@@ -3,10 +3,18 @@ from sqlalchemy import text
 
 from app.database.connection import engine, Base
 
+from app.models.usuario import Usuario
+from app.models.produccion import Produccion
+from app.models.etiqueta import Etiqueta
+from app.models.defecto import Defecto
+from app.models.auditoria import Auditoria
 # routers
 from app.routes import usuarios
 from app.routes import auth   # 👈 NUEVO
-
+from app.routes import produccion
+from app.routes import etiqueta
+from app.routes import defecto
+from app.routes import auditoria
 app = FastAPI(title="Venvidrio API")
 
 # crear tablas
@@ -17,7 +25,10 @@ Base.metadata.create_all(bind=engine)
 # =========================
 app.include_router(usuarios.router)
 app.include_router(auth.router)   # 👈 LOGIN
-
+app.include_router(produccion.router)
+app.include_router(etiqueta.router)
+app.include_router(defecto.router)
+app.include_router(auditoria.router)
 # =========================
 # HOME
 # =========================

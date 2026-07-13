@@ -1,13 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database.connection import SessionLocal
 from app.models.usuario import Usuario
-from app.schema.usuario import UsuarioCreate
+from app.schemas.usuario import UsuarioCreate, UsuarioResponse
+from app.core.security import hash_password
+from app.dependencies.auth import get_current_user
 
-router = APIRouter()
+router = APIRouter(
+    prefix="",
+    tags=["Usuarios"]
+)
 
-# conexión a BD
+
+# =========================
+# CONEXIÓN A LA BASE DE DATOS
+# =========================
 def get_db():
     db = SessionLocal()
     try:
@@ -16,24 +24,48 @@ def get_db():
         db.close()
 
 
-@router.get("/usuarios")
-def listar_usuarios(db: Session = Depends(get_db)):
+# =========================
+# LISTAR USUARIOS
+# =========================
+@router.get(
+    "/usuarios",
+    response_model=list[UsuarioResponse]
+)
+def listar_usuarios(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
     return db.query(Usuario).all()
 
 
-@router.post("/usuarios")
-def crear_usuario(usuario: UsuarioCreate, db: Session = Depends(get_db)):
+# =========================
+# CREAR USUARIO
+# =========================
+@router.post(
+    "/usuarios",
+    response_model=UsuarioResponse,
+    status_code=status.HTTP_201_CREATED
+)
+def crear_usuario(
+    usuario: UsuarioCreate,
+    db: Session = Depends(get_db)
+):
 
-    # evitar duplicados
-    existe = db.query(Usuario).filter(Usuario.email == usuario.email).first()
+    existe = db.query(Usuario).filter(
+        Usuario.correo == usuario.correo
+    ).first()
+
     if existe:
-        raise HTTPException(status_code=400, detail="Email ya registrado")
+        raise HTTPException(
+            status_code=400,
+            detail="El correo ya está registrado."
+        )
 
     nuevo = Usuario(
         nombre=usuario.nombre,
-        email=usuario.email,
-        password=usuario.password,
-        rol=usuario.rol
+        correo=usuario.correo,
+        password=hash_password(usuario.password),
+        rol_id=usuario.rol_id
     )
 
     db.add(nuevo)

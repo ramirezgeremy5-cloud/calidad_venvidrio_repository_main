@@ -1,35 +1,47 @@
-from passlib.context import CryptContext
-from jose import jwt
 from datetime import datetime, timedelta
 
-# =========================
-# CONFIG
-# =========================
-SECRET_KEY = "venvidrio_super_secret_key_2026"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+from jose import jwt
+from passlib.context import CryptContext
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from app.core.config import settings
 
-# =========================
-# HASH PASSWORD
-# =========================
+
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto"
+)
+
+
 def hash_password(password: str):
+
     return pwd_context.hash(password)
 
-# =========================
-# VERIFY PASSWORD
-# =========================
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
 
-# =========================
-# CREATE JWT TOKEN
-# =========================
+def verify_password(
+    plain_password: str,
+    hashed_password: str
+):
+
+    return pwd_context.verify(
+        plain_password,
+        hashed_password
+    )
+
+
 def create_access_token(data: dict):
+
     to_encode = data.copy()
 
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
+    expire = datetime.utcnow() + timedelta(
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    )
 
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    to_encode.update({
+        "exp": expire
+    })
+
+    return jwt.encode(
+        to_encode,
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM
+    )

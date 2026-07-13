@@ -7,6 +7,7 @@ from app.schemas.auth import LoginRequest, TokenResponse
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
+
 # =========================
 # LOGIN
 # =========================
@@ -17,28 +18,43 @@ def login(data: LoginRequest):
 
         user = conn.execute(
             text("""
-                SELECT id, nombre, email, password, rol
+                SELECT id, nombre, correo, password, rol_id
                 FROM usuarios
-                WHERE email = :email
+                WHERE correo = :correo
             """),
-            {"email": data.username}
+            {"correo": data.correo}
         ).mappings().first()
 
-        # usuario no existe
+        # Usuario no existe
         if not user:
-            raise HTTPException(status_code=401, detail="Usuario no encontrado")
+            raise HTTPException(
+                status_code=401,
+                detail="Usuario no encontrado"
+            )
 
-        # password incorrecta
+        # Contraseña incorrecta
         if not verify_password(data.password, user["password"]):
-            raise HTTPException(status_code=401, detail="Contraseña incorrecta")
+            raise HTTPException(
+                status_code=401,
+                detail="Contraseña incorrecta"
+            )
 
-        # crear token
+        # Crear JWT
         token = create_access_token({
-            "sub": user["email"],
-            "role": user["rol"]
+    "sub": str(user["id"]),
+    "role": user["rol_id"]
+
         })
+        
 
         return {
             "access_token": token,
-            "role": user["rol"]
+            "token_type": "bearer",
+            "role": user["rol_id"],
+            "user": {
+                "id": user["id"],
+                "nombre": user["nombre"],
+                "correo": user["correo"],
+                "rol_id": user["rol_id"]
+            }
         }
