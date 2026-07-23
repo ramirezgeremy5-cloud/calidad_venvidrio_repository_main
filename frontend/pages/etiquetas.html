@@ -1,178 +1,978 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Etiquetas y QR — Venvidrio CQ</title>
-  <link rel="stylesheet" href="../assets/css/shared.css" />
-  <link rel="stylesheet" href="../assets/css/etiquetas.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
-  <!-- QR code library -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+<title>Etiquetas y QR — Venvidrio CQ</title>
+
+
+<link rel="stylesheet"
+href="../assets/css/shared.css">
+
+
+<link rel="stylesheet"
+href="../assets/css/etiquetas.css">
+
+
+<link rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+
+
+
+<!-- QR -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+
 </head>
+
+
+
 <body>
 
+
+
+<!-- ================= NAVBAR ================= -->
+
+
 <nav class="navbar">
-  <div class="nav-brand">VENV<span>IDRIO</span></div>
-  <ul class="nav-links">
-    <li>
-            <a class="active" href="../public/dashboard.html">
-                <i class="ti ti-layout-dashboard"></i>
-                Panel Principal
-    <li><a href="../pages/produccion.html"><i class="ti ti-building-factory-2"></i> Producción</a></li>
-    <li><a href="../pages/defectos.html"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
-    <li><a href="../pages/etiquetas.html" class="active"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
-    <li><a href="../pages/auditoria.html"><i class="ti ti-clipboard-check"></i> Auditoría</a></li>
-  </ul>
-  <div class="nav-user">
-    <div class="nav-avatar">JR</div>
-    <span class="nav-username">J. Ramírez</span>
-  </div>
+
+
+<div class="nav-brand">
+
+VENV<span>IDRIO</span>
+
+</div>
+
+
+
+
+<ul class="nav-links">
+
+
+<li>
+
+<a href="../public/dashboard.html">
+
+<i class="ti ti-layout-dashboard"></i>
+
+Panel Principal
+
+</a>
+
+</li>
+
+
+
+<li>
+
+<a href="../pages/produccion.html">
+
+<i class="ti ti-building-factory-2"></i>
+
+Producción
+
+</a>
+
+</li>
+
+
+
+
+<li>
+
+<a href="../pages/defectos.html">
+
+<i class="ti ti-alert-triangle"></i>
+
+Defectos
+
+</a>
+
+</li>
+
+
+
+
+<li>
+
+<a class="active"
+href="../pages/etiquetas.html">
+
+<i class="ti ti-qrcode"></i>
+
+Etiquetas y QR
+
+</a>
+
+</li>
+
+
+
+
+<li>
+
+<a href="../pages/auditoria.html">
+
+<i class="ti ti-clipboard-check"></i>
+
+Auditoría
+
+</a>
+
+</li>
+
+
+
+</ul>
+
+
+
+
+
+<div class="nav-user">
+
+
+<div class="nav-avatar">
+
+JR
+
+</div>
+
+
+<span class="nav-username">
+
+J. Ramírez
+
+</span>
+
+
+</div>
+
+
+
 </nav>
+
+
+
+
+
+
+
+
 
 <main class="page">
 
-  <div class="page-header">
-    <h1>Etiquetas y QR</h1>
-    <p>Generación, impresión y trazabilidad de etiquetas de producto y lote</p>
-  </div>
 
-  <div class="stats-grid">
-    <div class="stat-card" style="animation-delay:0.05s">
-      <div class="stat-label">Generadas Hoy</div>
-      <div class="stat-value">142</div>
-      <div class="stat-sub">Etiquetas emitidas</div>
-    </div>
-    <div class="stat-card" style="animation-delay:0.1s">
-      <div class="stat-label">Impresas</div>
-      <div class="stat-value success">138</div>
-      <div class="stat-sub">97% del total</div>
-    </div>
-    <div class="stat-card" style="animation-delay:0.15s">
-      <div class="stat-label">Pendientes</div>
-      <div class="stat-value warning">4</div>
-      <div class="stat-sub">En cola de impresión</div>
-    </div>
-    <div class="stat-card" style="animation-delay:0.2s">
-      <div class="stat-label">Lotes Activos</div>
-      <div class="stat-value">24</div>
-      <div class="stat-sub">Con etiqueta asignada</div>
-    </div>
-  </div>
 
-  <div class="etq-layout">
 
-    <!-- Generador -->
-    <div class="card anim-card" style="animation-delay:0.2s">
-      <div class="card-header">
-        <div class="card-title"><i class="ti ti-tag"></i> Generar Etiqueta</div>
-      </div>
-      <div class="card-body">
-        <div class="grid-2">
-          <div class="field">
-            <label>Código de Lote</label>
-            <input type="text" id="e-lote" placeholder="VV-2024-XXXX" />
-          </div>
-          <div class="field">
-            <label>Producto</label>
-            <select id="e-prod">
-              <option value="">Seleccionar</option>
-              <option>Vidrio Templado 6mm</option>
-              <option>Vidrio Laminado 8mm</option>
-              <option>Vidrio Reflectivo</option>
-              <option>Vidrio Serigrafiado</option>
-              <option>Vidrio Curvo</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Dimensiones (mm)</label>
-            <input type="text" id="e-dims" placeholder="1200 x 800" />
-          </div>
-          <div class="field">
-            <label>Espesor (mm)</label>
-            <input type="number" id="e-esp" placeholder="6" step="0.5" />
-          </div>
-          <div class="field">
-            <label>Cantidad de piezas</label>
-            <input type="number" id="e-qty" placeholder="0" min="1" />
-          </div>
-          <div class="field">
-            <label>Destino / Cliente</label>
-            <input type="text" id="e-cliente" placeholder="Nombre del cliente" />
-          </div>
-          <div class="field">
-            <label>Norma / Certificación</label>
-            <select id="e-norma">
-              <option>NMX-C-175 (Templado)</option>
-              <option>NMX-C-431 (Laminado)</option>
-              <option>ASTM C1048</option>
-              <option>EN 12150</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Estado de Calidad</label>
-            <select id="e-estado">
-              <option value="aprobado">Aprobado ✓</option>
-              <option value="condicionado">Condicionado</option>
-              <option value="retenido">Retenido</option>
-            </select>
-          </div>
-        </div>
-        <div class="flex gap-2" style="margin-top:0.5rem">
-          <button class="btn btn-primary" id="btn-generar"><i class="ti ti-qrcode"></i> Generar Etiqueta</button>
-          <button class="btn btn-outline" id="btn-limpiar-etq"><i class="ti ti-eraser"></i> Limpiar</button>
-        </div>
-      </div>
-    </div>
 
-    <!-- Preview -->
-    <div class="card anim-card" style="animation-delay:0.3s">
-      <div class="card-header">
-        <div class="card-title"><i class="ti ti-eye"></i> Vista Previa</div>
-        <div class="flex gap-2" id="btn-actions" style="opacity:0;transition:opacity 0.3s">
-          <button class="btn btn-outline btn-sm" id="btn-imprimir"><i class="ti ti-printer"></i> Imprimir</button>
-          <button class="btn btn-primary btn-sm" id="btn-descargar"><i class="ti ti-download"></i> Descargar</button>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="label-preview" id="label-preview">
-          <div class="label-empty">
-            <i class="ti ti-tag" style="font-size:40px;color:var(--border-dark)"></i>
-            <p>Completa el formulario y presiona <strong>Generar Etiqueta</strong></p>
-          </div>
-        </div>
-      </div>
-    </div>
+<!-- HEADER -->
 
-  </div>
 
-  <!-- Historial de etiquetas -->
-  <div class="card anim-card" style="animation-delay:0.35s; margin-top:1.5rem">
-    <div class="card-header">
-      <div class="card-title"><i class="ti ti-history"></i> Etiquetas Recientes</div>
-      <button class="btn btn-outline btn-sm"><i class="ti ti-download"></i> Exportar</button>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Lote</th>
-            <th>Producto</th>
-            <th>Dimensiones</th>
-            <th>Piezas</th>
-            <th>Cliente</th>
-            <th>Estado</th>
-            <th>Generada</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="tabla-etq"></tbody>
-      </table>
-    </div>
-  </div>
+<div class="page-header">
+
+
+<h1>
+
+Etiquetas y QR
+
+</h1>
+
+
+<p>
+
+Generación, impresión y trazabilidad de etiquetas de producto y lote
+
+</p>
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<!-- ESTADÍSTICAS -->
+
+
+<div class="stats-grid">
+
+
+<div class="stat-card">
+
+<div class="stat-label">
+
+Generadas Hoy
+
+</div>
+
+
+<div class="stat-value"
+id="etq-hoy">
+
+0
+
+</div>
+
+
+<div class="stat-sub">
+
+Etiquetas emitidas
+
+</div>
+
+</div>
+
+
+
+
+
+<div class="stat-card">
+
+
+<div class="stat-label">
+
+Impresas
+
+</div>
+
+
+<div class="stat-value success">
+
+0
+
+</div>
+
+
+<div class="stat-sub">
+
+Proceso completado
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="stat-card">
+
+
+<div class="stat-label">
+
+Pendientes
+
+</div>
+
+
+<div class="stat-value warning">
+
+0
+
+</div>
+
+
+<div class="stat-sub">
+
+Pendientes impresión
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<div class="stat-card">
+
+
+<div class="stat-label">
+
+Lotes Activos
+
+</div>
+
+
+<div class="stat-value">
+
+0
+
+</div>
+
+
+<div class="stat-sub">
+
+Con etiqueta asignada
+
+</div>
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+<!-- ================= LAYOUT ================= -->
+
+
+<div class="etq-layout">
+
+
+
+
+
+
+
+<!-- FORMULARIO -->
+
+
+<div class="card anim-card">
+
+
+<div class="card-header">
+
+
+<div class="card-title">
+
+
+<i class="ti ti-tag"></i>
+
+
+Generar Etiqueta
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+<div class="card-body">
+
+
+
+
+
+<div class="grid-2">
+
+
+
+
+
+<div class="field">
+
+
+<label>
+
+Código de Lote
+
+</label>
+
+
+<input
+type="text"
+id="e-lote"
+placeholder="VV-2026-XXXX">
+
+
+</div>
+
+
+
+
+
+
+
+
+<div class="field">
+
+
+<label>
+
+Producto
+
+</label>
+
+
+<select id="e-prod">
+
+
+<option value="">
+
+Seleccionar
+
+</option>
+
+
+<option>
+Vidrio Templado 6mm
+</option>
+
+
+<option>
+Vidrio Laminado 8mm
+</option>
+
+
+<option>
+Vidrio Reflectivo
+</option>
+
+
+<option>
+Vidrio Serigrafiado
+</option>
+
+
+<option>
+Vidrio Curvo
+</option>
+
+
+</select>
+
+
+</div>
+
+
+
+
+
+
+
+
+<div class="field">
+
+
+<label>
+
+Dimensiones
+
+</label>
+
+
+<input
+id="e-dims"
+type="text"
+placeholder="1200x800">
+
+
+</div>
+
+
+
+
+
+
+
+<div class="field">
+
+
+<label>
+
+Espesor (mm)
+
+</label>
+
+
+<input
+id="e-esp"
+type="number"
+step="0.5"
+placeholder="6">
+
+
+</div>
+
+
+
+
+
+
+
+
+<div class="field">
+
+
+<label>
+
+Cantidad piezas
+
+</label>
+
+
+<input
+id="e-qty"
+type="number"
+min="1"
+placeholder="0">
+
+
+</div>
+
+
+
+
+
+
+
+<div class="field">
+
+
+<label>
+
+Cliente
+
+</label>
+
+
+<input
+id="e-cliente"
+type="text"
+placeholder="Cliente">
+
+
+</div>
+
+
+
+
+
+
+
+
+<div class="field">
+
+
+<label>
+
+Norma
+
+</label>
+
+
+<select id="e-norma">
+
+
+<option>
+NMX-C-175
+</option>
+
+
+<option>
+NMX-C-431
+</option>
+
+
+<option>
+ASTM C1048
+</option>
+
+
+<option>
+EN 12150
+</option>
+
+
+
+</select>
+
+
+</div>
+
+
+
+
+
+
+
+<div class="field">
+
+
+<label>
+
+Estado Calidad
+
+</label>
+
+
+<select id="e-estado">
+
+
+<option value="aprobado">
+
+Aprobado
+
+</option>
+
+
+<option value="condicionado">
+
+Condicionado
+
+</option>
+
+
+<option value="retenido">
+
+Retenido
+
+</option>
+
+
+
+</select>
+
+
+</div>
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+<div class="flex gap-2">
+
+
+<button
+class="btn btn-primary"
+id="btn-generar">
+
+
+<i class="ti ti-qrcode"></i>
+
+
+Generar Etiqueta
+
+
+</button>
+
+
+
+
+
+<button
+class="btn btn-outline"
+id="btn-limpiar-etq">
+
+
+<i class="ti ti-eraser"></i>
+
+
+Limpiar
+
+
+</button>
+
+
+</div>
+
+
+
+
+
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<!-- PREVIEW -->
+
+
+<div class="card anim-card">
+
+
+<div class="card-header">
+
+
+<div class="card-title">
+
+
+<i class="ti ti-eye"></i>
+
+
+Vista Previa
+
+
+</div>
+
+
+
+
+<div id="btn-actions"
+style="opacity:0">
+
+
+<button
+class="btn btn-outline btn-sm"
+id="btn-imprimir">
+
+
+<i class="ti ti-printer"></i>
+
+Imprimir
+
+</button>
+
+
+
+
+<button
+class="btn btn-primary btn-sm"
+id="btn-descargar">
+
+
+<i class="ti ti-download"></i>
+
+Descargar
+
+</button>
+
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+<div class="card-body">
+
+
+
+<div
+class="label-preview"
+id="label-preview">
+
+
+
+<div class="label-empty">
+
+
+<i class="ti ti-tag"></i>
+
+
+<p>
+
+Completa el formulario
+
+</p>
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+</div>
+
+
+
+
+</div>
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<!-- TABLA -->
+
+
+<div class="card anim-card">
+
+
+<div class="card-header">
+
+
+<div class="card-title">
+
+
+<i class="ti ti-history"></i>
+
+
+Etiquetas Recientes
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+<div class="table-wrap">
+
+
+<table>
+
+
+
+<thead>
+
+
+<tr>
+
+
+<th>
+Lote
+</th>
+
+
+<th>
+Producto
+</th>
+
+
+<th>
+Dimensiones
+</th>
+
+
+<th>
+Cantidad
+</th>
+
+
+<th>
+Cliente
+</th>
+
+
+<th>
+Estado
+</th>
+
+
+<th>
+Hora
+</th>
+
+
+<th>
+Acción
+</th>
+
+
+</tr>
+
+
+
+</thead>
+
+
+
+<tbody id="tabla-etq">
+
+
+</tbody>
+
+
+
+
+</table>
+
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+
 
 </main>
 
-<script src="js/etiquetas.js"></script>
+
+
+
+
+
+
+<script src="../assets/js/etiquetas.js"></script>
+
+
 </body>
+
+
 </html>

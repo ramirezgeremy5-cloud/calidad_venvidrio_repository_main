@@ -2,24 +2,48 @@ from pydantic import BaseModel
 from datetime import datetime
 
 
+
 class EtiquetaBase(BaseModel):
-    codigo_etiqueta: str
-    codigo_lote: str
-    cliente: str
-    producto: str
-    cantidad: int
-    estado: str
-    observaciones: str | None = None
+
+    codigo_lote:str
+
+    producto:str
+
+    dimensiones:str
+
+    espesor:str
+
+    cantidad:int
+
+    cliente:str
+
+    norma:str | None = None
+
+    estado:str
+
+    qr_codigo:str | None = None
+
+
+
 
 
 class EtiquetaCreate(EtiquetaBase):
+
     pass
 
 
+
+
+
+
 class EtiquetaResponse(EtiquetaBase):
-    id: int
-    fecha_registro: datetime
-    fecha_actualizacion: datetime
+
+    id:int
+
+    fecha_registro:datetime
+
+
 
     class Config:
-        from_attributes = True
+
+        from_attributes=True

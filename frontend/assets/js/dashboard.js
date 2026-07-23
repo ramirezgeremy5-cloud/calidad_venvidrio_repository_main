@@ -1,410 +1,507 @@
 /* ==========================================
-   VENVIDRIO - CONTROL DE CALIDAD
-   app.js
+   VENVIDRIO - DASHBOARD
+   dashboard.js
 ========================================== */
+
+
+const API_URL = "http://127.0.0.1:8000";
+
+
+let productionChart = null;
+
+
 
 /* ==========================================
-   NAVEGACIÓN ENTRE MÓDULOS
+   CARGAR ESTADÍSTICAS KPI
 ========================================== */
 
-function nav(page) {
 
-    document.querySelectorAll('.page').forEach(section => {
-        section.classList.remove('active');
-    });
+async function cargarDashboard(){
 
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active');
-    });
+    try {
 
-    const selectedPage =
-        document.getElementById(`page-${page}`);
 
-    if (selectedPage) {
-        selectedPage.classList.add('active');
+        console.log(
+            "Cargando estadísticas del dashboard..."
+        );
+
+
+        const response = await fetch(
+            `${API_URL}/dashboard/stats`
+        );
+
+
+        if(!response.ok){
+
+            throw new Error(
+                "Error consultando estadísticas"
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        console.log(
+            "Dashboard recibido:",
+            data
+        );
+
+
+
+        const lotes =
+            document.getElementById("dash-lotes");
+
+
+        if(lotes){
+
+            lotes.textContent =
+                data.lotes ?? 0;
+
+        }
+
+
+
+        const unidades =
+            document.getElementById("dash-unidades");
+
+
+        if(unidades){
+
+            unidades.textContent =
+                data.unidades ?? 0;
+
+        }
+
+
+
+        const defectos =
+            document.getElementById("dash-defectos");
+
+
+        if(defectos){
+
+            defectos.textContent =
+                data.defectos ?? 0;
+
+        }
+
+
+
+        const eficiencia =
+            document.getElementById("dash-eficiencia");
+
+
+        if(eficiencia){
+
+            eficiencia.textContent =
+                data.eficiencia ?? "0%";
+
+        }
+
+
+
+        crearGrafica(data);
+
+
     }
 
-    const selectedNav =
-        document.querySelector(`[data-page="${page}"]`);
 
-    if (selectedNav) {
-        selectedNav.classList.add('active');
+    catch(error){
+
+        console.error(
+            "Error cargando dashboard:",
+            error
+        );
+
     }
+
 }
+
+
+
+
+
+
 
 /* ==========================================
-   PRODUCCIÓN
+   CARGAR ÚLTIMOS REGISTROS
 ========================================== */
 
-function addProd() {
 
-    const form =
-        document.getElementById('prod-form-card');
+async function cargarUltimos(){
 
-    if (form) {
-        form.style.display = 'block';
-    }
-}
+    try{
 
-function cancelProd() {
 
-    const form =
-        document.getElementById('prod-form-card');
+        const response =
+            await fetch(
+                `${API_URL}/dashboard/ultimos`
+            );
 
-    if (form) {
-        form.style.display = 'none';
-    }
-}
 
-function saveProd() {
+        if(!response.ok){
 
-    const molde =
-        document.getElementById('f-molde')?.value.trim() || 'M-00';
+            throw new Error(
+                "Error cargando registros"
+            );
 
-    const inicio =
-        document.getElementById('f-inicio')?.value || '-';
+        }
 
-    const fin =
-        document.getElementById('f-fin')?.value || '-';
 
-    const estado =
-        document.getElementById('f-estado')?.value || 'Activa';
+        const registros =
+            await response.json();
 
-    const table =
-        document.getElementById('prod-table');
 
-    if (!table) return;
 
-    const totalRows =
-        table.querySelectorAll('tr').length;
+        console.log(
+            "Últimos registros:",
+            registros
+        );
 
-    const corrida =
-        `CR-${String(totalRows).padStart(3, '0')}`;
 
-    let chipClass = 'chip-blue';
 
-    switch (estado) {
+        const tabla =
+            document.getElementById(
+                "dashboard-table"
+            );
 
-        case 'Completa':
-            chipClass = 'chip-green';
-            break;
 
-        case 'Revisión':
-            chipClass = 'chip-amber';
-            break;
 
-        default:
-            chipClass = 'chip-blue';
-    }
+        if(!tabla)
+            return;
 
-    const row =
-        document.createElement('tr');
 
-    row.dataset.estado = estado;
 
-    row.innerHTML = `
-        <td>${corrida}</td>
-        <td>${molde}</td>
-        <td>${inicio}</td>
-        <td>${fin}</td>
-        <td>--</td>
-        <td>--</td>
-        <td>
-            <span class="chip ${chipClass}">
-                ${estado}
-            </span>
-        </td>
-    `;
+        tabla.innerHTML = "";
 
-    table.appendChild(row);
 
-    document.getElementById('f-molde').value = '';
-    document.getElementById('f-inicio').value = '';
-    document.getElementById('f-fin').value = '';
 
-    cancelProd();
-}
+        registros.forEach(registro=>{
 
-/* ==========================================
-   FILTRO DE PRODUCCIÓN
-========================================== */
 
-function filterProd(status) {
+            const fila =
+                document.createElement(
+                    "tr"
+                );
 
-    document
-        .querySelectorAll('#prod-table tr[data-estado]')
-        .forEach(row => {
 
-            if (
-                status === 'all' ||
-                row.dataset.estado === status
-            ) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
+
+            fila.innerHTML = `
+
+                <td>${registro.fecha}</td>
+
+                <td>${registro.linea}</td>
+
+                <td>${registro.producto}</td>
+
+                <td>
+                    <span class="badge badge-success">
+                        ${registro.estado}
+                    </span>
+                </td>
+
+            `;
+
+
+            tabla.appendChild(fila);
+
 
         });
+
+
+    }
+
+
+    catch(error){
+
+
+        console.error(
+            "Error cargando últimos registros:",
+            error
+        );
+
+
+    }
+
 }
+
+
+
+
+
+
+
+
 
 /* ==========================================
-   DEFECTOS
+   CARGAR ALERTAS DEL SISTEMA
 ========================================== */
 
-function addDefecto() {
 
-    const form =
-        document.getElementById('def-form-card');
+async function cargarAlertas(){
 
-    if (form) {
-        form.style.display = 'block';
+
+    try{
+
+
+        console.log(
+            "Cargando alertas..."
+        );
+
+
+        const response =
+            await fetch(
+                `${API_URL}/dashboard/alerts`
+            );
+
+
+
+        if(!response.ok){
+
+            throw new Error(
+                "Error cargando alertas"
+            );
+
+        }
+
+
+
+        const alertas =
+            await response.json();
+
+
+
+        console.log(
+            "Alertas recibidas:",
+            alertas
+        );
+
+
+
+        const lista =
+            document.getElementById(
+                "dashboard-alerts"
+            );
+
+
+
+        if(!lista)
+            return;
+
+
+
+        lista.innerHTML = "";
+
+
+
+        alertas.forEach(alerta=>{
+
+
+            const li =
+                document.createElement(
+                    "li"
+                );
+
+
+
+            let icono = "✔";
+
+
+
+            if(alerta.tipo === "warning"){
+
+                icono = "⚠";
+
+            }
+
+
+
+            if(alerta.tipo === "danger"){
+
+                icono = "❌";
+
+            }
+
+
+
+            li.innerHTML = `
+
+                ${icono}
+                ${alerta.mensaje}
+
+            `;
+
+
+
+            lista.appendChild(li);
+
+
+        });
+
+
+
     }
+
+
+    catch(error){
+
+
+        console.error(
+            "Error cargando alertas:",
+            error
+        );
+
+
+    }
+
+
 }
 
-function cancelDef() {
 
-    const form =
-        document.getElementById('def-form-card');
 
-    if (form) {
-        form.style.display = 'none';
-    }
-}
 
-function saveDef() {
 
-    const corrida =
-        document.getElementById('d-corrida')?.value || '';
 
-    const tipo =
-        document.getElementById('d-tipo')?.value || '';
 
-    const cantidad =
-        document.getElementById('d-cant')?.value || '1';
 
-    const severidad =
-        document.getElementById('d-sev')?.value || 'Leve';
-
-    const observacion =
-        document.getElementById('d-obs')?.value || '-';
-
-    const table =
-        document.getElementById('def-table');
-
-    if (!table) return;
-
-    let chipClass = 'chip-green';
-
-    switch (severidad) {
-
-        case 'Moderado':
-            chipClass = 'chip-amber';
-            break;
-
-        case 'Crítico':
-            chipClass = 'chip-red';
-            break;
-
-        default:
-            chipClass = 'chip-green';
-    }
-
-    const row =
-        document.createElement('tr');
-
-    row.innerHTML = `
-        <td>${corrida}</td>
-        <td>${tipo}</td>
-        <td>${cantidad}</td>
-        <td>
-            <span class="chip ${chipClass}">
-                ${severidad}
-            </span>
-        </td>
-        <td>${observacion}</td>
-        <td>
-            <button
-                class="btn btn-danger"
-                onclick="deleteRow(this)">
-                Eliminar
-            </button>
-        </td>
-    `;
-
-    table.appendChild(row);
-
-    document.getElementById('d-tipo').value = '';
-    document.getElementById('d-cant').value = '1';
-    document.getElementById('d-obs').value = '';
-
-    cancelDef();
-}
-
-function deleteRow(button) {
-
-    const row = button.closest('tr');
-
-    if (row) {
-        row.remove();
-    }
-}
 
 /* ==========================================
-   ETIQUETAS
+   GRÁFICA PRODUCCIÓN
 ========================================== */
 
-function updateLabel() {
 
-    const producto =
-        document.getElementById('lbl-prod')?.value || '';
+function crearGrafica(data){
 
-    const lote =
-        document.getElementById('lbl-lote')?.value || '';
 
-    const composicion =
-        document.getElementById('lbl-comp')?.value || '';
+    const canvas =
+        document.getElementById(
+            "productionChart"
+        );
 
-    const peso =
-        document.getElementById('lbl-peso')?.value || '';
 
-    const estado =
-        document.getElementById('lbl-estado')?.value || '';
 
-    document.getElementById('tp-prod').textContent =
-        producto;
+    if(!canvas)
+        return;
 
-    document.getElementById('tp-lote').textContent =
-        lote;
 
-    document.getElementById('tp-comp').textContent =
-        composicion;
 
-    document.getElementById('tp-peso').textContent =
-        peso;
+    if(productionChart){
 
-    const estadoElement =
-        document.getElementById('tp-estado');
+        productionChart.destroy();
 
-    estadoElement.textContent = estado;
-
-    estadoElement.className = 'chip';
-
-    if (estado === 'Producción Apta') {
-
-        estadoElement.classList.add('chip-green');
-
-    } else if (estado === 'No Apta') {
-
-        estadoElement.classList.add('chip-red');
-
-    } else {
-
-        estadoElement.classList.add('chip-amber');
     }
+
+
+
+    productionChart =
+        new Chart(
+            canvas,
+            {
+
+                type:"bar",
+
+
+                data:{
+
+
+                    labels:[
+
+                        "Producción",
+                        "Defectos"
+
+                    ],
+
+
+                    datasets:[
+
+                        {
+
+                            label:
+                            "Cantidad",
+
+
+                            data:[
+
+                                data.unidades ?? 0,
+
+                                data.defectos ?? 0
+
+                            ]
+
+                        }
+
+                    ]
+
+                },
+
+
+                options:{
+
+
+                    responsive:true,
+
+
+                    scales:{
+
+
+                        y:{
+
+
+                            beginAtZero:true
+
+
+                        }
+
+
+                    }
+
+
+                }
+
+
+            }
+
+        );
+
+
 }
 
-/* ==========================================
-   QR CODE
-========================================== */
 
-let qrInstance = null;
 
-function generateQR() {
 
-    const container =
-        document.getElementById('qr-canvas');
 
-    if (!container) return;
 
-    container.innerHTML = '';
 
-    const producto =
-        document.getElementById('lbl-prod')?.value || '';
 
-    const lote =
-        document.getElementById('lbl-lote')?.value || '';
-
-    const fecha =
-        document.getElementById('lbl-fecha')?.value || '';
-
-    const contenidoQR =
-        `Producto: ${producto}
-Lote: ${lote}
-Fecha: ${fecha}`;
-
-    qrInstance = new QRCode(container, {
-        text: contenidoQR,
-        width: 120,
-        height: 120,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-    });
-
-    const note =
-        document.getElementById('qr-note');
-
-    if (note) {
-        note.textContent =
-            `QR generado correctamente para el lote ${lote}`;
-    }
-}
-
-/* ==========================================
-   AUDITORÍA
-========================================== */
-
-function updateAudit() {
-
-    const checks =
-        document.querySelectorAll('.audit-check');
-
-    const total =
-        checks.length;
-
-    const completed =
-        [...checks].filter(
-            check => check.checked
-        ).length;
-
-    const percentage =
-        total > 0
-            ? Math.round(
-                (completed / total) * 100
-              )
-            : 0;
-
-    const progressFill =
-        document.getElementById('audit-fill');
-
-    const progressText =
-        document.getElementById('audit-pct');
-
-    if (progressFill) {
-        progressFill.style.width =
-            `${percentage}%`;
-    }
-
-    if (progressText) {
-        progressText.textContent =
-            `${completed} / ${total} (${percentage}%)`;
-    }
-}
 
 /* ==========================================
    INICIALIZACIÓN
 ========================================== */
 
-document.addEventListener(
-    'DOMContentLoaded',
-    () => {
 
-        updateLabel();
-        updateAudit();
+document.addEventListener(
+    "DOMContentLoaded",
+    ()=>{
+
 
         console.log(
-            'Sistema de Control de Calidad Venvidrio iniciado.'
+            "Dashboard Venvidrio iniciado"
         );
+
+
+
+        cargarDashboard();
+
+
+        cargarUltimos();
+
+
+        cargarAlertas();
+
+
 
     }
 );

@@ -1,238 +1,532 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Venvidrio | Dashboard</title>
 
+
     <!-- Tabler Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+    <link rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+
 
     <!-- CSS -->
-    <link rel="stylesheet" href="../assets/css/shared.css">
-    <link rel="stylesheet" href="../assets/css/dashboard.css">
+
+    <link rel="stylesheet"
+    href="../assets/css/shared.css">
+
+    <link rel="stylesheet"
+    href="../assets/css/dashboard.css">
+
+
 </head>
+
 
 <body>
 
+
 <!-- ================= NAVBAR ================= -->
+
 <nav class="navbar">
+
 
     <div class="nav-brand">
         VENV<span>IDRIO</span>
     </div>
 
+
+
     <ul class="nav-links">
+
+
         <li>
-            <a class="active" href="../public/dashboard.html">
+            <a class="active"
+            href="../public/dashboard.html">
+
                 <i class="ti ti-layout-dashboard"></i>
                 Panel Principal
+
             </a>
         </li>
+
+
 
         <li>
             <a href="../pages/produccion.html">
+
                 <i class="ti ti-building-factory-2"></i>
                 Producción
+
             </a>
         </li>
+
+
 
         <li>
             <a href="../pages/defectos.html">
+
                 <i class="ti ti-alert-triangle"></i>
                 Defectos
+
             </a>
         </li>
+
+
 
         <li>
             <a href="../pages/etiquetas.html">
+
                 <i class="ti ti-qrcode"></i>
                 Etiquetas
+
             </a>
         </li>
+
+
 
         <li>
             <a href="../pages/auditoria.html">
+
                 <i class="ti ti-clipboard-check"></i>
                 Auditoría
+
             </a>
         </li>
+
+
     </ul>
 
+
+
     <div class="nav-user">
-        <div class="nav-avatar">GR</div>
-        <div class="nav-username">G. Ramírez</div>
+
+        <div class="nav-avatar">
+            GR
+        </div>
+
+
+        <div class="nav-username">
+            G. Ramírez
+        </div>
+
     </div>
+
 
 </nav>
 
+
+
+
+
 <!-- ================= CONTENIDO ================= -->
+
 <main class="page">
 
-    <!-- ================= KPI ================= -->
-    <section class="kpi-grid">
 
-        <div class="kpi-card anim-card">
-            <p class="kpi-label">Producción Total</p>
-            <div class="kpi-value">1,248</div>
-            <div class="kpi-meta">+12% vs ayer</div>
+
+
+
+<!-- ================= KPI ================= -->
+
+
+<section class="kpi-grid">
+
+
+
+    <div class="kpi-card anim-card">
+
+
+        <p class="kpi-label">
+            Producción Total
+        </p>
+
+
+        <div 
+        class="kpi-value"
+        id="dash-unidades">
+
+            0
+
         </div>
 
-        <div class="kpi-card anim-card">
-            <p class="kpi-label">Defectos</p>
-            <div class="kpi-value" style="color: var(--danger);">32</div>
-            <div class="kpi-meta">-3% mejora</div>
+
+        <div class="kpi-meta">
+            Unidades producidas
         </div>
 
-        <div class="kpi-card anim-card">
-            <p class="kpi-label">Eficiencia</p>
-            <div class="kpi-value">94%</div>
-            <div class="kpi-meta">Óptimo</div>
+
+    </div>
+
+
+
+
+
+    <div class="kpi-card anim-card">
+
+
+        <p class="kpi-label">
+            Lotes registrados
+        </p>
+
+
+        <div 
+        class="kpi-value"
+        id="dash-lotes">
+
+            0
+
         </div>
 
-        <div class="kpi-card anim-card">
-            <p class="kpi-label">Auditorías</p>
-            <div class="kpi-value">8</div>
-            <div class="kpi-meta">Completadas</div>
+
+        <div class="kpi-meta">
+            Producción actual
         </div>
 
-    </section>
 
-    <!-- ================= GRID PRINCIPAL ================= -->
-    <section class="dashboard-layout">
+    </div>
 
-        <!-- ================= PRODUCCIÓN ================= -->
-        <div class="card anim-card">
 
-            <div class="card-header">
-                <div class="card-title">
-                    <i class="ti ti-chart-bar"></i>
-                    Producción en Tiempo Real
-                </div>
-            </div>
 
-            <div class="card-body">
-    <canvas id="productionChart"></canvas>
+
+
+    <div class="kpi-card anim-card">
+
+
+        <p class="kpi-label">
+            Defectos
+        </p>
+
+
+        <div 
+        class="kpi-value"
+        id="dash-defectos"
+        style="color:var(--danger);">
+
+
+            0
+
+
+        </div>
+
+
+
+        <div class="kpi-meta">
+            Registros encontrados
+        </div>
+
+
+    </div>
+
+
+
+
+
+
+    <div class="kpi-card anim-card">
+
+
+        <p class="kpi-label">
+            Eficiencia
+        </p>
+
+
+        <div 
+        class="kpi-value"
+        id="dash-eficiencia">
+
+
+            0%
+
+
+        </div>
+
+
+
+        <div class="kpi-meta">
+            Rendimiento general
+        </div>
+
+
+    </div>
+
+
+
+</section>
+
+
+
+
+
+
+
+<!-- ================= GRID PRINCIPAL ================= -->
+
+
+<section class="dashboard-layout">
+
+
+
+
+
+<!-- ================= PRODUCCIÓN ================= -->
+
+
+<div class="card anim-card">
+
+
+    <div class="card-header">
+
+
+        <div class="card-title">
+
+            <i class="ti ti-chart-bar"></i>
+
+            Producción en Tiempo Real
+
+        </div>
+
+
+    </div>
+
+
+
+
+    <div class="card-body">
+
+
+        <canvas id="productionChart"></canvas>
+
+
+    </div>
+
+
 </div>
 
-                <!-- GRÁFICA MANUAL (BASE PARA TIEMPO REAL) -->
-                <div class="chart-bars">
 
-                    <div class="chart-col">
-                        <div class="chart-value">120</div>
-                        <div class="chart-bar" style="height: 70%;"></div>
-                        <div class="chart-label">08 Jun</div>
-                    </div>
 
-                    <div class="chart-col">
-                        <div class="chart-value">145</div>
-                        <div class="chart-bar" style="height: 85%;"></div>
-                        <div class="chart-label">09 Jun</div>
-                    </div>
 
-                    <div class="chart-col">
-                        <div class="chart-value">132</div>
-                        <div class="chart-bar" style="height: 78%;"></div>
-                        <div class="chart-label">10 Jun</div>
-                    </div>
 
-                    <div class="chart-col">
-                        <div class="chart-value">160</div>
-                        <div class="chart-bar" style="height: 95%;"></div>
-                        <div class="chart-label">11 Jun</div>
-                    </div>
 
-                    <div class="chart-col">
-                        <div class="chart-value">110</div>
-                        <div class="chart-bar" style="height: 65%;"></div>
-                        <div class="chart-label">12 Jun</div>
-                    </div>
 
-                </div>
 
-            </div>
 
+<!-- ================= ALERTAS ================= -->
+
+
+<!-- ================= ALERTAS ================= -->
+<div class="card anim-card">
+
+    <div class="card-header">
+        <div class="card-title">
+            <i class="ti ti-bell"></i>
+            Alertas del Sistema
         </div>
 
-        <!-- ================= ALERTAS ================= -->
-        <div class="card anim-card">
+        <span class="badge badge-success">
+            En vivo
+        </span>
 
-            <div class="card-header">
-                <div class="card-title">
-                    <i class="ti ti-bell"></i>
-                    Alertas del Sistema
-                </div>
-            </div>
+    </div>
 
-            <div class="card-body">
 
-                <ul class="alert-list">
-                    <li>⚠ Línea 2 con retraso</li>
-                    <li>❌ Defecto crítico detectado</li>
-                    <li>✔ Auditoría completada</li>
-                </ul>
+    <div class="card-body">
 
-            </div>
 
-        </div>
+        <ul 
+            class="alert-list"
+            id="dashboard-alerts"
+        >
 
-    </section>
+            <!-- Aquí entran las alertas desde FastAPI -->
 
-    <!-- ================= TABLA ================= -->
-    <section class="card anim-card">
+            <li>
+                Cargando alertas...
+            </li>
 
-        <div class="card-header">
-            <div class="card-title">
-                <i class="ti ti-table"></i>
-                Últimos Registros
-            </div>
-        </div>
 
-        <div class="card-body table-wrap">
+        </ul>
 
-            <table>
 
-                <thead>
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Línea</th>
-                        <th>Producto</th>
-                        <th>Estado</th>
-                    </tr>
-                </thead>
+    </div>
 
-                <tbody>
-                    <tr>
-                        <td>10/06/2026</td>
-                        <td>Línea 1</td>
-                        <td>Botella 500ml</td>
-                        <td><span class="badge badge-success">OK</span></td>
-                    </tr>
+</div>
 
-                    <tr>
-                        <td>10/06/2026</td>
-                        <td>Línea 2</td>
-                        <td>Botella 1L</td>
-                        <td><span class="badge badge-danger">Defecto</span></td>
-                    </tr>
-                </tbody>
 
-            </table>
 
-        </div>
 
-    </section>
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<!-- ================= TABLA ================= -->
+
+
+
+<section class="card anim-card">
+
+
+<div class="card-header">
+
+
+<div class="card-title">
+
+
+<i class="ti ti-table"></i>
+
+Últimos Registros
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<div class="card-body table-wrap">
+
+
+<table>
+
+
+
+<thead>
+
+
+<tr>
+
+<th>
+Fecha
+</th>
+
+
+<th>
+Línea
+</th>
+
+
+<th>
+Producto
+</th>
+
+
+<th>
+Estado
+</th>
+
+
+</tr>
+
+
+</thead>
+
+
+
+
+<tbody id="dashboard-table">
+
+
+
+<tr>
+
+<td>
+--
+</td>
+
+
+<td>
+--
+</td>
+
+
+<td>
+--
+</td>
+
+
+<td>
+--
+</td>
+
+
+</tr>
+
+
+
+</tbody>
+
+
+
+</table>
+
+
+</div>
+
+
+</section>
+
+
+
+
+
 
 </main>
 
+
+
+
+
+
+
 <!-- ================= FOOTER ================= -->
-<footer class="footer" style="text-align:center; padding:1.5rem; color:var(--text-muted);">
-    <p>© 2026 Venvidrio - Sistema de Control de Producción</p>
+
+
+<footer class="footer"
+style="text-align:center;padding:1.5rem;color:var(--text-muted);">
+
+
+<p>
+
+© 2026 Venvidrio - Sistema de Control de Producción
+
+</p>
+
+
 </footer>
 
+
+
+
+
+
+
 <!-- ================= JS ================= -->
+
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
 <script src="../assets/js/dashboard.js" defer></script>
 
+
+
+
 </body>
+
+
 </html>

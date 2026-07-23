@@ -1,209 +1,817 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Defectos — Venvidrio CQ</title>
-  <link rel="stylesheet" href="../assets/css/shared.css" />
-  <link rel="stylesheet" href="../assets/css/defectos.css"/>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Venvidrio | Defectos</title>
+
+
+<link rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+
+
+<link rel="stylesheet"
+href="../assets/css/shared.css">
+
+<link rel="stylesheet"
+href="../assets/css/defectos.css">
+
+
 </head>
+
+
 <body>
 
+
+
+<!-- ================= NAVBAR ================= -->
+
 <nav class="navbar">
-  <div class="nav-brand">VENV<span>IDRIO</span></div>
-  <ul class="nav-links">
-    <li>
-            <a class="active" href="../public/dashboard.html">
-                <i class="ti ti-layout-dashboard"></i>
-                Panel Principal
-    <li><a href="../pages/produccion.html"><i class="ti ti-building-factory-2"></i> Producción</a></li>
-    <li><a href="../pages/defectos.html" class="active"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
-    <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
-    <li><a href="../pages/auditoria.html"><i class="ti ti-clipboard-check"></i> Auditoría</a></li>
-  </ul>
-  <div class="nav-user">
-    <div class="nav-avatar">JR</div>
-    <span class="nav-username">J. Ramírez</span>
-  </div>
+
+
+<div class="nav-brand">
+    VENV<span>IDRIO</span>
+</div>
+
+
+
+<ul class="nav-links">
+
+
+<li>
+<a href="../public/dashboard.html">
+
+<i class="ti ti-layout-dashboard"></i>
+Panel Principal
+
+</a>
+</li>
+
+
+
+<li>
+
+<a href="../pages/produccion.html">
+
+<i class="ti ti-building-factory-2"></i>
+Producción
+
+</a>
+
+</li>
+
+
+
+
+<li>
+
+<a class="active" href="../pages/defectos.html">
+
+<i class="ti ti-alert-triangle"></i>
+Defectos
+
+</a>
+
+</li>
+
+
+
+
+<li>
+
+<a href="../pages/etiquetas.html">
+
+<i class="ti ti-qrcode"></i>
+Etiquetas y QR
+
+</a>
+
+</li>
+
+
+
+
+<li>
+
+<a href="../pages/auditoria.html">
+
+<i class="ti ti-clipboard-check"></i>
+Auditoría
+
+</a>
+
+</li>
+
+
+</ul>
+
+
+
+
+<div class="nav-user">
+
+<div class="nav-avatar">
+GR
+</div>
+
+
+<span class="nav-username">
+G. Ramírez
+</span>
+
+
+</div>
+
+
 </nav>
+
+
+
+
 
 <main class="page">
 
-  <div class="page-header">
-    <h1>Registro de Defectos</h1>
-    <p>Clasificación, trazabilidad y análisis de no conformidades en vidrio</p>
-  </div>
 
-  <div class="stats-grid">
-    <div class="stat-card" style="animation-delay:0.05s">
-      <div class="stat-label">Defectos Hoy</div>
-      <div class="stat-value danger">38</div>
-      <div class="stat-sub">+12 vs. ayer</div>
-    </div>
-    <div class="stat-card" style="animation-delay:0.1s">
-      <div class="stat-label">Críticos</div>
-      <div class="stat-value danger">7</div>
-      <div class="stat-sub">Requieren acción inmediata</div>
-    </div>
-    <div class="stat-card" style="animation-delay:0.15s">
-      <div class="stat-label">Mayores</div>
-      <div class="stat-value warning">14</div>
-      <div class="stat-sub">En revisión</div>
-    </div>
-    <div class="stat-card" style="animation-delay:0.2s">
-      <div class="stat-label">Menores</div>
-      <div class="stat-value" style="color:var(--navy)">17</div>
-      <div class="stat-sub">Monitoreo continuo</div>
-    </div>
-  </div>
 
-  <div class="def-layout">
 
-    <!-- Formulario -->
-    <div class="card anim-card" style="animation-delay:0.2s">
-      <div class="card-header">
-        <div class="card-title"><i class="ti ti-bug"></i> Registrar Defecto</div>
-      </div>
-      <div class="card-body">
-        <div class="grid-2">
-          <div class="field">
-            <label>Lote Afectado</label>
-            <input type="text" id="d-lote" placeholder="VV-2024-XXXX" />
-          </div>
-          <div class="field">
-            <label>Tipo de Defecto</label>
-            <select id="d-tipo">
-              <option value="">Seleccionar</option>
-              <option>Burbuja / Inclusión</option>
-              <option>Rayadura Superficial</option>
-              <option>Fractura / Grieta</option>
-              <option>Deformación Geométrica</option>
-              <option>Mancha / Contaminación</option>
-              <option>Espesor fuera de tolerancia</option>
-              <option>Delaminación</option>
-              <option>Ondulación</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Clasificación</label>
-            <select id="d-clase">
-              <option value="">Seleccionar</option>
-              <option value="critico">Crítico</option>
-              <option value="mayor">Mayor</option>
-              <option value="menor">Menor</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Cantidad de piezas</label>
-            <input type="number" id="d-qty" placeholder="0" min="1" />
-          </div>
-          <div class="field">
-            <label>Zona de Detección</label>
-            <select id="d-zona">
-              <option value="">Seleccionar</option>
-              <option>Entrada de horno</option>
-              <option>Salida de horno</option>
-              <option>Mesa de corte</option>
-              <option>Inspección final</option>
-              <option>Empaque</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Inspector</label>
-            <input type="text" id="d-inspector" placeholder="Nombre" />
-          </div>
-        </div>
 
-        <!-- Selector visual de zona en vidrio -->
-        <div class="field" style="margin-top:0.5rem">
-          <label>Ubicación en la pieza</label>
-          <div class="glass-map">
-            <div class="glass-panel" id="glass-panel">
-              <div class="glass-overlay">Clic para marcar defecto</div>
-              <div class="glass-markers" id="glass-markers"></div>
-            </div>
-            <div class="glass-legend">
-              <span class="dot dot-critico"></span> Crítico
-              <span class="dot dot-mayor"></span> Mayor
-              <span class="dot dot-menor"></span> Menor
-            </div>
-          </div>
-        </div>
+<div class="page-header">
 
-        <div class="field">
-          <label>Descripción y causa probable</label>
-          <textarea id="d-desc" placeholder="Describe el defecto y su posible origen..."></textarea>
-        </div>
+<h1>
+Registro de Defectos
+</h1>
 
-        <div class="flex gap-2" style="margin-top:0.5rem">
-          <button class="btn btn-primary" id="btn-def"><i class="ti ti-device-floppy"></i> Registrar Defecto</button>
-          <button class="btn btn-outline" id="btn-def-clear"><i class="ti ti-eraser"></i> Limpiar</button>
-        </div>
-        <div class="toast-success" id="toast-def">
-          <i class="ti ti-circle-check"></i> Defecto registrado correctamente
-        </div>
-      </div>
-    </div>
 
-    <!-- Distribución visual -->
-    <div class="def-right">
-      <div class="card anim-card" style="animation-delay:0.25s">
-        <div class="card-header">
-          <div class="card-title"><i class="ti ti-chart-donut"></i> Distribución</div>
-        </div>
-        <div class="card-body">
-          <div class="dist-bars" id="dist-bars"></div>
-        </div>
-      </div>
+<p>
+Clasificación, trazabilidad y análisis de no conformidades en vidrio
+</p>
 
-      <div class="card anim-card" style="animation-delay:0.3s; margin-top:1rem">
-        <div class="card-header">
-          <div class="card-title"><i class="ti ti-flame"></i> Top Defectos</div>
-        </div>
-        <div class="card-body" style="padding:0">
-          <div id="top-defectos"></div>
-        </div>
-      </div>
-    </div>
 
-  </div><!-- /def-layout -->
+</div>
 
-  <!-- Tabla -->
-  <div class="card anim-card" style="animation-delay:0.35s; margin-top:1.5rem">
-    <div class="card-header">
-      <div class="card-title"><i class="ti ti-list-details"></i> Historial de Defectos</div>
-      <div class="flex gap-2">
-        <select id="filtro-clase" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none">
-          <option value="">Todos</option>
-          <option value="Crítico">Críticos</option>
-          <option value="Mayor">Mayores</option>
-          <option value="Menor">Menores</option>
-        </select>
-        <button class="btn btn-outline btn-sm"><i class="ti ti-download"></i> Exportar</button>
-      </div>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Lote</th>
-            <th>Tipo</th>
-            <th>Clasificación</th>
-            <th>Piezas</th>
-            <th>Zona</th>
-            <th>Inspector</th>
-            <th>Hora</th>
-            <th>Acción</th>
-          </tr>
-        </thead>
-        <tbody id="tabla-def"></tbody>
-      </table>
-    </div>
-  </div>
+
+
+
+
+
+<!-- ================= STATS ================= -->
+
+
+<div class="stats-grid">
+
+
+
+<div class="stat-card">
+
+<div class="stat-label">
+Defectos Registrados
+</div>
+
+
+<div class="stat-value danger"
+id="total-defectos">
+0
+</div>
+
+
+<div class="stat-sub">
+Total sistema
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="stat-card">
+
+<div class="stat-label">
+Críticos
+</div>
+
+
+<div class="stat-value danger"
+id="defectos-criticos">
+0
+</div>
+
+
+<div class="stat-sub">
+Acción inmediata
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="stat-card">
+
+<div class="stat-label">
+Mayores
+</div>
+
+
+<div class="stat-value warning"
+id="defectos-mayores">
+0
+</div>
+
+
+<div class="stat-sub">
+En revisión
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="stat-card">
+
+<div class="stat-label">
+Menores
+</div>
+
+
+<div class="stat-value"
+id="defectos-menores">
+
+0
+
+</div>
+
+
+<div class="stat-sub">
+Monitoreo
+</div>
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<div class="def-layout">
+
+
+
+
+
+
+
+<!-- ================= FORMULARIO ================= -->
+
+
+<div class="card anim-card">
+
+
+<div class="card-header">
+
+
+<div class="card-title">
+
+<i class="ti ti-bug"></i>
+
+Registrar Defecto
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="card-body">
+
+
+<div class="grid-2">
+
+
+
+<div class="field">
+
+<label>
+Lote afectado
+</label>
+
+
+<input 
+id="d-lote"
+type="text"
+placeholder="VV-2026-001">
+
+
+</div>
+
+
+
+
+
+<div class="field">
+
+<label>
+Tipo defecto
+</label>
+
+
+<select id="d-tipo">
+
+
+<option value="">
+Seleccionar
+</option>
+
+
+<option>
+Burbuja / Inclusión
+</option>
+
+
+<option>
+Rayadura Superficial
+</option>
+
+
+<option>
+Fractura / Grieta
+</option>
+
+
+<option>
+Deformación Geométrica
+</option>
+
+
+<option>
+Mancha / Contaminación
+</option>
+
+
+<option>
+Delaminación
+</option>
+
+
+<option>
+Ondulación
+</option>
+
+
+</select>
+
+
+</div>
+
+
+
+
+
+
+
+<div class="field">
+
+<label>
+Clasificación
+</label>
+
+
+<select id="d-clase">
+
+
+<option value="">
+Seleccionar
+</option>
+
+
+<option value="Crítico">
+Crítico
+</option>
+
+
+<option value="Mayor">
+Mayor
+</option>
+
+
+<option value="Menor">
+Menor
+</option>
+
+
+</select>
+
+
+</div>
+
+
+
+
+
+
+
+<div class="field">
+
+
+<label>
+Cantidad piezas
+</label>
+
+
+<input 
+id="d-qty"
+type="number"
+min="1">
+
+
+</div>
+
+
+
+
+
+
+
+<div class="field">
+
+
+<label>
+Zona detección
+</label>
+
+
+<select id="d-zona">
+
+
+<option value="">
+Seleccionar
+</option>
+
+
+<option>
+Entrada horno
+</option>
+
+
+<option>
+Salida horno
+</option>
+
+
+<option>
+Mesa de corte
+</option>
+
+
+<option>
+Inspección final
+</option>
+
+
+<option>
+Empaque
+</option>
+
+
+</select>
+
+
+</div>
+
+
+
+
+
+
+<div class="field">
+
+
+<label>
+Inspector
+</label>
+
+
+<input
+id="d-inspector"
+type="text">
+
+
+</div>
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div class="field">
+
+
+<label>
+Descripción
+</label>
+
+
+<textarea
+id="d-desc">
+</textarea>
+
+
+</div>
+
+
+
+
+
+
+<div class="flex gap-2">
+
+
+<button 
+class="btn btn-primary"
+id="btn-def">
+
+<i class="ti ti-device-floppy"></i>
+
+Registrar
+
+
+</button>
+
+
+
+
+
+<button
+class="btn btn-outline"
+id="btn-def-clear">
+
+
+<i class="ti ti-eraser"></i>
+
+Limpiar
+
+
+</button>
+
+
+</div>
+
+
+
+
+
+<div class="toast-success"
+id="toast-def">
+
+<i class="ti ti-circle-check"></i>
+
+Defecto registrado
+
+</div>
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+<!-- ================= DERECHA ================= -->
+
+
+<div class="def-right">
+
+
+
+<div class="card">
+
+
+<div class="card-header">
+
+<div class="card-title">
+
+<i class="ti ti-chart-donut"></i>
+
+Distribución
+
+</div>
+
+
+</div>
+
+
+
+<div class="card-body">
+
+
+<div 
+id="dist-bars"
+class="dist-bars">
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="card"
+style="margin-top:1rem">
+
+
+<div class="card-header">
+
+
+<div class="card-title">
+
+<i class="ti ti-flame"></i>
+
+Top defectos
+
+</div>
+
+
+</div>
+
+
+
+<div class="card-body"
+id="top-defectos">
+
+
+</div>
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<!-- ================= TABLA ================= -->
+
+
+<div class="card"
+style="margin-top:1.5rem">
+
+
+<div class="card-header">
+
+
+<div class="card-title">
+
+<i class="ti ti-list-details"></i>
+
+Historial
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="table-wrap">
+
+
+<table>
+
+
+<thead>
+
+
+<tr>
+
+<th>
+Lote
+</th>
+
+
+<th>
+Tipo
+</th>
+
+
+<th>
+Clasificación
+</th>
+
+
+<th>
+Piezas
+</th>
+
+
+<th>
+Zona
+</th>
+
+
+<th>
+Inspector
+</th>
+
+
+<th>
+Fecha
+</th>
+
+
+</tr>
+
+
+</thead>
+
+
+
+<tbody id="tabla-def">
+
+
+</tbody>
+
+
+
+</table>
+
+
+
+</div>
+
+
+</div>
+
+
+
+
 
 </main>
 
-<script src="js/defectos.js"></script>
+
+
+
+
+
+<script src="../assets/js/defectos.js"></script>
+
+
 </body>
+
+
 </html>
