@@ -1,6 +1,5 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.sql import func
-
 from app.database.connection import Base
 
 
@@ -41,6 +40,31 @@ class Produccion(Base):
     )
 
     observaciones = Column(Text)
+
+    # ========================================================
+    # CAMBIO: CLIENTE COMO LLAVE FORÁNEA
+    # ========================================================
+    cliente_id = Column(
+        Integer,
+        ForeignKey("clientes.id"),
+        nullable=True
+    )
+    # ========================================================
+
+    molde = Column(
+        String(100),
+        nullable=True
+    )
+    
+    item = Column(
+        String(50),
+        nullable=True
+    )
+
+    fecha_produccion = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
 
     fecha_registro = Column(
         DateTime(timezone=True),

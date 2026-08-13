@@ -15,11 +15,11 @@
   <div class="nav-brand">VENV<span>IDRIO</span></div>
   <ul class="nav-links">
     <li>
-    <a href="../public/dashboard.html">
+      <a href="../public/dashboard.html">
         <i class="ti ti-layout-dashboard"></i>
         Panel Principal
-    </a>
-</li>
+      </a>
+    </li>
     <li><a href="../pages/produccion.html" class="active"><i class="ti ti-building-factory-2"></i> Producción</a></li>
     <li><a href="../pages/defectos.html"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
     <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
@@ -35,100 +35,138 @@
 <main class="page">
 
   <div class="page-header">
-    <h1>Producción</h1>
-    <p>Control de lotes, líneas y rendimiento de fabricación — Turno actual: <strong>Matutino</strong></p>
+    <h1>Registro de Producción</h1>
+    <p>Complete la información del lote producido</p>
   </div>
 
-  <!-- Métricas -->
+  <div class="ultima-actualizacion" style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-hint);margin-bottom:1rem;">
+    <i class="ti ti-clock"></i>
+    Última actualización: <span id="ultima-actualizacion">--:--:--</span>
+    <button class="btn-refresh" onclick="window.recargarProduccion()" title="Recargar datos (Ctrl+R)" style="background:none;border:none;cursor:pointer;color:var(--text-hint);padding:2px 6px;border-radius:4px;transition:all var(--transition);font-size:14px;">
+      <i class="ti ti-refresh"></i>
+    </button>
+  </div>
+
+  <!-- MÉTRICAS -->
   <div class="stats-grid">
     <div class="stat-card" style="animation-delay:0.05s">
       <div class="stat-label">Lotes Hoy</div>
-      <div class="stat-value" id="cnt-lotes">24</div>
-      <div class="stat-sub">+3 respecto ayer</div>
+      <div class="stat-value" id="cnt-lotes"><span class="skeleton"></span></div>
+      <div class="stat-sub">Cargando...</div>
     </div>
     <div class="stat-card" style="animation-delay:0.1s">
       <div class="stat-label">Unidades Producidas</div>
-      <div class="stat-value" id="cnt-unidades">1 840</div>
-      <div class="stat-sub">Meta: 2 000</div>
+      <div class="stat-value" id="cnt-unidades"><span class="skeleton"></span></div>
+      <div class="stat-sub" id="sub-unidades">Total producción</div>
     </div>
     <div class="stat-card" style="animation-delay:0.15s">
       <div class="stat-label">Eficiencia</div>
-      <div class="stat-value warning" id="cnt-eficiencia">92%</div>
-      <div class="stat-sub">Línea A y B activas</div>
+      <div class="stat-value warning" id="cnt-eficiencia"><span class="skeleton"></span></div>
+      <div class="stat-sub" id="estado-lineas">Cargando líneas...</div>
     </div>
     <div class="stat-card" style="animation-delay:0.2s">
       <div class="stat-label">Rechazos</div>
-      <div class="stat-value danger" id="cnt-rechazos">38</div>
-      <div class="stat-sub">2.06% del total</div>
+      <div class="stat-value danger" id="cnt-rechazos"><span class="skeleton"></span></div>
+      <div class="stat-sub" id="pct-rechazos">0% del total</div>
     </div>
   </div>
 
   <div class="prod-layout">
 
-    <!-- Formulario nuevo lote -->
+    <!-- FORMULARIO NUEVO LOTE -->
     <div class="card anim-card" style="animation-delay:0.2s">
       <div class="card-header">
-        <div class="card-title"><i class="ti ti-plus"></i> Registrar Lote</div>
+        <div class="card-title"><i class="ti ti-file-description"></i> Registro de Lote</div>
+        <span class="badge badge-info">Nuevo</span>
       </div>
       <div class="card-body">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:1rem;">
+          <i class="ti ti-info-circle" style="color:var(--navy);"></i>
+          Complete los campos para registrar un nuevo lote de producción. El código se genera automáticamente.
+        </p>
+
         <div class="grid-2">
           <div class="field">
+            <label for="linea">Línea de Producción *</label>
+            <select id="linea" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;">
+              <option value="">Seleccionar</option>
+              <option value="Línea A — Corte">Línea A — Corte</option>
+              <option value="Línea B — Templado">Línea B — Templado</option>
+              <option value="Línea C — Laminado">Línea C — Laminado</option>
+              <option value="Línea D — Serigrafía">Línea D — Serigrafía</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="producto">Tipo de Producto *</label>
+            <select id="producto" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;">
+              <option value="">Seleccionar</option>
+              <option value="Vidrio Templado 6mm">Vidrio Templado 6mm</option>
+              <option value="Vidrio Laminado 8mm">Vidrio Laminado 8mm</option>
+              <option value="Vidrio Reflectivo">Vidrio Reflectivo</option>
+              <option value="Vidrio Serigrafiado">Vidrio Serigrafiado</option>
+              <option value="Vidrio Curvo">Vidrio Curvo</option>
+            </select>
+          </div>
+
+          <div class="field">
             <label for="lote-id">Código de Lote</label>
-            <input type="text" id="lote-id" placeholder="VV-2024-XXXX" />
+            <input type="text" id="lote-id" placeholder="PROD-2026-0001" disabled style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:#f5f5f5;cursor:not-allowed;color:var(--text-muted);" />
+            <small style="font-size:10px;color:var(--text-hint);">Se genera automáticamente</small>
           </div>
+
           <div class="field">
-            <label for="linea">Línea de Producción</label>
-            <select id="linea">
+            <label for="fecha-prod">Fecha</label>
+            <input type="date" id="fecha-prod" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
+          </div>
+
+          <div class="field">
+            <label for="turno">Turno *</label>
+            <select id="turno" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;">
               <option value="">Seleccionar</option>
-              <option>Línea A — Corte</option>
-              <option>Línea B — Templado</option>
-              <option>Línea C — Laminado</option>
-              <option>Línea D — Serigrafía</option>
+              <option value="Matutino 06:00–14:00">Matutino 06:00–14:00</option>
+              <option value="Vespertino 14:00–22:00">Vespertino 14:00–22:00</option>
+              <option value="Nocturno 22:00–06:00">Nocturno 22:00–06:00</option>
             </select>
           </div>
+
           <div class="field">
-            <label for="producto">Tipo de Producto</label>
-            <select id="producto">
-              <option value="">Seleccionar</option>
-              <option>Vidrio Templado 6mm</option>
-              <option>Vidrio Laminado 8mm</option>
-              <option>Vidrio Reflectivo</option>
-              <option>Vidrio Serigrafiado</option>
-              <option>Vidrio Curvo</option>
+            <label for="operador">Operador *</label>
+            <input type="text" id="operador" placeholder="Nombre completo" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
+          </div>
+
+          <div class="field">
+            <label for="cantidad">Cantidad (unidades) *</label>
+            <input type="number" id="cantidad" placeholder="0" min="1" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
+          </div>
+
+          <!-- NUEVO CAMPO CLIENTE -->
+          <div class="field">
+            <label for="cliente">Cliente Destino *</label>
+            <select id="cliente" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;">
+              <option value="">Seleccionar cliente...</option>
             </select>
           </div>
-          <div class="field">
-            <label for="cantidad">Cantidad (unidades)</label>
-            <input type="number" id="cantidad" placeholder="0" min="1" />
-          </div>
-          <div class="field">
-            <label for="operador">Operador</label>
-            <input type="text" id="operador" placeholder="Nombre completo" />
-          </div>
-          <div class="field">
-            <label for="turno">Turno</label>
-            <select id="turno">
-              <option>Matutino 06:00–14:00</option>
-              <option>Vespertino 14:00–22:00</option>
-              <option>Nocturno 22:00–06:00</option>
-            </select>
-          </div>
+          <!-- FIN NUEVO CAMPO -->
         </div>
+
         <div class="field">
           <label for="obs-prod">Observaciones</label>
-          <textarea id="obs-prod" placeholder="Notas adicionales del lote..."></textarea>
+          <textarea id="obs-prod" placeholder="Notas adicionales del lote (opcional)..." rows="3" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;resize:vertical;min-height:60px;"></textarea>
         </div>
+
         <div class="flex gap-2" style="margin-top:0.5rem">
           <button class="btn btn-primary" id="btn-registrar"><i class="ti ti-device-floppy"></i> Guardar Lote</button>
           <button class="btn btn-outline" id="btn-limpiar"><i class="ti ti-eraser"></i> Limpiar</button>
         </div>
+
         <div class="toast-success" id="toast-prod">
           <i class="ti ti-circle-check"></i> Lote registrado correctamente
         </div>
       </div>
     </div>
 
-    <!-- Barra de progreso líneas -->
+    <!-- ESTADO DE LÍNEAS -->
     <div class="card anim-card" style="animation-delay:0.3s">
       <div class="card-header">
         <div class="card-title"><i class="ti ti-chart-bar"></i> Estado de Líneas</div>
@@ -136,22 +174,81 @@
       </div>
       <div class="card-body">
         <div class="lineas-list" id="lineas-list">
-          <!-- generado por JS -->
+          <!-- JavaScript generará dinámicamente -->
+        </div>
+        <div style="margin-top:0.75rem;padding:8px 12px;background:var(--off-white);border-radius:var(--radius-sm);font-size:11px;color:var(--text-hint);">
+          <i class="ti ti-info-circle"></i>
+          Porcentaje de producción por línea
         </div>
       </div>
     </div>
 
-  </div><!-- /prod-layout -->
+  </div>
 
-  <!-- Tabla de lotes -->
+  <!-- TABLA DE LOTES CON FILTROS -->
   <div class="card anim-card" style="animation-delay:0.35s; margin-top:1.5rem">
     <div class="card-header">
-      <div class="card-title"><i class="ti ti-list-details"></i> Lotes del Turno</div>
-      <div class="flex gap-2">
+      <div class="card-title"><i class="ti ti-list-details"></i> Historial de Producción</div>
+      <div class="flex gap-2" style="flex-wrap:wrap;">
         <input type="text" id="buscar-lote" placeholder="Buscar lote..." style="padding:6px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;outline:none;width:200px" />
-        <button class="btn btn-outline btn-sm"><i class="ti ti-download"></i> Exportar</button>
+        <button class="btn btn-outline btn-sm" id="btn-exportar-csv"><i class="ti ti-file-spreadsheet"></i> CSV</button>
+        <button class="btn btn-success btn-sm" id="btn-exportar-excel"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+        <button class="btn btn-danger btn-sm" id="btn-exportar-pdf"><i class="ti ti-file-pdf"></i> PDF</button>
       </div>
     </div>
+
+    <div class="filtros-bar" style="padding:1rem 1.5rem;background:var(--off-white);border-bottom:1px solid var(--border)">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px,1fr));gap:10px;align-items:end">
+        <div class="field" style="margin:0">
+          <label for="filtro-codigo" style="font-size:11px;font-weight:600;color:var(--text-hint)">Código</label>
+          <input type="text" id="filtro-codigo" placeholder="Buscar código..." style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white" />
+        </div>
+        <div class="field" style="margin:0">
+          <label for="filtro-producto" style="font-size:11px;font-weight:600;color:var(--text-hint)">Producto</label>
+          <select id="filtro-producto" style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0">
+          <label for="filtro-linea" style="font-size:11px;font-weight:600;color:var(--text-hint)">Línea</label>
+          <select id="filtro-linea" style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0">
+          <label for="filtro-operador" style="font-size:11px;font-weight:600;color:var(--text-hint)">Operador</label>
+          <select id="filtro-operador" style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0">
+          <label for="filtro-turno" style="font-size:11px;font-weight:600;color:var(--text-hint)">Turno</label>
+          <select id="filtro-turno" style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0">
+          <label for="filtro-fecha-desde" style="font-size:11px;font-weight:600;color:var(--text-hint)">Desde</label>
+          <input type="date" id="filtro-fecha-desde" style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white" />
+        </div>
+        <div class="field" style="margin:0">
+          <label for="filtro-fecha-hasta" style="font-size:11px;font-weight:600;color:var(--text-hint)">Hasta</label>
+          <input type="date" id="filtro-fecha-hasta" style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white" />
+        </div>
+        <div style="display:flex;gap:6px;align-items:end">
+          <button class="btn btn-primary btn-sm" id="btn-aplicar-filtros" style="padding:6px 16px;font-size:12px">
+            <i class="ti ti-search"></i> Filtrar
+          </button>
+          <button class="btn btn-outline btn-sm" id="btn-limpiar-filtros" style="padding:6px 12px;font-size:12px">
+            <i class="ti ti-x"></i>
+          </button>
+        </div>
+      </div>
+      <div style="margin-top:6px;font-size:11px;color:var(--text-hint)">
+        <span id="filtro-resultados">📋 Mostrando todos los lotes</span>
+      </div>
+    </div>
+
     <div class="table-wrap">
       <table>
         <thead>
@@ -161,18 +258,26 @@
             <th>Línea</th>
             <th>Operador</th>
             <th>Unidades</th>
-            <th>Rechazos</th>
-            <th>Estado</th>
-            <th>Hora</th>
+            <th>Turno</th>
+            <th>Fecha</th>
+            <th style="text-align:center;min-width:120px;">Acciones</th>
           </tr>
         </thead>
-        <tbody id="tabla-lotes"></tbody>
+        <tbody id="tabla-lotes">
+          <!-- JavaScript generará dinámicamente -->
+        </tbody>
       </table>
     </div>
   </div>
 
 </main>
 
+<footer class="footer" style="text-align:center;padding:1.5rem;color:var(--text-muted);border-top:1px solid var(--border);margin-top:1.5rem;">
+  <p style="font-size:12px;">© 2026 Venvidrio - Sistema de Control de Calidad</p>
+</footer>
+
+<!-- JavaScript separado -->
 <script src="../assets/js/produccion.js" defer></script>
+
 </body>
 </html>

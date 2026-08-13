@@ -8,6 +8,9 @@ class Auditoria(Base):
     __tablename__ = "auditorias"
 
     id = Column(Integer, primary_key=True, index=True)
+    
+    # NUEVO CAMPO: Código de auditoría (ej: AUD-2026-0001)
+    codigo = Column(String(20), unique=True, nullable=False, index=True)
 
     tipo_auditoria = Column(String(100), nullable=False)
 

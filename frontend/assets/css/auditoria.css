@@ -1,6 +1,14 @@
-/* auditoria.css */
+/* ==========================================
+   AUDITORIA.CSS - Estilos para módulo de auditoría
+   ========================================== */
 
-.anim-card { animation: fade-up 0.5s ease both; }
+/* ------------------------------------------
+   1. ANIMACIONES Y LAYOUT PRINCIPAL
+   ------------------------------------------ */
+
+.anim-card {
+  animation: fade-up 0.5s ease both;
+}
 
 .aud-layout {
   display: grid;
@@ -9,9 +17,38 @@
   margin-bottom: 1.5rem;
 }
 
-.aud-right { display: flex; flex-direction: column; }
+.aud-right {
+  display: flex;
+  flex-direction: column;
+}
 
-/* ---- Barra de progreso ---- */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+
+/* ------------------------------------------
+   2. BARRA DE PROGRESO
+   ------------------------------------------ */
+
 .aud-progress-track {
   height: 10px;
   background: var(--off-white);
@@ -24,18 +61,25 @@
   height: 100%;
   background: var(--navy);
   border-radius: 99px;
-  transition: width 0.6s cubic-bezier(0.4,0,0.2,1), background 0.4s ease;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s ease;
 }
 
-.aud-progress-fill.complete { background: var(--success); }
+.aud-progress-fill.complete {
+  background: var(--success);
+}
 
-/* ---- Checklist ---- */
+
+/* ------------------------------------------
+   3. CHECKLIST
+   ------------------------------------------ */
+
 .checklist-body {
   padding: 1rem 0;
   max-height: 420px;
   overflow-y: auto;
 }
 
+/* 3.1 Secciones del checklist */
 .chk-section {
   padding: 0 1.5rem;
   margin-bottom: 0.75rem;
@@ -51,6 +95,7 @@
   margin-top: 4px;
 }
 
+/* 3.2 Items del checklist */
 .chk-item {
   display: flex;
   align-items: flex-start;
@@ -64,12 +109,29 @@
   position: relative;
 }
 
-.chk-item:hover { background: var(--off-white); border-color: var(--border); }
+.chk-item:hover {
+  background: var(--off-white);
+  border-color: var(--border);
+}
 
-.chk-item.ok     { background: #f0fdf4; border-color: #bbf7d0; }
-.chk-item.nc     { background: #fef2f2; border-color: #fecaca; }
-.chk-item.na     { background: var(--off-white); border-color: var(--border); opacity: 0.6; }
+/* Estados del checklist */
+.chk-item.ok {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
 
+.chk-item.nc {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.chk-item.na {
+  background: var(--off-white);
+  border-color: var(--border);
+  opacity: 0.6;
+}
+
+/* 3.3 Check del item */
 .chk-check {
   width: 20px;
   height: 20px;
@@ -84,11 +146,27 @@
   margin-top: 1px;
 }
 
-.chk-item.ok .chk-check { background: var(--success); border-color: var(--success); color: white; }
-.chk-item.nc .chk-check { background: var(--danger); border-color: var(--danger); color: white; }
-.chk-item.na .chk-check { background: var(--border); border-color: var(--border); }
+.chk-item.ok .chk-check {
+  background: var(--success);
+  border-color: var(--success);
+  color: white;
+}
 
-.chk-text { flex: 1; }
+.chk-item.nc .chk-check {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
+}
+
+.chk-item.na .chk-check {
+  background: var(--border);
+  border-color: var(--border);
+}
+
+/* 3.4 Texto del item */
+.chk-text {
+  flex: 1;
+}
 
 .chk-label {
   font-size: 13px;
@@ -102,6 +180,7 @@
   margin-top: 2px;
 }
 
+/* 3.5 Acciones (botones) */
 .chk-actions {
   display: flex;
   gap: 4px;
@@ -110,7 +189,9 @@
   transition: opacity var(--transition);
 }
 
-.chk-item:hover .chk-actions { opacity: 1; }
+.chk-item:hover .chk-actions {
+  opacity: 1;
+}
 
 .chk-btn {
   width: 26px;
@@ -127,15 +208,37 @@
   font-weight: 600;
 }
 
-.chk-btn.ok-btn  { color: var(--success); }
-.chk-btn.nc-btn  { color: var(--danger); }
-.chk-btn.na-btn  { color: var(--text-hint); }
+.chk-btn.ok-btn {
+  color: var(--success);
+}
 
-.chk-btn:hover.ok-btn  { background: #d1fae5; border-color: var(--success); }
-.chk-btn:hover.nc-btn  { background: #fee2e2; border-color: var(--danger); }
-.chk-btn:hover.na-btn  { background: var(--off-white); }
+.chk-btn.nc-btn {
+  color: var(--danger);
+}
 
-/* Footer de checklist */
+.chk-btn.na-btn {
+  color: var(--text-hint);
+}
+
+.chk-btn:hover.ok-btn {
+  background: #d1fae5;
+  border-color: var(--success);
+}
+
+.chk-btn:hover.nc-btn {
+  background: #fee2e2;
+  border-color: var(--danger);
+}
+
+.chk-btn:hover.na-btn {
+  background: var(--off-white);
+}
+
+
+/* ------------------------------------------
+   4. CARD FOOTER
+   ------------------------------------------ */
+
 .card-footer-row {
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--border);
@@ -144,14 +247,20 @@
   align-items: center;
 }
 
-/* No conformidades */
+
+/* ------------------------------------------
+   5. NO CONFORMIDADES
+   ------------------------------------------ */
+
 .nc-item {
   padding: 12px 1.5rem;
   border-bottom: 1px solid var(--border);
   animation: slide-in-right 0.4s ease both;
 }
 
-.nc-item:last-child { border-bottom: none; }
+.nc-item:last-child {
+  border-bottom: none;
+}
 
 .nc-header {
   display: flex;
@@ -160,9 +269,16 @@
   margin-bottom: 4px;
 }
 
-.nc-title { font-size: 13px; font-weight: 600; color: var(--navy); }
+.nc-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+}
 
-.nc-desc { font-size: 12px; color: var(--text-muted); }
+.nc-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
 
 .nc-meta {
   font-size: 11px;
@@ -172,7 +288,11 @@
   gap: 12px;
 }
 
-/* Toast */
+
+/* ------------------------------------------
+   6. TOAST
+   ------------------------------------------ */
+
 .toast-success {
   display: flex;
   align-items: center;
@@ -190,8 +310,318 @@
   pointer-events: none;
 }
 
-.toast-success.show { opacity: 1; transform: translateY(0); }
+.toast-success.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+
+/* ------------------------------------------
+   7. BOTONES DE ACCIÓN (TABLA)
+   ------------------------------------------ */
+
+/* 7.1 Tamaños de botones */
+.btn-xs {
+  padding: 2px 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  border-radius: 4px;
+}
+
+/* 7.2 Botón éxito (Excel) */
+.btn-success {
+  background-color: #28a745;
+  color: white;
+  border: 1px solid #28a745;
+}
+
+.btn-success:hover {
+  background-color: #218838;
+  border-color: #1e7e34;
+}
+
+/* 7.3 Botón peligro (PDF) */
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+  border: 1px solid #dc3545;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+  border-color: #bd2130;
+}
+
+/* 7.4 Botón primario para filtros */
+.btn-primary {
+  background-color: var(--navy);
+  color: white;
+  border: 1px solid var(--navy);
+}
+
+.btn-primary:hover {
+  background-color: #0d1a5c;
+  border-color: #0d1a5c;
+}
+
+/* 7.5 Botón outline */
+.btn-outline {
+  background-color: transparent;
+  color: var(--text-main);
+  border: 1px solid var(--border);
+}
+
+.btn-outline:hover {
+  background-color: var(--off-white);
+  border-color: var(--border-dark);
+}
+
+
+/* ------------------------------------------
+   8. FILTROS
+   ------------------------------------------ */
+
+.filtros-bar {
+  background: var(--off-white);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 1.5rem;
+}
+
+.filtros-bar .field {
+  margin: 0;
+}
+
+.filtros-bar .field label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-hint);
+  display: block;
+  margin-bottom: 3px;
+}
+
+.filtros-bar input,
+.filtros-bar select {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: var(--font-body);
+  outline: none;
+  background: white;
+  transition: border-color var(--transition);
+}
+
+.filtros-bar input:focus,
+.filtros-bar select:focus {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.1);
+}
+
+.filtros-bar .btn-sm {
+  padding: 6px 16px;
+  font-size: 12px;
+}
+
+#filtro-resultados {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+
+/* ------------------------------------------
+   9. UTILIDADES FLEX
+   ------------------------------------------ */
+
+.flex {
+  display: flex;
+}
+
+.flex.gap-1 {
+  gap: 4px;
+}
+
+.flex.gap-2 {
+  gap: 8px;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.w-full {
+  width: 100%;
+}
+
+
+/* ------------------------------------------
+   10. TABLA
+   ------------------------------------------ */
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table-wrap thead th {
+  background: var(--off-white);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table-wrap tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.table-wrap tbody tr {
+  transition: background var(--transition);
+}
+
+.table-wrap tbody tr:hover {
+  background: var(--off-white);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-sm {
+  font-size: 12px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.badge-info {
+  background: #e3f2fd;
+  color: #0d47a1;
+}
+
+.badge-success {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.badge-danger {
+  background: #ffebee;
+  color: #b71c1c;
+}
+
+.badge-warning {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+
+/* ------------------------------------------
+   11. RESPONSIVE
+   ------------------------------------------ */
+
+@media (max-width: 1024px) {
+  .filtros-bar .grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+}
 
 @media (max-width: 900px) {
-  .aud-layout { grid-template-columns: 1fr; }
+  .aud-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .filtros-bar {
+    padding: 0.75rem 1rem;
+  }
+  
+  .filtros-bar .grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  
+  .filtros-bar .btn-sm {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 600px) {
+  .chk-actions {
+    opacity: 1;
+  }
+  
+  .chk-item {
+    flex-wrap: wrap;
+  }
+  
+  .chk-actions {
+    margin-left: auto;
+  }
+  
+  .card-footer-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .filtros-bar .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .table-wrap {
+    font-size: 12px;
+  }
+  
+  .table-wrap thead th,
+  .table-wrap tbody td {
+    padding: 6px 8px;
+  }
+  
+  .btn-xs {
+    padding: 1px 4px;
+    font-size: 9px;
+  }
+}
+
+/* ------------------------------------------
+   12. SCROLLBAR PERSONALIZADA (Checklist)
+   ------------------------------------------ */
+
+.checklist-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.checklist-body::-webkit-scrollbar-track {
+  background: var(--off-white);
+  border-radius: 4px;
+}
+
+.checklist-body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.checklist-body::-webkit-scrollbar-thumb:hover {
+  background: var(--border-dark);
 }

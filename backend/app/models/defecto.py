@@ -11,19 +11,21 @@ class Defecto(Base):
 
     codigo_lote = Column(String(30), nullable=False)
 
+    tipo_producto = Column(String(100), nullable=True)
+
     tipo_defecto = Column(String(100), nullable=False)
 
-    clasificacion = Column(String(30), nullable=False)
+    clasificacion = Column(String(30), nullable=False, default="Menor")
 
-    cantidad_piezas = Column(Integer, nullable=False)
+    cantidad_piezas = Column(Integer, nullable=False, default=1)
 
-    zona_deteccion = Column(String(100), nullable=False)
+    zona_deteccion = Column(String(100), nullable=True)
 
-    inspector = Column(String(100), nullable=False)
+    inspector = Column(String(100), nullable=True)
 
-    descripcion = Column(Text)
+    descripcion = Column(Text, nullable=True)
 
-    ubicacion_pieza = Column(String(50))
+    ubicacion_pieza = Column(String(50), nullable=True)
 
     fecha_registro = Column(
         DateTime(timezone=True),

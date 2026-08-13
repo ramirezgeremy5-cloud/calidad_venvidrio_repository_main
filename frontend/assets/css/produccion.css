@@ -1,4 +1,14 @@
-/* produccion.css */
+/* ==========================================
+   PRODUCCION.CSS - Estilos para módulo de producción
+   ========================================== */
+
+/* ------------------------------------------
+   1. ANIMACIONES Y LAYOUT
+   ------------------------------------------ */
+
+.anim-card {
+  animation: fade-up 0.5s ease both;
+}
 
 .prod-layout {
   display: grid;
@@ -7,11 +17,212 @@
   margin-bottom: 1.5rem;
 }
 
-.anim-card {
-  animation: fade-up 0.5s ease both;
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* Toast */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+
+/* ------------------------------------------
+   2. SKELETON LOADING
+   ------------------------------------------ */
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+  min-height: 28px;
+  min-width: 80px;
+  display: inline-block;
+}
+
+.skeleton-text {
+  height: 14px;
+  width: 100%;
+  margin: 4px 0;
+}
+
+.skeleton-badge {
+  height: 20px;
+  width: 60px;
+  border-radius: 99px;
+}
+
+
+/* ------------------------------------------
+   3. ÚLTIMA ACTUALIZACIÓN
+   ------------------------------------------ */
+
+.ultima-actualizacion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-hint);
+  margin-bottom: 1rem;
+}
+
+.ultima-actualizacion .btn-refresh {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-hint);
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all var(--transition);
+  font-size: 14px;
+}
+
+.ultima-actualizacion .btn-refresh:hover {
+  background: var(--off-white);
+  color: var(--navy);
+  transform: rotate(45deg);
+}
+
+
+/* ------------------------------------------
+   4. MÉTRICAS (STATS)
+   ------------------------------------------ */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow var(--transition), transform var(--transition);
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  transform: translateY(-2px);
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 4px;
+}
+
+.stat-card:nth-child(1)::before { background: var(--navy); }
+.stat-card:nth-child(2)::before { background: #4CAF50; }
+.stat-card:nth-child(3)::before { background: #FF9800; }
+.stat-card:nth-child(4)::before { background: var(--danger); }
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--navy);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  transition: color 0.3s ease;
+}
+
+.stat-value.warning {
+  color: #FF9800;
+}
+
+.stat-value.danger {
+  color: var(--danger);
+}
+
+.stat-value.success {
+  color: var(--success);
+}
+
+.stat-sub {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-hint);
+}
+
+
+/* ------------------------------------------
+   5. TENDENCIAS
+   ------------------------------------------ */
+
+.tendencia {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--off-white);
+  animation: slide-up 0.4s ease both;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.tendencia.up {
+  color: var(--success);
+  background: #e8f5e9;
+}
+
+.tendencia.down {
+  color: var(--danger);
+  background: #ffebee;
+}
+
+.tendencia.neutral {
+  color: var(--text-hint);
+  background: var(--off-white);
+}
+
+
+/* ------------------------------------------
+   6. TOAST
+   ------------------------------------------ */
+
 .toast-success {
   display: flex;
   align-items: center;
@@ -34,12 +245,18 @@
   transform: translateY(0);
 }
 
-/* Líneas de producción */
+
+/* ------------------------------------------
+   7. LÍNEAS DE PRODUCCIÓN
+   ------------------------------------------ */
+
 .linea-item {
   margin-bottom: 1.25rem;
 }
 
-.linea-item:last-child { margin-bottom: 0; }
+.linea-item:last-child {
+  margin-bottom: 0;
+}
 
 .linea-header {
   display: flex;
@@ -73,12 +290,20 @@
   border-radius: 99px;
   background: var(--navy);
   width: 0;
-  transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.progress-bar.warning { background: var(--warning); }
-.progress-bar.danger  { background: var(--danger); }
-.progress-bar.success { background: var(--success); }
+.progress-bar.warning {
+  background: var(--warning);
+}
+
+.progress-bar.danger {
+  background: var(--danger);
+}
+
+.progress-bar.success {
+  background: var(--success);
+}
 
 .linea-meta {
   font-size: 11px;
@@ -86,6 +311,511 @@
   margin-top: 3px;
 }
 
-@media (max-width: 900px) {
-  .prod-layout { grid-template-columns: 1fr; }
+
+/* ------------------------------------------
+   8. TABLA
+   ------------------------------------------ */
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table-wrap thead th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-hint);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--border);
+  background: var(--off-white);
+}
+
+.table-wrap tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  color: var(--text-main);
+}
+
+.table-wrap tbody tr {
+  transition: background var(--transition);
+}
+
+.table-wrap tbody tr:hover {
+  background: var(--off-white);
+}
+
+.table-wrap tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-sm {
+  font-size: 12px;
+}
+
+
+/* ------------------------------------------
+   9. BADGES
+   ------------------------------------------ */
+
+.badge {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.badge-success {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.badge-danger {
+  background: #ffebee;
+  color: #b71c1c;
+}
+
+.badge-info {
+  background: #e3f2fd;
+  color: #0d47a1;
+}
+
+.badge-warning {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.badge-neutral {
+  background: var(--off-white);
+  color: var(--text-muted);
+}
+
+
+/* ------------------------------------------
+   10. BOTONES DE EXPORTACIÓN
+   ------------------------------------------ */
+
+.btn-sm {
+  padding: 4px 12px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn-sm:hover {
+  background: var(--off-white);
+  color: var(--text-main);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.btn-outline:hover {
+  background: var(--off-white);
+  border-color: var(--border-dark);
+}
+
+.btn-success {
+  background-color: #28a745;
+  color: white;
+  border: 1px solid #28a745;
+}
+
+.btn-success:hover {
+  background-color: #218838;
+  border-color: #1e7e34;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+  border: 1px solid #dc3545;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+  border-color: #bd2130;
+}
+
+.btn-primary {
+  background-color: var(--navy);
+  color: white;
+  border: 1px solid var(--navy);
+}
+
+.btn-primary:hover {
+  background-color: #0d1a5c;
+  border-color: #0d1a5c;
+}
+
+.btn-primary i,
+.btn-success i,
+.btn-danger i,
+.btn-outline i {
+  margin-right: 4px;
+}
+
+
+/* ------------------------------------------
+   11. BOTONES PEQUEÑOS EN TABLA (Excel, PDF, Eliminar)
+   ------------------------------------------ */
+
+.btn-xs {
+  padding: 2px 6px;
+  font-size: 11px;
+  line-height: 1.5;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-xs i {
+  font-size: 12px;
+}
+
+.btn-xs:hover {
+  transform: scale(1.05);
+}
+
+.btn-xs.btn-success {
+  background-color: #28a745;
+  color: white;
+  border: 1px solid #28a745;
+}
+
+.btn-xs.btn-success:hover {
+  background-color: #218838;
+  border-color: #1e7e34;
+}
+
+.btn-xs.btn-danger {
+  background-color: #dc3545;
+  color: white;
+  border: 1px solid #dc3545;
+}
+
+.btn-xs.btn-danger:hover {
+  background-color: #c82333;
+  border-color: #bd2130;
+}
+
+
+/* ------------------------------------------
+   12. FORMULARIO
+   ------------------------------------------ */
+
+.field {
+  margin-bottom: 0.75rem;
+}
+
+.field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: var(--font-body);
+  outline: none;
+  transition: border-color var(--transition);
+  background: white;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.1);
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+
+/* ------------------------------------------
+   13. CARDS
+   ------------------------------------------ */
+
+.card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: box-shadow var(--transition);
+}
+
+.card:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--off-white);
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-title i {
+  font-size: 18px;
+  color: var(--navy);
+}
+
+.card-body {
+  padding: 1rem 1.5rem 1.5rem;
+}
+
+.flex {
+  display: flex;
+}
+
+.flex.gap-1 {
+  gap: 4px;
+}
+
+.flex.gap-2 {
+  gap: 8px;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.w-full {
+  width: 100%;
+}
+
+
+/* ------------------------------------------
+   14. FOOTER
+   ------------------------------------------ */
+
+.footer {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  margin-top: 1.5rem;
+}
+
+.footer p {
+  font-size: 12px;
+}
+
+
+/* ------------------------------------------
+   15. RESPONSIVE
+   ------------------------------------------ */
+
+@media (max-width: 1024px) {
+  .prod-layout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .stat-value {
+    font-size: 24px;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .card-header {
+    padding: 0.75rem 1rem;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .card-body {
+    padding: 0.75rem 1rem 1rem;
+  }
+
+  .table-wrap tbody td,
+  .table-wrap thead th {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .ultima-actualizacion {
+    font-size: 10px;
+    gap: 4px;
+  }
+
+  .ultima-actualizacion .btn-refresh {
+    font-size: 12px;
+  }
+
+  .flex.gap-2 {
+    flex-wrap: wrap;
+  }
+
+  .btn-xs {
+    padding: 2px 4px;
+    font-size: 9px;
+  }
+
+  .btn-xs i {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+
+  .tendencia {
+    font-size: 11px;
+    padding: 1px 6px;
+  }
+
+  .card-title {
+    font-size: 13px;
+  }
+
+  .btn-sm {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+
+  .btn-xs {
+    padding: 1px 4px;
+    font-size: 8px;
+  }
+
+  .btn-xs i {
+    font-size: 9px;
+  }
+}
+
+
+/* ------------------------------------------
+   16. SCROLLBAR PERSONALIZADA
+   ------------------------------------------ */
+
+.table-wrap::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-wrap::-webkit-scrollbar-track {
+  background: var(--off-white);
+  border-radius: 4px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb:hover {
+  background: var(--border-dark);
+}
+
+
+/* ------------------------------------------
+   17. EMPTY STATE Y LOADING
+   ------------------------------------------ */
+
+.loading-spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+.loading-placeholder {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 10px 0;
+}
+
+.loading-placeholder i {
+  font-size: 1.2rem;
+  margin-right: 0.5rem;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 20px 0;
+}
+
+.empty-state i {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text-hint);
 }
