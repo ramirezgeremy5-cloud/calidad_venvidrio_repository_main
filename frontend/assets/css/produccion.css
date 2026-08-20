@@ -49,6 +49,11 @@
   100% { background-position: 200% 0; }
 }
 
+@keyframes pulse-timer {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 
 /* ------------------------------------------
    2. SKELETON LOADING
@@ -369,6 +374,10 @@
   font-size: 12px;
 }
 
+.text-center {
+  text-align: center;
+}
+
 
 /* ------------------------------------------
    9. BADGES
@@ -411,7 +420,7 @@
 
 
 /* ------------------------------------------
-   10. BOTONES DE EXPORTACIÓN
+   10. BOTONES
    ------------------------------------------ */
 
 .btn-sm {
@@ -483,7 +492,7 @@
 
 
 /* ------------------------------------------
-   11. BOTONES PEQUEÑOS EN TABLA (Excel, PDF, Eliminar)
+   11. BOTONES PEQUEÑOS EN TABLA
    ------------------------------------------ */
 
 .btn-xs {
@@ -529,6 +538,16 @@
   border-color: #bd2130;
 }
 
+.btn-xs.btn-outline {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.btn-xs.btn-outline:hover {
+  background: var(--off-white);
+}
+
 
 /* ------------------------------------------
    12. FORMULARIO
@@ -570,6 +589,30 @@
 .field textarea {
   resize: vertical;
   min-height: 60px;
+}
+
+.field input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+  color: var(--text-muted);
+}
+
+.field-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+.field-hint i {
+  color: var(--navy);
+  margin-right: 4px;
+}
+
+.field small {
+  font-size: 10px;
+  color: var(--text-hint);
+  display: block;
+  margin-top: 2px;
 }
 
 .grid-2 {
@@ -644,7 +687,55 @@
 
 
 /* ------------------------------------------
-   14. FOOTER
+   14. FILTROS
+   ------------------------------------------ */
+
+.filtros-bar {
+  padding: 1rem 1.5rem;
+  background: var(--off-white);
+  border-bottom: 1px solid var(--border);
+}
+
+.filtros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.filtros-grid .field {
+  margin: 0;
+}
+
+.filtros-actions {
+  display: flex;
+  gap: 6px;
+  align-items: end;
+  padding-bottom: 1px;
+}
+
+.filtros-resultados {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-hint);
+}
+
+.lineas-footer {
+  margin-top: 0.75rem;
+  padding: 8px 12px;
+  background: var(--off-white);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--text-hint);
+}
+
+.lineas-footer i {
+  margin-right: 4px;
+}
+
+
+/* ------------------------------------------
+   15. FOOTER
    ------------------------------------------ */
 
 .footer {
@@ -661,7 +752,212 @@
 
 
 /* ------------------------------------------
-   15. RESPONSIVE
+   16. TIMER FLOTANTE
+   ------------------------------------------ */
+
+.sesion-timer {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'DM Sans', sans-serif;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.sesion-timer i {
+  color: #60a5fa;
+  font-size: 16px;
+}
+
+.sesion-timer .tiempo-restante {
+  color: #fff;
+  font-weight: 600;
+  min-width: 50px;
+  display: inline-block;
+  text-align: center;
+}
+
+.sesion-timer .badge-timer {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.sesion-timer .badge-timer.warning {
+  background: rgba(234, 179, 8, 0.2);
+  color: #eab308;
+}
+
+.sesion-timer .badge-timer.danger {
+  background: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  animation: pulse-timer 1s ease-in-out infinite;
+}
+
+
+/* ========================================================== */
+/* =========== 17. NAVBAR - USUARIO Y DROPDOWN (ACTUALIZADO) = */
+/* ========================================================== */
+
+/* Contenedor principal del usuario (Círculo + Nombre) */
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px 4px 4px;
+  border-radius: 99px;
+  cursor: pointer;
+  position: relative;
+  transition: background var(--transition);
+  user-select: none;
+}
+
+.nav-user:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Avatar en el Navbar */
+.nav-avatar-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%; /* Forma circular */
+  background-color: #1a2436; /* Azul oscuro */
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.nav-user .nav-username {
+  font-size: 13px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+/* Dropdown */
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  background: #fff;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: all var(--transition);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.user-dropdown.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.user-dropdown .dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--off-white);
+}
+
+/* Avatar dentro del dropdown */
+.dropdown-avatar-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #1a2436; /* Azul oscuro */
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.user-dropdown .dropdown-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.user-dropdown .dropdown-email {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.user-dropdown .dropdown-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 12px;
+}
+
+.user-dropdown .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  color: var(--text-main);
+  text-decoration: none;
+  font-size: 13px;
+  transition: background var(--transition);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.user-dropdown .dropdown-item:hover {
+  background: var(--off-white);
+}
+
+.user-dropdown .dropdown-item i {
+  font-size: 16px;
+  color: var(--text-hint);
+  width: 20px;
+  text-align: center;
+}
+
+.user-dropdown .dropdown-item.dropdown-danger {
+  color: var(--danger);
+}
+
+.user-dropdown .dropdown-item.dropdown-danger:hover {
+  background: #ffebee;
+}
+
+.user-dropdown .dropdown-item.dropdown-danger i {
+  color: var(--danger);
+}
+
+
+/* ------------------------------------------
+   18. RESPONSIVE
    ------------------------------------------ */
 
 @media (max-width: 1024px) {
@@ -673,6 +969,10 @@
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.75rem;
+  }
+
+  .filtros-grid {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
 }
 
@@ -728,6 +1028,26 @@
   .btn-xs i {
     font-size: 10px;
   }
+
+  .filtros-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .filtros-actions {
+    grid-column: span 2;
+    justify-content: flex-end;
+  }
+
+  .sesion-timer {
+    bottom: 10px;
+    right: 10px;
+    padding: 8px 12px;
+    font-size: 10px;
+  }
+
+  .sesion-timer .tiempo-restante {
+    min-width: 40px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -761,11 +1081,55 @@
   .btn-xs i {
     font-size: 9px;
   }
+
+  .filtros-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filtros-actions {
+    grid-column: span 1;
+    justify-content: flex-start;
+  }
+
+  /* Ocultar nombre en móviles muy pequeños */
+  .nav-user .nav-username {
+    display: none;
+  }
+
+  .sesion-timer {
+    bottom: 8px;
+    right: 8px;
+    padding: 6px 10px;
+    font-size: 9px;
+    gap: 6px;
+  }
+
+  .sesion-timer .tiempo-restante {
+    min-width: 35px;
+  }
+
+  .sesion-timer .badge-timer {
+    font-size: 8px;
+    padding: 1px 6px;
+  }
+
+  .user-dropdown {
+    right: 0;
+    min-width: 170px;
+  }
+
+  .user-dropdown .dropdown-name {
+    font-size: 13px;
+  }
+
+  .user-dropdown .dropdown-email {
+    font-size: 11px;
+  }
 }
 
 
 /* ------------------------------------------
-   16. SCROLLBAR PERSONALIZADA
+   19. SCROLLBAR PERSONALIZADA
    ------------------------------------------ */
 
 .table-wrap::-webkit-scrollbar {
@@ -788,7 +1152,7 @@
 
 
 /* ------------------------------------------
-   17. EMPTY STATE Y LOADING
+   20. EMPTY STATE Y LOADING
    ------------------------------------------ */
 
 .loading-spinner {

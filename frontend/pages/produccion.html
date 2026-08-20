@@ -24,10 +24,27 @@
     <li><a href="../pages/defectos.html"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
     <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
     <li><a href="../pages/auditoria.html"><i class="ti ti-clipboard-check"></i> Auditoría</a></li>
+    <li><a href="../pages/auditoria_producto.html" class="active"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
   </ul>
-  <div class="nav-user">
-    <div class="nav-avatar">JR</div>
-    <span class="nav-username">J. Ramírez</span>
+
+  <!-- ===== ÁREA DE USUARIO CON DROPDOWN ===== -->
+  <div class="nav-user" id="navUserContainer">
+    <div class="nav-avatar-circle" id="navAvatar">JR</div>
+    <span class="nav-username" id="navUsername">J. Ramírez</span>
+
+    <div class="user-dropdown" id="userDropdown">
+      <div class="dropdown-header">
+        <div class="dropdown-avatar-circle" id="dropdownAvatar">JR</div>
+        <div>
+          <div class="dropdown-name" id="dropdownName">J. Ramírez</div>
+          <div class="dropdown-email" id="dropdownEmail">usuario@email.com</div>
+        </div>
+      </div>
+      <div class="dropdown-divider"></div>
+      <a class="dropdown-item dropdown-danger" id="dropdownLogout">
+        <i class="ti ti-logout"></i> Cerrar Sesión
+      </a>
+    </div>
   </div>
 </nav>
 
@@ -35,7 +52,7 @@
 <main class="page">
 
   <div class="page-header">
-    <h1>Registro de Producción</h1>
+    <h1>Registro de la Producción</h1>
     <p>Complete la información del lote producido</p>
   </div>
 
@@ -82,72 +99,87 @@
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-muted);margin-bottom:1rem;">
           <i class="ti ti-info-circle" style="color:var(--navy);"></i>
-          Complete los campos para registrar un nuevo lote de producción. El código se genera automáticamente.
+          Complete los campos. Si escribe un valor nuevo, quedará registrado para futuras selecciones.
         </p>
 
         <div class="grid-2">
+          
+          <!-- LÍNEA -->
           <div class="field">
             <label for="linea">Línea de Producción *</label>
-            <select id="linea" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;">
-              <option value="">Seleccionar</option>
-              <option value="Línea A — Corte">Línea A — Corte</option>
-              <option value="Línea B — Templado">Línea B — Templado</option>
-              <option value="Línea C — Laminado">Línea C — Laminado</option>
-              <option value="Línea D — Serigrafía">Línea D — Serigrafía</option>
-            </select>
+            <input type="text" id="linea" list="lista-lineas" placeholder="Escriba o seleccione línea..." style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
+            <datalist id="lista-lineas">
+              <!-- Las opciones se cargarán dinámicamente desde el Backend -->
+            </datalist>
           </div>
 
+          <!-- TIPO DE MOLDE -->
           <div class="field">
-            <label for="producto">Tipo de Producto *</label>
-            <select id="producto" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;">
-              <option value="">Seleccionar</option>
-              <option value="Vidrio Templado 6mm">Vidrio Templado 6mm</option>
-              <option value="Vidrio Laminado 8mm">Vidrio Laminado 8mm</option>
-              <option value="Vidrio Reflectivo">Vidrio Reflectivo</option>
-              <option value="Vidrio Serigrafiado">Vidrio Serigrafiado</option>
-              <option value="Vidrio Curvo">Vidrio Curvo</option>
-            </select>
+            <label for="producto">Tipo de Molde *</label>
+            <input type="text" id="producto" list="lista-moldes" placeholder="Escriba o seleccione molde..." style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
+            <datalist id="lista-moldes">
+              <!-- Las opciones se cargarán dinámicamente desde el Backend -->
+            </datalist>
           </div>
 
+          <!-- CÓDIGO DE LOTE -->
           <div class="field">
             <label for="lote-id">Código de Lote</label>
             <input type="text" id="lote-id" placeholder="PROD-2026-0001" disabled style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:#f5f5f5;cursor:not-allowed;color:var(--text-muted);" />
             <small style="font-size:10px;color:var(--text-hint);">Se genera automáticamente</small>
           </div>
 
+          <!-- FECHA -->
           <div class="field">
             <label for="fecha-prod">Fecha</label>
             <input type="date" id="fecha-prod" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
           </div>
 
+          <!-- TURNO -->
           <div class="field">
             <label for="turno">Turno *</label>
-            <select id="turno" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;">
-              <option value="">Seleccionar</option>
-              <option value="Matutino 06:00–14:00">Matutino 06:00–14:00</option>
-              <option value="Vespertino 14:00–22:00">Vespertino 14:00–22:00</option>
-              <option value="Nocturno 22:00–06:00">Nocturno 22:00–06:00</option>
-            </select>
+            <input type="text" id="turno" list="lista-turnos" placeholder="Escriba o seleccione turno..." style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
+            <datalist id="lista-turnos">
+              <!-- Las opciones se cargarán dinámicamente desde el Backend -->
+            </datalist>
           </div>
 
+          <!-- OPERADOR -->
           <div class="field">
             <label for="operador">Operador *</label>
-            <input type="text" id="operador" placeholder="Nombre completo" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
+            <input type="text" id="operador" list="lista-operadores" placeholder="Escriba o seleccione operador..." style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
+            <datalist id="lista-operadores">
+              <!-- Las opciones se cargarán dinámicamente desde el Backend -->
+            </datalist>
           </div>
 
+          <!-- CANTIDAD -->
           <div class="field">
             <label for="cantidad">Cantidad (unidades) *</label>
             <input type="number" id="cantidad" placeholder="0" min="1" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
           </div>
 
-          <!-- NUEVO CAMPO CLIENTE -->
+          <!-- PALETAS -->
+          <div class="field">
+            <label for="paletas">Paletas</label>
+            <input type="number" id="paletas" placeholder="0" min="0" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
+          </div>
+
+          <!-- GRUESAS -->
+          <div class="field">
+            <label for="gruesas">Gruesas</label>
+            <input type="number" id="gruesas" placeholder="0" step="0.1" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
+          </div>
+
+          <!-- CLIENTE -->
           <div class="field">
             <label for="cliente">Cliente Destino *</label>
-            <select id="cliente" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;">
-              <option value="">Seleccionar cliente...</option>
-            </select>
+            <input type="text" id="cliente" list="lista-clientes" placeholder="Escriba o seleccione cliente..." style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
+            <datalist id="lista-clientes">
+              <!-- Las opciones se cargarán dinámicamente desde el Backend -->
+            </datalist>
           </div>
-          <!-- FIN NUEVO CAMPO -->
+          
         </div>
 
         <div class="field">
@@ -162,23 +194,6 @@
 
         <div class="toast-success" id="toast-prod">
           <i class="ti ti-circle-check"></i> Lote registrado correctamente
-        </div>
-      </div>
-    </div>
-
-    <!-- ESTADO DE LÍNEAS -->
-    <div class="card anim-card" style="animation-delay:0.3s">
-      <div class="card-header">
-        <div class="card-title"><i class="ti ti-chart-bar"></i> Estado de Líneas</div>
-        <span class="badge badge-success"><i class="ti ti-circle-dot"></i> En vivo</span>
-      </div>
-      <div class="card-body">
-        <div class="lineas-list" id="lineas-list">
-          <!-- JavaScript generará dinámicamente -->
-        </div>
-        <div style="margin-top:0.75rem;padding:8px 12px;background:var(--off-white);border-radius:var(--radius-sm);font-size:11px;color:var(--text-hint);">
-          <i class="ti ti-info-circle"></i>
-          Porcentaje de producción por línea
         </div>
       </div>
     </div>
@@ -204,28 +219,24 @@
           <input type="text" id="filtro-codigo" placeholder="Buscar código..." style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white" />
         </div>
         <div class="field" style="margin:0">
-          <label for="filtro-producto" style="font-size:11px;font-weight:600;color:var(--text-hint)">Producto</label>
-          <select id="filtro-producto" style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white">
-            <option value="">Todos</option>
-          </select>
+          <label for="filtro-producto" style="font-size:11px;font-weight:600;color:var(--text-hint)">Molde</label>
+          <input type="text" id="filtro-producto" list="filtro-lista-moldes" placeholder="Buscar molde..." style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white" />
+          <datalist id="filtro-lista-moldes"></datalist>
         </div>
         <div class="field" style="margin:0">
           <label for="filtro-linea" style="font-size:11px;font-weight:600;color:var(--text-hint)">Línea</label>
-          <select id="filtro-linea" style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white">
-            <option value="">Todos</option>
-          </select>
+          <input type="text" id="filtro-linea" list="filtro-lista-lineas" placeholder="Buscar línea..." style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white" />
+          <datalist id="filtro-lista-lineas"></datalist>
         </div>
         <div class="field" style="margin:0">
           <label for="filtro-operador" style="font-size:11px;font-weight:600;color:var(--text-hint)">Operador</label>
-          <select id="filtro-operador" style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white">
-            <option value="">Todos</option>
-          </select>
+          <input type="text" id="filtro-operador" list="filtro-lista-operadores" placeholder="Buscar operador..." style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white" />
+          <datalist id="filtro-lista-operadores"></datalist>
         </div>
         <div class="field" style="margin:0">
           <label for="filtro-turno" style="font-size:11px;font-weight:600;color:var(--text-hint)">Turno</label>
-          <select id="filtro-turno" style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white">
-            <option value="">Todos</option>
-          </select>
+          <input type="text" id="filtro-turno" list="filtro-lista-turnos" placeholder="Buscar turno..." style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white" />
+          <datalist id="filtro-lista-turnos"></datalist>
         </div>
         <div class="field" style="margin:0">
           <label for="filtro-fecha-desde" style="font-size:11px;font-weight:600;color:var(--text-hint)">Desde</label>
@@ -254,11 +265,14 @@
         <thead>
           <tr>
             <th>Código</th>
-            <th>Producto</th>
+            <th>Molde</th>
             <th>Línea</th>
             <th>Operador</th>
             <th>Unidades</th>
             <th>Turno</th>
+            <th>Paletas</th>
+            <th>Gruesas</th>
+            <th>Cliente</th>
             <th>Fecha</th>
             <th style="text-align:center;min-width:120px;">Acciones</th>
           </tr>

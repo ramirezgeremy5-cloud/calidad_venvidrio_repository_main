@@ -77,7 +77,8 @@ def login(data: LoginRequest):
             # ==================================================================
             # LÓGICA CLAVE: IMPEDIR SESIÓN DUPLICADA DEL MISMO USUARIO
             # ==================================================================
-            # Si el campo token_activo NO es None y NO es una cadena vacía, significa que ya está logueado en otro lado.
+            # Si el campo token_activo NO es None y NO es una cadena vacía, 
+            # significa que ya está logueado en otro lado.
             if user["token_activo"] and user["token_activo"] != "":
                 logger.warning(f"⚠️ Intento de sesión duplicada para: {data.correo}")
                 raise HTTPException(
@@ -318,12 +319,19 @@ def logout(Authorization: str = Header(...)):
     """
     try:
         # Extraer el token del header "Bearer <token>"
+        if not Authorization or not Authorization.startswith("Bearer "):
+            logger.warning("⚠️ Header de autorización inválido")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token no proporcionado"
+            )
+        
         token = Authorization.replace("Bearer ", "")
         logger.info(f"👋 Solicitud de logout para token: {token[:10]}...")
         
         with engine.connect() as conn:
-            # ✅ FORZAR LA LIMPIEZA DEL TOKEN EN LA BD SIEMPRE
-            # Esta línea es la clave: busca el token en la BD y lo borra, exista o no el usuario
+            # ✅ FORZAR LA LIMPIEZA DEL TOKEN EN LA BD
+            # Busca el token en la BD y lo borra
             result = conn.execute(
                 text("""
                     UPDATE usuarios 
@@ -346,6 +354,8 @@ def logout(Authorization: str = Header(...)):
                 "message": "Sesión cerrada correctamente"
             }
                 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"💥 Error inesperado en logout: {str(e)}")
         import traceback

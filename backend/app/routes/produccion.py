@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, date
 from typing import Optional
 
 from app.database.connection import SessionLocal
 from app.models.produccion import Produccion
-from app.models.cliente import Cliente
+# from app.models.cliente import Cliente  <-- Ya no necesitamos tabla maestra
 from app.schemas.produccion import (
     ProduccionCreate,
     ProduccionUpdate,
@@ -27,7 +27,7 @@ def get_db():
 
 
 # =========================
-# LISTAR PRODUCCIÓN (CON JOINLOAD CLIENTE)
+# LISTAR PRODUCCIÓN (SIN JOINS, 100% ESTABLE)
 # =========================
 @router.get(
     "/",
@@ -38,21 +38,18 @@ def get_db():
     response_model=list[ProduccionResponse]
 )
 def listar_produccion(
-    codigo: Optional[str] = Query(None, description="Filtrar por código de lote"),
-    producto: Optional[str] = Query(None, description="Filtrar por tipo de producto"),
-    linea: Optional[str] = Query(None, description="Filtrar por línea de producción"),
-    operador: Optional[str] = Query(None, description="Filtrar por operador"),
-    turno: Optional[str] = Query(None, description="Filtrar por turno"),
-    fecha_desde: Optional[date] = Query(None, description="Filtrar desde fecha (YYYY-MM-DD)"),
-    fecha_hasta: Optional[date] = Query(None, description="Filtrar hasta fecha (YYYY-MM-DD)"),
-    skip: int = Query(0, description="Número de registros a saltar (paginación)"),
-    limit: int = Query(100, description="Límite de registros por página"),
+    codigo: Optional[str] = Query(None),
+    producto: Optional[str] = Query(None),
+    linea: Optional[str] = Query(None),
+    operador: Optional[str] = Query(None),
+    turno: Optional[str] = Query(None),
+    fecha_desde: Optional[date] = Query(None),
+    fecha_hasta: Optional[date] = Query(None),
+    skip: int = Query(0),
+    limit: int = Query(100),
     db: Session = Depends(get_db)
 ):
-    """Lista producción con filtros opcionales"""
-    
-    # JOIN para traer el cliente
-    query = db.query(Produccion).options(joinedload(Produccion.cliente))
+    query = db.query(Produccion)
     
     if codigo:
         query = query.filter(Produccion.codigo_lote.ilike(f"%{codigo}%"))
@@ -74,30 +71,46 @@ def listar_produccion(
 
 
 # =========================
-# OBTENER OPCIONES DE FILTROS
+# OBTENER OPCIONES DE FILTROS (Para los filtros)
 # =========================
 @router.get("/opciones", response_model=dict)
 def obtener_opciones_filtros(db: Session = Depends(get_db)):
-    """Obtiene las opciones disponibles para los filtros"""
-    
     productos = db.query(Produccion.tipo_producto).distinct().all()
     lineas = db.query(Produccion.linea_produccion).distinct().all()
     operadores = db.query(Produccion.operador).distinct().all()
     turnos = db.query(Produccion.turno).distinct().all()
-    
-    # Traemos los clientes para el filtro
-    try:
-        clientes = db.query(Cliente.nombre).distinct().all()
-        lista_clientes = [c[0] for c in clientes if c[0]]
-    except Exception:
-        lista_clientes = []
+    clientes = db.query(Produccion.cliente).distinct().all()
     
     return {
         "productos": [p[0] for p in productos if p[0]],
         "lineas": [l[0] for l in lineas if l[0]],
         "operadores": [o[0] for o in operadores if o[0]],
         "turnos": [t[0] for t in turnos if t[0]],
-        "clientes": lista_clientes
+        "clientes": [c[0] for c in clientes if c[0]]
+    }
+
+
+# =========================
+# OBTENER OPCIONES REGISTRADAS (Para los DATALIST del Frontend)
+# =========================
+@router.get("/opciones-registradas", response_model=dict)
+def obtener_opciones_registradas(db: Session = Depends(get_db)):
+    """
+    Devuelve listas únicas de todos los valores que los usuarios 
+    han escrito en los campos de texto. Sirve para llenar los datalists.
+    """
+    productos = db.query(Produccion.tipo_producto).distinct().all()
+    lineas = db.query(Produccion.linea_produccion).distinct().all()
+    operadores = db.query(Produccion.operador).distinct().all()
+    turnos = db.query(Produccion.turno).distinct().all()
+    clientes = db.query(Produccion.cliente).distinct().all()
+    
+    return {
+        "productos": [p[0] for p in productos if p[0]],
+        "lineas": [l[0] for l in lineas if l[0]],
+        "operadores": [o[0] for o in operadores if o[0]],
+        "turnos": [t[0] for t in turnos if t[0]],
+        "clientes": [c[0] for c in clientes if c[0]]
     }
 
 
@@ -106,8 +119,6 @@ def obtener_opciones_filtros(db: Session = Depends(get_db)):
 # =========================
 @router.get("/estadisticas", response_model=dict)
 def obtener_estadisticas(db: Session = Depends(get_db)):
-    """Obtiene estadísticas de producción para el dashboard"""
-    
     total_lotes = db.query(func.count(Produccion.id)).scalar() or 0
     total_unidades = db.query(func.sum(Produccion.cantidad)).scalar() or 0
     
@@ -140,17 +151,14 @@ def obtener_estadisticas(db: Session = Depends(get_db)):
 # =========================
 @router.get("/{produccion_id}", response_model=ProduccionResponse)
 def obtener_produccion(produccion_id: int, db: Session = Depends(get_db)):
-    produccion = db.query(Produccion).options(joinedload(Produccion.cliente)).filter(
-        Produccion.id == produccion_id
-    ).first()
-
+    produccion = db.query(Produccion).filter(Produccion.id == produccion_id).first()
     if not produccion:
         raise HTTPException(status_code=404, detail="Producción no encontrada.")
     return produccion
 
 
 # =========================
-# CREAR PRODUCCIÓN (CON CLIENTE_ID)
+# CREAR PRODUCCIÓN (CON CAMPOS DE TEXTO Y NUEVOS CAMPOS)
 # =========================
 @router.post(
     "/",
@@ -185,21 +193,23 @@ def crear_produccion(
         turno=datos.turno,
         observaciones=datos.observaciones,
         fecha_produccion=datos.fecha_produccion,
-        cliente_id=datos.cliente_id,
+        # NUEVOS CAMPOS REGISTRABLES
+        cliente=datos.cliente,        # <-- Ahora es texto libre
         molde=datos.molde,
-        item=datos.item
+        item=datos.item,
+        # NUEVOS CAMPOS NUMÉRICOS
+        paletas=datos.paletas,
+        gruesas=datos.gruesas
     )
 
     db.add(nueva)
     db.commit()
     db.refresh(nueva)
-
-    # Devolvemos el objeto con el cliente cargado
-    return db.query(Produccion).options(joinedload(Produccion.cliente)).filter(Produccion.id == nueva.id).first()
+    return nueva
 
 
 # =========================
-# ACTUALIZAR PRODUCCIÓN (CON CLIENTE_ID)
+# ACTUALIZAR PRODUCCIÓN (CON CAMPOS DE TEXTO Y NUEVOS CAMPOS)
 # =========================
 @router.put("/{produccion_id}", response_model=ProduccionResponse)
 def actualizar_produccion(
@@ -228,42 +238,28 @@ def actualizar_produccion(
             detail="El código de lote ya existe."
         )
 
-    # Actualizar campos
-    if datos.codigo_lote is not None:
-        produccion.codigo_lote = datos.codigo_lote
-    
-    if datos.linea_produccion is not None:
-        produccion.linea_produccion = datos.linea_produccion
-    
-    if datos.tipo_producto is not None:
-        produccion.tipo_producto = datos.tipo_producto
-    
-    if datos.cantidad is not None:
-        produccion.cantidad = datos.cantidad
-    
-    if datos.operador is not None:
-        produccion.operador = datos.operador
-    
-    if datos.turno is not None:
-        produccion.turno = datos.turno
-    
-    if datos.observaciones is not None:
-        produccion.observaciones = datos.observaciones
-    
-    if datos.fecha_produccion is not None:
-        produccion.fecha_produccion = datos.fecha_produccion
+    # Actualizar campos de texto
+    if datos.codigo_lote is not None: produccion.codigo_lote = datos.codigo_lote
+    if datos.linea_produccion is not None: produccion.linea_produccion = datos.linea_produccion
+    if datos.tipo_producto is not None: produccion.tipo_producto = datos.tipo_producto
+    if datos.cantidad is not None: produccion.cantidad = datos.cantidad
+    if datos.operador is not None: produccion.operador = datos.operador
+    if datos.turno is not None: produccion.turno = datos.turno
+    if datos.observaciones is not None: produccion.observaciones = datos.observaciones
+    if datos.fecha_produccion is not None: produccion.fecha_produccion = datos.fecha_produccion
 
-    if datos.cliente_id is not None:
-        produccion.cliente_id = datos.cliente_id
-    if datos.molde is not None:
-        produccion.molde = datos.molde
-    if datos.item is not None:
-        produccion.item = datos.item
+    # NUEVOS CAMPOS REGISTRABLES (Texto)
+    if datos.cliente is not None: produccion.cliente = datos.cliente
+    if datos.molde is not None: produccion.molde = datos.molde
+    if datos.item is not None: produccion.item = datos.item
+
+    # NUEVOS CAMPOS NUMÉRICOS
+    if datos.paletas is not None: produccion.paletas = datos.paletas
+    if datos.gruesas is not None: produccion.gruesas = datos.gruesas
 
     db.commit()
     db.refresh(produccion)
-
-    return db.query(Produccion).options(joinedload(Produccion.cliente)).filter(Produccion.id == produccion.id).first()
+    return produccion
 
 
 # =========================

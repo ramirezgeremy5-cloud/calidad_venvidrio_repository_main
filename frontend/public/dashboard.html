@@ -63,10 +63,10 @@
         </li>
     </ul>
 
-    <!-- ===== ÁREA DE USUARIO CON DROPDOWN ===== -->
+    <!-- ===== ÁREA DE USUARIO CON DROPDOWN (CÍRCULO + NOMBRE) ===== -->
     <div class="nav-user" id="navUserContainer">
 
-        <div class="nav-avatar" id="navAvatar">
+        <div class="nav-avatar-circle" id="navAvatar">
             US
         </div>
 
@@ -74,22 +74,15 @@
             Usuario
         </div>
 
-        <!-- Dropdown de usuario -->
+        <!-- Dropdown de usuario - Solo Cerrar Sesión -->
         <div class="user-dropdown" id="userDropdown">
             <div class="dropdown-header">
-                <div class="dropdown-avatar" id="dropdownAvatar">US</div>
+                <div class="dropdown-avatar-circle" id="dropdownAvatar">US</div>
                 <div>
                     <div class="dropdown-name" id="dropdownName">Usuario</div>
                     <div class="dropdown-email" id="dropdownEmail">usuario@email.com</div>
                 </div>
             </div>
-            <div class="dropdown-divider"></div>
-            <a class="dropdown-item" id="dropdownPerfil">
-                <i class="ti ti-user"></i> Mi Perfil
-            </a>
-            <a class="dropdown-item" id="dropdownConfig">
-                <i class="ti ti-settings"></i> Configuración
-            </a>
             <div class="dropdown-divider"></div>
             <a class="dropdown-item dropdown-danger" id="dropdownLogout">
                 <i class="ti ti-logout"></i> Cerrar Sesión
@@ -341,6 +334,14 @@
 <footer class="footer" style="text-align:center;padding:1.5rem;color:var(--text-muted);border-top:1px solid var(--border);margin-top:1.5rem;">
     <p style="font-size:12px;">© 2026 Venvidrio - Sistema de Control de Calidad</p>
 </footer>
+
+<!-- ================= TIMER FLOTANTE ================= -->
+<div class="sesion-timer" id="sesionTimer">
+    <i class="ti ti-clock"></i>
+    <span>Sesión expira en:</span>
+    <span class="tiempo-restante" id="timerDisplay">05:00</span>
+    <span class="badge-timer" id="timerBadge">Activo</span>
+</div>
 
 <!-- ================= SCRIPTS ================= -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

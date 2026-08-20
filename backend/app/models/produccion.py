@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, Float
 from sqlalchemy.sql import func
 from app.database.connection import Base
 
@@ -42,11 +42,10 @@ class Produccion(Base):
     observaciones = Column(Text)
 
     # ========================================================
-    # CAMBIO: CLIENTE COMO LLAVE FORÁNEA
+    # CAMBIOS: CLIENTE COMO TEXTO LIBRE (Ya no es ForeignKey)
     # ========================================================
-    cliente_id = Column(
-        Integer,
-        ForeignKey("clientes.id"),
+    cliente = Column(
+        String(100),
         nullable=True
     )
     # ========================================================
@@ -60,6 +59,30 @@ class Produccion(Base):
         String(50),
         nullable=True
     )
+
+    # ========================================================
+    # NUEVOS CAMPOS PARA LA SÁBANA
+    # ========================================================
+    paletas = Column(
+        Integer,
+        nullable=True
+    )
+
+    gruesas = Column(
+        Float,
+        nullable=True
+    )
+    # ========================================================
+
+    # ========================================================
+    # NUEVO CAMPO PARA AUDITORÍA ALINEADA
+    # ========================================================
+    estado_auditoria = Column(
+        String(20),
+        nullable=False,
+        server_default="Pendiente"
+    )  # Valores: "Pendiente", "Auditado", "Rechazado"
+    # ========================================================
 
     fecha_produccion = Column(
         DateTime(timezone=True),

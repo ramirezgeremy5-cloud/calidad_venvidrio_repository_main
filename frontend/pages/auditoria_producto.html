@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auditoría de Producto Terminado — Venvidrio CQ</title>
+  <link rel="stylesheet" href="../assets/css/shared.css"/>
+  <link rel="stylesheet" href="../assets/css/auditoria_producto.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-brand">VENV<span>IDRIO</span></div>
+  <ul class="nav-links">
+    <li><a href="../public/dashboard.html"><i class="ti ti-layout-dashboard"></i> Panel Principal</a></li>
+    <li><a href="../pages/produccion.html"><i class="ti ti-building-factory-2"></i> Producción</a></li>
+    <li><a href="../pages/defectos.html"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
+    <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
+    <li><a href="../pages/auditoria.html"><i class="ti ti-clipboard-check"></i> Auditoría</a></li>
+    <li><a href="../pages/auditoria_producto.html" class="active"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
+  </ul>
+</nav>
+
+<!-- CONTENIDO -->
+<main class="page">
+
+  <div class="page-header">
+    <h1>Auditoría de Producto Terminado</h1>
+    <p>Seleccione un lote pendiente y registre su inspección de calidad</p>
+  </div>
+
+  <div class="prod-layout">
+
+    <!-- FORMULARIO DE AUDITORÍA -->
+    <div class="card anim-card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-file-description"></i> Registro de Auditoría</div>
+        <span class="badge badge-info">Nuevo</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:1rem;">
+          <i class="ti ti-info-circle" style="color:var(--navy);"></i>
+          Seleccione un lote de la lista. Los datos de producción se autocompletarán.
+        </p>
+
+        <div class="grid-2">
+          
+          <!-- SELECTOR DE LOTE PENDIENTE -->
+          <div class="field">
+            <label for="lote_id">Lote a Auditar *</label>
+            <select id="lote_id" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;">
+              <option value="">-- Seleccione un lote pendiente --</option>
+            </select>
+          </div>
+
+          <!-- FECHA -->
+          <div class="field">
+            <label for="fecha_auditoria">Fecha de Auditoría</label>
+            <input type="date" id="fecha_auditoria" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
+          </div>
+
+          <!-- MÁQUINA (Solo lectura) -->
+          <div class="field">
+            <label>Máquina</label>
+            <input type="text" id="maquina" disabled style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:#f5f5f5;cursor:not-allowed;color:var(--text-muted);" />
+          </div>
+
+          <!-- EV (Solo lectura) -->
+          <div class="field">
+            <label>EV (Código de Lote)</label>
+            <input type="text" id="ev" disabled style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:#f5f5f5;cursor:not-allowed;color:var(--text-muted);" />
+          </div>
+
+          <!-- ITEM (Solo lectura) -->
+          <div class="field">
+            <label>Item</label>
+            <input type="text" id="item" disabled style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:#f5f5f5;cursor:not-allowed;color:var(--text-muted);" />
+          </div>
+
+          <!-- PALETAS INSPECCIONADAS -->
+          <div class="field">
+            <label for="paletas_inspeccionadas">Paletas Inspeccionadas *</label>
+            <input type="number" id="paletas_inspeccionadas" placeholder="0" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
+          </div>
+
+          <!-- PALETAS APROBADAS -->
+          <div class="field">
+            <label for="paletas_aprobadas">Paletas Aprobadas *</label>
+            <input type="number" id="paletas_aprobadas" placeholder="0" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
+          </div>
+
+          <!-- PALETAS RECHAZADAS -->
+          <div class="field">
+            <label for="paletas_rechazadas">Paletas Rechazadas *</label>
+            <input type="number" id="paletas_rechazadas" placeholder="0" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
+          </div>
+
+          <!-- DEFECTOS (Múltiple) -->
+          <div class="field">
+            <label for="defectos_ids">Defectos Encontrados</label>
+            <select id="defectos_ids" multiple style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;min-height:80px;">
+              <option value="">-- Seleccione los defectos --</option>
+            </select>
+            <small style="font-size:10px;color:var(--text-hint);">Mantenga Ctrl presionado para seleccionar varios defectos.</small>
+          </div>
+          
+        </div>
+
+        <!-- OBSERVACIONES -->
+        <div class="field">
+          <label for="observaciones">Observaciones</label>
+          <textarea id="observaciones" placeholder="Notas adicionales..." rows="3" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;resize:vertical;min-height:60px;"></textarea>
+        </div>
+
+        <div class="flex gap-2" style="margin-top:0.5rem">
+          <button class="btn btn-primary" id="btn-registrar"><i class="ti ti-device-floppy"></i> Guardar Auditoría</button>
+          <button class="btn btn-outline" id="btn-limpiar"><i class="ti ti-eraser"></i> Limpiar</button>
+        </div>
+
+        <div class="toast-success" id="toast-auditoria">
+          <i class="ti ti-circle-check"></i> Auditoría registrada correctamente
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- JavaScript separado -->
+<script src="../assets/js/auditoria_producto.js" defer></script>
+
+</body>
+</html>

@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN
-   produccion.js - Versión Completa con Clientes (CORREGIDA)
+   produccion.js - Versión Definitiva (Registrables y Autenticación)
    ========================================= */
 
 (function () {
@@ -11,18 +11,205 @@
   let lotes = [];
   let intervaloCarga = null;
   let filtrosActivos = {};
+  let temporizadorInactividad = null;
+  let TIEMPO_INACTIVIDAD = 5 * 60 * 1000; // 5 minutos
+  let tiempoRestante = TIEMPO_INACTIVIDAD / 1000;
+  let intervaloContador = null;
+  let sesionActiva = true;
 
-  // Datos de líneas
-  const LINEAS = [
-    { name: 'Línea A — Corte', pct: 0, status: 'success', meta: 'Cargando...' },
-    { name: 'Línea B — Templado', pct: 0, status: 'warning', meta: 'Cargando...' },
-    { name: 'Línea C — Laminado', pct: 0, status: 'success', meta: 'Cargando...' },
-    { name: 'Línea D — Serigrafía', pct: 0, status: 'danger', meta: 'Cargando...' }
-  ];
+  // ==========================================
+  // CONTROL DE SESIÓN - USUARIO
+  // ==========================================
 
-  /* ==========================================
-     UTILIDADES Y LOGS
-  ========================================== */
+  function cargarUsuarioNav() {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        const avatar = document.getElementById('navAvatar');
+        const username = document.getElementById('navUsername');
+        const dropdownAvatar = document.getElementById('dropdownAvatar');
+        const dropdownName = document.getElementById('dropdownName');
+        const dropdownEmail = document.getElementById('dropdownEmail');
+
+        const iniciales = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
+        if (avatar) avatar.textContent = iniciales;
+        if (username) username.textContent = user.nombre || 'Usuario';
+        if (dropdownAvatar) dropdownAvatar.textContent = iniciales;
+        if (dropdownName) dropdownName.textContent = user.nombre || 'Usuario';
+        if (dropdownEmail) dropdownEmail.textContent = user.correo || 'usuario@email.com';
+      } catch (e) {
+        console.error('Error cargando usuario:', e);
+      }
+    }
+  }
+
+  function verificarSesion() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '../public/login.html';
+      return;
+    }
+
+    fetch(`${API_URL}/auth/verify`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Token inválido');
+      }
+      return response.json();
+    })
+    .then(() => {
+      cargarUsuarioNav();
+      iniciarControlInactividad();
+      init();
+    })
+    .catch(() => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('role');
+      window.location.href = '../public/login.html';
+    });
+  }
+
+  function iniciarControlInactividad() {
+    const eventos = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart', 'touchmove'];
+    eventos.forEach(evento => {
+      document.addEventListener(evento, function() {
+        if (sesionActiva) {
+          reiniciarTemporizador();
+        }
+      });
+    });
+
+    reiniciarTemporizador();
+    iniciarContador();
+  }
+
+  function iniciarContador() {
+    if (intervaloContador) {
+      clearInterval(intervaloContador);
+    }
+
+    tiempoRestante = TIEMPO_INACTIVIDAD / 1000;
+
+    intervaloContador = setInterval(function() {
+      tiempoRestante--;
+      actualizarTimerDisplay();
+
+      if (tiempoRestante <= 0) {
+        clearInterval(intervaloContador);
+        intervaloContador = null;
+      }
+    }, 1000);
+  }
+
+  function actualizarTimerDisplay() {
+    const timerDisplay = document.getElementById('timerDisplay');
+    const timerBadge = document.getElementById('timerBadge');
+    
+    if (timerDisplay) {
+      const minutos = Math.floor(tiempoRestante / 60);
+      const segundos = Math.floor(tiempoRestante % 60);
+      timerDisplay.textContent = String(minutos).padStart(2, '0') + ':' + String(segundos).padStart(2, '0');
+    }
+
+    if (timerBadge) {
+      if (tiempoRestante > 120) {
+        timerBadge.className = 'badge-timer';
+        timerBadge.textContent = 'Activo';
+      } else if (tiempoRestante > 60) {
+        timerBadge.className = 'badge-timer warning';
+        timerBadge.textContent = '⚠️ Cerca de expirar';
+      } else {
+        timerBadge.className = 'badge-timer danger';
+        timerBadge.textContent = '🔴 Expirando';
+      }
+    }
+  }
+
+  function reiniciarTemporizador() {
+    if (!sesionActiva) return;
+
+    if (temporizadorInactividad) {
+      clearTimeout(temporizadorInactividad);
+    }
+
+    tiempoRestante = TIEMPO_INACTIVIDAD / 1000;
+    actualizarTimerDisplay();
+
+    temporizadorInactividad = setTimeout(function() {
+      cerrarSesion('⏳ Tu sesión ha expirado por inactividad.');
+    }, TIEMPO_INACTIVIDAD);
+  }
+
+  function cerrarSesion(mensaje) {
+    sesionActiva = false;
+
+    if (temporizadorInactividad) {
+      clearTimeout(temporizadorInactividad);
+      temporizadorInactividad = null;
+    }
+
+    if (intervaloContador) {
+      clearInterval(intervaloContador);
+      intervaloContador = null;
+    }
+
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('role');
+
+    if (mensaje) {
+      alert(mensaje);
+    }
+
+    window.location.href = '../public/login.html';
+  }
+
+  function initUserControls() {
+    const container = document.getElementById('navUserContainer');
+    const dropdown = document.getElementById('userDropdown');
+    const logoutBtn = document.getElementById('dropdownLogout');
+
+    if (container) {
+      container.addEventListener('click', function(e) {
+        e.stopPropagation();
+        dropdown.classList.toggle('show');
+      });
+    }
+
+    document.addEventListener('click', function() {
+      dropdown.classList.remove('show');
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        dropdown.classList.remove('show');
+      }
+      if (e.ctrlKey && e.shiftKey && (e.key === 'L' || e.key === 'l')) {
+        e.preventDefault();
+        cerrarSesion('👋 Sesión cerrada manualmente.');
+      }
+    });
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+          cerrarSesion('👋 Sesión cerrada exitosamente.');
+        }
+      });
+    }
+  }
+
+  // ==========================================
+  // UTILIDADES Y LOGS
+  // ==========================================
 
   function log(message, data = null) {
     const timestamp = new Date().toLocaleTimeString();
@@ -51,9 +238,9 @@
     }
   }
 
-  /* ==========================================
-     SKELETON LOADING
-  ========================================== */
+  // ==========================================
+  // SKELETON LOADING
+  // ==========================================
 
   function mostrarSkeleton() {
     const elementos = ['cnt-lotes', 'cnt-unidades', 'cnt-eficiencia', 'cnt-rechazos'];
@@ -65,9 +252,9 @@
     });
   }
 
-  /* ==========================================
-     ACTUALIZAR TIMESTAMP
-  ========================================== */
+  // ==========================================
+  // ACTUALIZAR TIMESTAMP
+  // ==========================================
 
   function actualizarTimestamp() {
     const now = new Date();
@@ -77,9 +264,9 @@
     }
   }
 
-  /* ==========================================
-     CARGAR PRODUCCIÓN DESDE API (CORREGIDA)
-  ========================================== */
+  // ==========================================
+  // CARGAR PRODUCCIÓN DESDE API
+  // ==========================================
 
   async function cargarProduccion(filtros = {}) {
     try {
@@ -94,30 +281,34 @@
       if (filtros.fecha_desde) params.append('fecha_desde', filtros.fecha_desde);
       if (filtros.fecha_hasta) params.append('fecha_hasta', filtros.fecha_hasta);
 
-      // 🔥 CORRECCIÓN CRÍTICA: Evitar el '?' vacío que causa redirección y error 500
-      const queryString = params.toString();
-      // Añadimos un timestamp para evitar la caché del navegador
       const cacheBuster = `t=${Date.now()}`;
       
       let url;
-      if (queryString) {
-        url = `${API_URL}/produccion?${queryString}&${cacheBuster}`;
+      if (params.toString()) {
+        url = `${API_URL}/produccion?${params.toString()}&${cacheBuster}`;
       } else {
         url = `${API_URL}/produccion?${cacheBuster}`;
       }
 
-      log(`📤 URL: ${url}`);
-
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          cerrarSesion('⏳ Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+          return;
+        }
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
-      log(`📊 Datos recibidos: ${data.length} lotes`);
 
-      // Mapeamos los datos incluyendo el cliente si viene en la respuesta
+      // ==========================================
+      // MAPEO DE DATOS (Incluye nuevos campos)
+      // ==========================================
       lotes = data.map(p => ({
         id: p.id,
         codigo: p.codigo_lote,
@@ -126,8 +317,9 @@
         op: p.operador,
         uds: p.cantidad,
         turno: p.turno,
-        // Extraemos el nombre del cliente si existe en el objeto anidado
-        cliente: p.cliente ? p.cliente.nombre : 'Sin asignar', 
+        paletas: p.paletas || 0,
+        gruesas: p.gruesas || 0,
+        cliente: p.cliente || 'Sin asignar',
         fecha: new Date(p.fecha_registro).toLocaleString('es-ES', {
           day: '2-digit',
           month: '2-digit',
@@ -137,16 +329,15 @@
         })
       }));
 
-      actualizarLineasDesdeProduccion(lotes);
       actualizarKPIs(lotes);
       renderTabla();
       actualizarTimestamp();
 
       const resultadoEl = document.getElementById('filtro-resultados');
       if (resultadoEl) {
-        const filtrosActivos = Object.values(filtros).filter(v => v);
-        if (filtrosActivos.length > 0) {
-          resultadoEl.textContent = `🔍 Filtros aplicados: ${filtrosActivos.length} | ${data.length} resultados`;
+        const filtrosActivosCount = Object.values(filtros).filter(v => v).length;
+        if (filtrosActivosCount > 0) {
+          resultadoEl.textContent = `🔍 Filtros aplicados: ${filtrosActivosCount} | ${data.length} resultados`;
         } else {
           resultadoEl.textContent = `📋 Mostrando ${data.length} lotes`;
         }
@@ -160,65 +351,9 @@
     }
   }
 
-  /* ==========================================
-     ACTUALIZAR LÍNEAS DESDE PRODUCCIÓN
-  ========================================== */
-
-  function actualizarLineasDesdeProduccion(lotesData) {
-    const lineasMap = {};
-
-    lotesData.forEach(l => {
-      if (!lineasMap[l.linea]) {
-        lineasMap[l.linea] = 0;
-      }
-      lineasMap[l.linea] += l.uds;
-    });
-
-    const total = Object.values(lineasMap).reduce((sum, val) => sum + val, 0);
-
-    LINEAS.forEach(linea => {
-      const nombreLinea = linea.name;
-      const unidades = lineasMap[nombreLinea] || 0;
-
-      if (total > 0) {
-        linea.pct = Math.round((unidades / total) * 100);
-      } else {
-        linea.pct = 0;
-      }
-
-      if (unidades > 0) {
-        linea.meta = `${unidades} unidades producidas`;
-        linea.status = unidades > 50 ? 'success' : 'warning';
-      } else {
-        linea.meta = 'Sin producción';
-        linea.status = 'danger';
-      }
-    });
-
-    renderLineas();
-    actualizarMetricasLineas();
-  }
-
-  /* ==========================================
-     ACTUALIZAR MÉTRICAS DE LÍNEAS
-  ========================================== */
-
-  function actualizarMetricasLineas() {
-    const eficienciaEl = document.getElementById('cnt-eficiencia');
-    const estadoEl = document.getElementById('estado-lineas');
-
-    if (LINEAS && LINEAS.length) {
-      const promedio = Math.round(LINEAS.reduce((acc, l) => acc + l.pct, 0) / LINEAS.length);
-      if (eficienciaEl) eficienciaEl.textContent = promedio + '%';
-
-      const activas = LINEAS.filter(l => l.pct > 0).length;
-      if (estadoEl) estadoEl.textContent = `${activas} de ${LINEAS.length} líneas activas`;
-    }
-  }
-
-  /* ==========================================
-     ACTUALIZAR KPIs
-  ========================================== */
+  // ==========================================
+  // ACTUALIZAR KPIs
+  // ==========================================
 
   function actualizarKPIs(lotesData) {
     const totalLotes = lotesData.length;
@@ -257,8 +392,6 @@
       if (!el) return;
 
       const tendencia = 0;
-
-      const esPositiva = kpi.invertir ? tendencia < 0 : tendencia > 0;
       const esCero = tendencia === 0;
 
       let color = 'var(--text-hint)';
@@ -266,9 +399,9 @@
       let claseTendencia = 'neutral';
 
       if (!esCero) {
-        color = esPositiva ? 'var(--success)' : 'var(--danger)';
-        flecha = esPositiva ? '↑' : '↓';
-        claseTendencia = esPositiva ? 'up' : 'down';
+        color = tendencia > 0 ? 'var(--success)' : 'var(--danger)';
+        flecha = tendencia > 0 ? '↑' : '↓';
+        claseTendencia = tendencia > 0 ? 'up' : 'down';
       }
 
       let valorFormateado;
@@ -314,49 +447,9 @@
     return Math.min(Math.round((promedio / 100) * 100), 100);
   }
 
-  /* ==========================================
-     RENDER LINEAS
-  ========================================== */
-
-  function renderLineas() {
-    const container = document.getElementById('lineas-list');
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    LINEAS.forEach((l, i) => {
-      const div = document.createElement('div');
-      div.className = 'linea-item';
-      div.style.animationDelay = `${0.1 * i}s`;
-
-      let statusClass = 'success';
-      if (l.pct < 50) statusClass = 'danger';
-      else if (l.pct < 75) statusClass = 'warning';
-
-      div.innerHTML = `
-        <div class="linea-header">
-          <span class="linea-name">${l.name}</span>
-          <span class="linea-pct">${l.pct}%</span>
-        </div>
-        <div class="progress-track">
-          <div class="progress-bar ${statusClass}" data-pct="${l.pct}" style="width:0"></div>
-        </div>
-        <div class="linea-meta">${l.meta}</div>
-      `;
-
-      container.appendChild(div);
-    });
-
-    setTimeout(() => {
-      document.querySelectorAll('.progress-bar').forEach(bar => {
-        bar.style.width = bar.dataset.pct + '%';
-      });
-    }, 200);
-  }
-
-  /* ==========================================
-     GENERAR CÓDIGO DE LOTE
-  ========================================== */
+  // ==========================================
+  // GENERAR CÓDIGO DE LOTE
+  // ==========================================
 
   function generarCodigoLote() {
     const año = new Date().getFullYear();
@@ -364,9 +457,9 @@
     return `PROD-${año}-${String(count).padStart(4, '0')}`;
   }
 
-  /* ==========================================
-     RENDER TABLA (CON BOTONES Y CLIENTE)
-  ========================================== */
+  // ==========================================
+  // RENDER TABLA (Con nuevos campos)
+  // ==========================================
 
   function renderTabla(filtro = '') {
     const tbody = document.getElementById('tabla-lotes');
@@ -376,6 +469,7 @@
       ? lotes.filter(l =>
           l.codigo.toLowerCase().includes(filtro) ||
           l.prod.toLowerCase().includes(filtro) ||
+          l.linea.toLowerCase().includes(filtro) ||
           l.op.toLowerCase().includes(filtro)
         )
       : lotes;
@@ -385,7 +479,7 @@
     if (data.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted)">
+          <td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted)">
             <i class="ti ti-inbox" style="font-size:1.5rem;margin-right:0.5rem"></i>
             No hay lotes registrados
           </td>
@@ -398,7 +492,7 @@
       const tr = document.createElement('tr');
       tr.style.animationDelay = `${0.04 * i}s`;
 
-      // Añadimos una columna para mostrar el Cliente
+      // AGREGUÉ PALETAS Y GRUESAS A LA TABLA
       tr.innerHTML = `
         <td class="font-mono" style="font-size:12px">
           <span class="badge badge-info">${l.codigo}</span>
@@ -408,6 +502,8 @@
         <td>${l.op}</td>
         <td style="text-align:center">${l.uds}</td>
         <td><span class="badge badge-info">${l.turno}</span></td>
+        <td style="text-align:center">${l.paletas}</td>
+        <td style="text-align:center">${l.gruesas}</td>
         <td class="text-muted text-sm">
           <span style="display:block;font-weight:600;color:var(--navy);">${l.cliente}</span>
           <span style="font-size:10px;color:var(--text-hint)">${l.fecha}</span>
@@ -431,9 +527,9 @@
     });
   }
 
-  /* ==========================================
-     ELIMINAR LOTE
-  ========================================== */
+  // ==========================================
+  // ELIMINAR LOTE
+  // ==========================================
 
   window.eliminarLote = async function(id) {
     if (!confirm('¿Estás seguro de eliminar este lote? Esta acción no se puede deshacer.')) {
@@ -442,10 +538,17 @@
 
     try {
       const response = await fetch(`${API_URL}/produccion/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          cerrarSesion('⏳ Tu sesión ha expirado.');
+          return;
+        }
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
@@ -472,9 +575,9 @@
     }
   };
 
-  /* ==========================================
-     EXPORTAR LOTE (INDIVIDUAL Y GENERAL)
-  ========================================== */
+  // ==========================================
+  // EXPORTAR LOTE
+  // ==========================================
 
   window.exportarLoteIndividual = function(id) {
     if (!id) {
@@ -482,7 +585,7 @@
       return;
     }
     log(`📤 Exportando lote ${id} a Excel Individual...`);
-    window.open(`${API_URL}/reportes/produccion/excel/individual/${id}`, '_blank');
+    window.open(`${API_URL}/reportes/produccion/excel/individual/${id}?token=${localStorage.getItem('token')}`, '_blank');
   };
 
   window.exportarLoteGeneral = function(id) {
@@ -491,43 +594,46 @@
       return;
     }
     log(`📤 Exportando lote ${id} a Excel General (Sábana)...`);
-    window.open(`${API_URL}/reportes/produccion/excel/general/${id}`, '_blank');
+    window.open(`${API_URL}/reportes/produccion/excel/general/${id}?token=${localStorage.getItem('token')}`, '_blank');
   };
 
-  /* ==========================================
-     REGISTRAR PRODUCCIÓN (CON CLIENTE_ID)
-  ========================================== */
+  // ==========================================
+  // REGISTRAR PRODUCCIÓN (Actualizado con nuevos campos)
+  // ==========================================
 
   const btnRegistrar = document.getElementById('btn-registrar');
 
   if (btnRegistrar) {
     btnRegistrar.addEventListener('click', async () => {
-      const linea = document.getElementById('linea').value;
-      const prod = document.getElementById('producto').value;
+      const linea = document.getElementById('linea').value.trim();
+      const prod = document.getElementById('producto').value.trim();
       const cant = document.getElementById('cantidad').value;
       const op = document.getElementById('operador').value.trim();
-      const turno = document.getElementById('turno').value;
+      const turno = document.getElementById('turno').value.trim();
       const fecha = document.getElementById('fecha-prod').value;
-      // Obtenemos el ID del cliente seleccionado
-      const clienteId = document.getElementById('cliente').value;
+      const cliente = document.getElementById('cliente').value.trim();
+      const paletas = document.getElementById('paletas').value;
+      const gruesas = document.getElementById('gruesas').value;
 
-      if (!linea || !prod || !cant || !op || !turno || !clienteId) {
-        alert('Completa todos los campos obligatorios, incluyendo el Cliente.');
+      if (!linea || !prod || !cant || !op || !turno || !cliente) {
+        alert('Completa todos los campos obligatorios (Línea, Molde, Cantidad, Operador, Turno, Cliente).');
         return;
       }
 
       const codigo = generarCodigoLote();
 
+      // CONSTRUCCIÓN DEL BODY CON LOS NUEVOS CAMPOS
       const body = {
         codigo_lote: codigo,
         linea_produccion: linea,
         tipo_producto: prod,
-        cantidad: parseInt(cant),
+        cantidad: parseInt(cant) || 0,
         operador: op,
         turno: turno,
-        observaciones: document.getElementById('obs-prod').value || null,
-        // Enviamos el ID del cliente
-        cliente_id: parseInt(clienteId) 
+        cliente: cliente,
+        paletas: parseInt(paletas) || 0,
+        gruesas: parseFloat(gruesas) || 0,
+        observaciones: document.getElementById('obs-prod').value || null
       };
 
       if (fecha) {
@@ -538,12 +644,17 @@
         const response = await fetch(`${API_URL}/produccion`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
           body: JSON.stringify(body)
         });
 
         if (!response.ok) {
+          if (response.status === 401) {
+            cerrarSesion('⏳ Tu sesión ha expirado.');
+            return;
+          }
           const errorData = await response.json();
           throw new Error(errorData.detail || 'Error guardando');
         }
@@ -567,22 +678,22 @@
     });
   }
 
-  /* ==========================================
-     LIMPIAR FORMULARIO
-  ========================================== */
+  // ==========================================
+  // LIMPIAR FORMULARIO
+  // ==========================================
 
   const btnLimpiar = document.getElementById('btn-limpiar');
 
   if (btnLimpiar) {
     btnLimpiar.addEventListener('click', () => {
-      ['lote-id', 'cantidad', 'operador', 'obs-prod', 'fecha-prod'].forEach(id => {
+      ['lote-id', 'cantidad', 'operador', 'obs-prod', 'fecha-prod', 'paletas', 'gruesas'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
       });
 
       ['linea', 'producto', 'turno', 'cliente'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.selectedIndex = 0;
+        if (el) el.value = '';
       });
 
       const loteInput = document.getElementById('lote-id');
@@ -592,17 +703,17 @@
     });
   }
 
-  /* ==========================================
-     FILTROS
-  ========================================== */
+  // ==========================================
+  // FILTROS
+  // ==========================================
 
   function aplicarFiltros() {
     filtrosActivos = {
       codigo: document.getElementById('filtro-codigo')?.value.trim() || '',
-      producto: document.getElementById('filtro-producto')?.value || '',
-      linea: document.getElementById('filtro-linea')?.value || '',
-      operador: document.getElementById('filtro-operador')?.value || '',
-      turno: document.getElementById('filtro-turno')?.value || '',
+      producto: document.getElementById('filtro-producto')?.value.trim() || '',
+      linea: document.getElementById('filtro-linea')?.value.trim() || '',
+      operador: document.getElementById('filtro-operador')?.value.trim() || '',
+      turno: document.getElementById('filtro-turno')?.value.trim() || '',
       fecha_desde: document.getElementById('filtro-fecha-desde')?.value || '',
       fecha_hasta: document.getElementById('filtro-fecha-hasta')?.value || ''
     };
@@ -625,25 +736,32 @@
     cargarProduccion({});
   }
 
-  async function cargarOpcionesFiltros() {
+  // ==========================================
+  // CARGAR OPCIONES DE FILTROS Y DATALISTS (Registrables)
+  // ==========================================
+
+  async function cargarOpcionesRegistradas() {
     try {
-      const response = await fetch(`${API_URL}/produccion/opciones`);
+      const response = await fetch(`${API_URL}/produccion/opciones`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
       if (!response.ok) throw new Error('Error cargando opciones');
 
       const data = await response.json();
 
-      const selects = [
+      // ACTUALIZAR FILTROS
+      const filtros = [
         { id: 'filtro-producto', opciones: data.productos || [] },
         { id: 'filtro-linea', opciones: data.lineas || [] },
         { id: 'filtro-operador', opciones: data.operadores || [] },
         { id: 'filtro-turno', opciones: data.turnos || [] }
       ];
 
-      selects.forEach(({ id, opciones }) => {
+      filtros.forEach(({ id, opciones }) => {
         const select = document.getElementById(id);
         if (!select) return;
-
-        const valorActual = select.value;
 
         while (select.options.length > 0) {
           select.remove(0);
@@ -654,9 +772,7 @@
         optTodos.textContent = 'Todos';
         select.appendChild(optTodos);
 
-        const valoresUnicos = [...new Set(opciones)];
-        valoresUnicos.sort();
-        valoresUnicos.forEach(val => {
+        [...new Set(opciones)].sort().forEach(val => {
           if (val) {
             const opt = document.createElement('option');
             opt.value = val;
@@ -664,22 +780,41 @@
             select.appendChild(opt);
           }
         });
-
-        if (valorActual) {
-          select.value = valorActual;
-        }
       });
 
-      log('✅ Opciones de filtros cargadas');
+      // ACTUALIZAR DATALISTS (Para el formulario registrable)
+      const datalists = [
+        { id: 'lista-lineas', opciones: data.lineas || [] },
+        { id: 'lista-moldes', opciones: data.productos || [] },
+        { id: 'lista-turnos', opciones: data.turnos || [] },
+        { id: 'lista-operadores', opciones: data.operadores || [] },
+        { id: 'lista-clientes', opciones: data.clientes || [] }
+      ];
+
+      datalists.forEach(({ id, opciones }) => {
+        const datalist = document.getElementById(id);
+        if (!datalist) return;
+
+        datalist.innerHTML = '';
+        [...new Set(opciones)].sort().forEach(val => {
+          if (val) {
+            const opt = document.createElement('option');
+            opt.value = val;
+            datalist.appendChild(opt);
+          }
+        });
+      });
+
+      log('✅ Opciones registradas cargadas');
 
     } catch (error) {
-      logError('Error cargando opciones de filtros:', error);
+      logError('Error cargando opciones registradas:', error);
     }
   }
 
-  /* ==========================================
-     BUSCADOR RÁPIDO
-  ========================================== */
+  // ==========================================
+  // BUSCADOR RÁPIDO
+  // ==========================================
 
   const buscar = document.getElementById('buscar-lote');
 
@@ -689,9 +824,9 @@
     });
   }
 
-  /* ==========================================
-     EXPORTAR A CSV
-  ========================================== */
+  // ==========================================
+  // EXPORTAR A CSV
+  // ==========================================
 
   function exportarCSV() {
     if (lotes.length === 0) {
@@ -699,7 +834,7 @@
       return;
     }
 
-    const headers = ['Código', 'Producto', 'Línea', 'Operador', 'Unidades', 'Turno', 'Fecha', 'Cliente'];
+    const headers = ['Código', 'Producto', 'Línea', 'Operador', 'Unidades', 'Turno', 'Paletas', 'Gruesas', 'Fecha', 'Cliente'];
     const rows = lotes.map(l => [
       l.codigo,
       l.prod,
@@ -707,6 +842,8 @@
       l.op,
       l.uds,
       l.turno,
+      l.paletas,
+      l.gruesas,
       l.fecha,
       l.cliente
     ]);
@@ -726,18 +863,16 @@
     URL.revokeObjectURL(url);
   }
 
-  /* ==========================================
-     EXPORTAR TODOS A EXCEL Y PDF
-  ========================================== */
+  // ==========================================
+  // EXPORTAR TODOS A EXCEL Y PDF
+  // ==========================================
 
   function exportarExcel() {
     if (lotes.length === 0) {
       alert('No hay datos para exportar');
       return;
     }
-    // Si quieres exportar todos los lotes a un solo archivo, necesitas un endpoint masivo
-    // Por ahora, exportamos el primero como ejemplo o puedes deshabilitarlo
-    window.open(`${API_URL}/reportes/produccion/excel/general/${lotes[0].id}`, '_blank');
+    window.open(`${API_URL}/reportes/produccion/excel/general/${lotes[0].id}?token=${localStorage.getItem('token')}`, '_blank');
   }
 
   function exportarPDF() {
@@ -745,28 +880,28 @@
       alert('No hay datos para exportar');
       return;
     }
-    window.open(`${API_URL}/reportes/produccion/pdf/general/${lotes[0].id}`, '_blank');
+    window.open(`${API_URL}/reportes/produccion/pdf/general/${lotes[0].id}?token=${localStorage.getItem('token')}`, '_blank');
   }
 
-  /* ==========================================
-     RECARGAR MANUAL
-  ========================================== */
+  // ==========================================
+  // RECARGAR MANUAL
+  // ==========================================
 
   window.recargarProduccion = function() {
     log('🔄 Recargando producción manualmente...');
     cargarProduccion(filtrosActivos);
   };
 
-  /* ==========================================
-     MOSTRAR ERROR
-  ========================================== */
+  // ==========================================
+  // MOSTRAR ERROR
+  // ==========================================
 
   function mostrarError() {
     const tbody = document.getElementById('tabla-lotes');
     if (tbody) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted)">
+          <td colspan="10" style="text-align:center;padding:2rem;color:var(--text-muted)">
             <i class="ti ti-alert-circle" style="font-size:1.5rem;margin-right:0.5rem"></i>
             Error al cargar datos. Verifica que el servidor esté corriendo en ${API_URL}
           </td>
@@ -775,17 +910,19 @@
     }
   }
 
-  /* ==========================================
-     INICIALIZACIÓN
-  ========================================== */
+  // ==========================================
+  // INICIALIZACIÓN
+  // ==========================================
 
   function init() {
     log('🚀 Producción iniciado');
 
     mostrarSkeleton();
 
-    cargarOpcionesFiltros();
+    // Cargar opciones registradas (para datalists y filtros)
+    cargarOpcionesRegistradas();
 
+    // Event listeners
     document.getElementById('btn-aplicar-filtros')?.addEventListener('click', aplicarFiltros);
     document.getElementById('btn-limpiar-filtros')?.addEventListener('click', limpiarFiltros);
 
@@ -797,9 +934,9 @@
     document.getElementById('btn-exportar-excel')?.addEventListener('click', exportarExcel);
     document.getElementById('btn-exportar-pdf')?.addEventListener('click', exportarPDF);
 
-    renderLineas();
     cargarProduccion({});
 
+    // Auto-refresh
     if (intervaloCarga) {
       clearInterval(intervaloCarga);
     }
@@ -809,10 +946,17 @@
       cargarProduccion(filtrosActivos);
     }, 30000);
 
+    // Inicializar controles de usuario
+    initUserControls();
+
     log('✅ Producción iniciado correctamente');
   }
 
-  // Iniciar
-  init();
+  // ==========================================
+  // INICIO - Verificar sesión primero
+  // ==========================================
+
+  log('🔐 Verificando sesión...');
+  verificarSesion();
 
 })();

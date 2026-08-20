@@ -3,14 +3,6 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
 
-# --- Clase auxiliar para serializar el cliente ---
-class ClienteSchema(BaseModel):
-    id: int
-    nombre: str
-
-    class Config:
-        from_attributes = True
-
 # --- Base de Producción ---
 class ProduccionBase(BaseModel):
     codigo_lote: str
@@ -21,9 +13,16 @@ class ProduccionBase(BaseModel):
     turno: str
     observaciones: Optional[str] = None
     fecha_produccion: Optional[datetime] = None
-    cliente_id: Optional[int] = None
+    
+    # CAMBIOS: 
+    # - cliente_id eliminado, ahora es cliente (texto libre)
+    cliente: Optional[str] = None
     molde: Optional[str] = None
     item: Optional[str] = None
+
+    # NUEVOS CAMPOS:
+    paletas: Optional[int] = None
+    gruesas: Optional[float] = None
 
 # --- Creación ---
 class ProduccionCreate(ProduccionBase):
@@ -39,19 +38,17 @@ class ProduccionUpdate(ProduccionBase):
     turno: Optional[str] = None
     observaciones: Optional[str] = None
     fecha_produccion: Optional[datetime] = None
-    cliente_id: Optional[int] = None
+    cliente: Optional[str] = None
     molde: Optional[str] = None
     item: Optional[str] = None
+    paletas: Optional[int] = None
+    gruesas: Optional[float] = None
 
-# --- Respuesta (¡Aquí está la clave!) ---
+# --- Respuesta ---
 class ProduccionResponse(ProduccionBase):
     id: int
     fecha_registro: datetime
     fecha_actualizacion: datetime
-    
-    # Esto permite que el JSON incluya { "cliente": { "id": 1, "nombre": "MOLDEABAG" } }
-    # Cuando el Frontend reciba la respuesta, verá el objeto cliente completo.
-    cliente: Optional[ClienteSchema] = None 
 
     class Config:
         from_attributes = True
