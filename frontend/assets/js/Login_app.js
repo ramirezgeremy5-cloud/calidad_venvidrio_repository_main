@@ -1,6 +1,6 @@
 /* =============================================
    Venvidrio — Sistema de Control de Calidad
-   login_app.js (Solo lógica de Login)
+   login_app.js (Lógica de Login con UX mejorada)
    ============================================= */
 
 (function () {
@@ -20,6 +20,11 @@
   var pwIcon         = document.getElementById('pwIcon');
   var submitBtn      = document.getElementById('submitBtn');
   var successOverlay = document.getElementById('successOverlay');
+  var errorMessage   = document.getElementById('errorMessage');
+  var errorText      = document.getElementById('errorText');
+  var logoArea       = document.getElementById('logoArea');
+  var capsLockWarning = document.getElementById('capsLockWarning');
+  var rememberMe     = document.getElementById('rememberMe');
 
   // =========================
   // VERIFICAR ELEMENTOS
@@ -41,18 +46,77 @@
   }
 
   // =========================
+  // DETECCIÓN DE CAPS LOCK (Bloq Mayús)
+  // =========================
+  if (passwordInput && capsLockWarning) {
+    passwordInput.addEventListener('keydown', function(e) {
+      if (e.getModifierState('CapsLock')) {
+        capsLockWarning.style.display = 'flex';
+      } else {
+        capsLockWarning.style.display = 'none';
+      }
+    });
+
+    // Ocultar al perder el foco
+    passwordInput.addEventListener('blur', function() {
+      capsLockWarning.style.display = 'none';
+    });
+  }
+
+  // =========================
   // LIMPIEZA DE ERROR AL ESCRIBIR
   // =========================
   if (usernameInput) {
     usernameInput.addEventListener('input', function() {
       usernameInput.classList.remove('error');
+      ocultarError();
     });
   }
 
   if (passwordInput) {
     passwordInput.addEventListener('input', function() {
       passwordInput.classList.remove('error');
+      ocultarError();
     });
+  }
+
+  // =========================
+  // DOBLE CLIC EN EL LOGO PARA LIMPIAR
+  // =========================
+  if (logoArea) {
+    logoArea.addEventListener('dblclick', function() {
+      usernameInput.value = '';
+      passwordInput.value = '';
+      usernameInput.classList.remove('error');
+      passwordInput.classList.remove('error');
+      ocultarError();
+      usernameInput.focus();
+    });
+  }
+
+  // =========================
+  // FUNCIONES DE ERROR (Sin alert)
+  // =========================
+  function mostrarError(message) {
+    if (errorMessage && errorText) {
+      errorText.textContent = message;
+      errorMessage.classList.add('show');
+      // Auto ocultar después de 4 segundos
+      clearTimeout(window.errorTimeout);
+      window.errorTimeout = setTimeout(function() {
+        errorMessage.classList.remove('show');
+      }, 4000);
+    } else {
+      // Fallback por si los elementos no existen
+      alert(message);
+    }
+  }
+
+  function ocultarError() {
+    if (errorMessage) {
+      errorMessage.classList.remove('show');
+      clearTimeout(window.errorTimeout);
+    }
   }
 
   // =========================
@@ -60,6 +124,7 @@
   // =========================
   function validate() {
     var valid = true;
+    ocultarError();
 
     if (usernameInput) {
       usernameInput.classList.remove('error');
@@ -107,20 +172,12 @@
   }
 
   // =========================
-  // MOSTRAR ERROR
-  // =========================
-  function showError(message) {
-    submitBtn.classList.add('error');
-    setTimeout(function() {
-      submitBtn.classList.remove('error');
-    }, 1000);
-    alert(message || 'Error al iniciar sesión');
-  }
-
-  // =========================
   // LOGIN - CONEXIÓN REAL AL BACKEND
   // =========================
   function handleLogin() {
+    // Evitar múltiples clics
+    if (submitBtn.disabled) return;
+
     if (!validate()) {
       if (usernameInput && usernameInput.classList.contains('error')) {
         usernameInput.focus();
@@ -136,23 +193,20 @@
     var emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(correo)) {
       if (usernameInput) usernameInput.classList.add('error');
-      alert('Por favor ingresa un correo electrónico válido');
+      mostrarError('Por favor ingresa un correo electrónico válido');
       if (usernameInput) usernameInput.focus();
       return;
     }
 
     if (password.length < 1) {
       if (passwordInput) passwordInput.classList.add('error');
-      alert('Por favor ingresa tu contraseña');
+      mostrarError('Por favor ingresa tu contraseña');
       if (passwordInput) passwordInput.focus();
       return;
     }
 
     setLoading(true);
 
-    // ==========================================================
-    // PETICIÓN AL BACKEND (El backend valida si el usuario ya está activo)
-    // ==========================================================
     fetch(API_URL + '/auth/login', {
       method: 'POST',
       headers: {
@@ -181,6 +235,13 @@
         localStorage.setItem('role', data.role);
         localStorage.setItem('login_time', Date.now());
 
+        // Guardar preferencia de "Recordar sesión" (solo como bandera, el tiempo lo maneja el backend)
+        if (rememberMe && rememberMe.checked) {
+          localStorage.setItem('remember_me', 'true');
+        } else {
+          localStorage.removeItem('remember_me');
+        }
+
         showSuccess(2500);
         setTimeout(function() {
           window.location.href = 'dashboard.html';
@@ -191,7 +252,6 @@
       // ❌ ERRORES DEL BACKEND
       var errorMsg = data.detail || 'Credenciales incorrectas';
 
-      // CAPTURAMOS EL MENSAJE DE "USUARIO ACTIVO" QUE ENVÍA EL BACKEND
       if (status === 403) {
         if (errorMsg.toLowerCase().indexOf('activo') !== -1 || 
             errorMsg.toLowerCase().indexOf('sesión') !== -1) {
@@ -205,7 +265,7 @@
         errorMsg = '⏳ Demasiados intentos. Intente más tarde.';
       }
 
-      showError(errorMsg);
+      mostrarError(errorMsg);
       if (passwordInput) {
         passwordInput.value = '';
         passwordInput.focus();
@@ -222,7 +282,7 @@
         errorMsg += 'Asegúrate de que el backend esté corriendo en ' + API_URL;
       }
 
-      showError(errorMsg);
+      mostrarError(errorMsg);
     });
   }
 
@@ -258,7 +318,7 @@
   // =========================
   // INICIALIZACIÓN
   // =========================
-  console.log('🔐 Venvidrio - Login App inicializada (Solo Login)');
+  console.log('🔐 Venvidrio - Login App inicializada (UX Mejorada)');
   console.log('📡 API URL:', API_URL);
 
 })();

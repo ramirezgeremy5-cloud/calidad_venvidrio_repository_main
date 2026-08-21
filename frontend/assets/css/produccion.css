@@ -831,17 +831,17 @@
 
 /* Avatar en el Navbar */
 .nav-avatar-circle {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%; /* Forma circular */
-  background-color: #1a2436; /* Azul oscuro */
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 14px;
-  flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: var(--blue-accent);  /* ✅ AHORA ES AZUL */
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+    flex-shrink: 0;
 }
 
 .nav-user .nav-username {
@@ -885,17 +885,17 @@
 
 /* Avatar dentro del dropdown */
 .dropdown-avatar-circle {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: #1a2436; /* Azul oscuro */
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 16px;
-  flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--blue-accent);  /* ✅ AHORA ES AZUL */
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 16px;
+    flex-shrink: 0;
 }
 
 .user-dropdown .dropdown-name {

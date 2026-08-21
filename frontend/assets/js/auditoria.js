@@ -15,6 +15,168 @@
 (function () {
   'use strict';
 
+    /* ================================================================
+     1.5 CONTROL DE SESIÓN - USUARIO
+  ================================================================ */
+
+  function cargarUsuarioNav() {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        const avatar = document.getElementById('navAvatar');
+        const username = document.getElementById('navUsername');
+        const dropdownAvatar = document.getElementById('dropdownAvatar');
+        const dropdownName = document.getElementById('dropdownName');
+        const dropdownEmail = document.getElementById('dropdownEmail');
+
+        const iniciales = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
+        const nombre = user.nombre || 'Usuario';
+        const correo = user.correo || 'usuario@email.com';
+
+        if (avatar) avatar.textContent = iniciales;
+        if (username) username.textContent = nombre;
+        if (dropdownAvatar) dropdownAvatar.textContent = iniciales;
+        if (dropdownName) dropdownName.textContent = nombre;
+        if (dropdownEmail) dropdownEmail.textContent = correo;
+
+        console.log('✅ Usuario cargado en navbar:', nombre);
+      } catch (e) {
+        console.error('Error cargando usuario:', e);
+      }
+    }
+  }
+
+  function verificarSesion() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log('❌ No hay token, redirigiendo al login...');
+      window.location.href = '../public/login.html';
+      return;
+    }
+
+    console.log('🔐 Verificando token...');
+
+    fetch(API_URL + '/auth/verify', {
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    })
+    .then(function(response) {
+      if (!response.ok) {
+        throw new Error('Token inválido');
+      }
+      return response.json();
+    })
+    .then(function() {
+      console.log('✅ Sesión verificada');
+      cargarUsuarioNav();
+      initUserControls();
+      init();
+    })
+    .catch(function(error) {
+      console.error('❌ Error verificando sesión:', error);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('role');
+      window.location.href = '../public/login.html';
+    });
+  }
+
+  function cerrarSesion(mensaje) {
+    var token = localStorage.getItem('token');
+
+    if (token) {
+      fetch(API_URL + '/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        }
+      })
+      .catch(function(error) {
+        console.warn('⚠️ No se pudo comunicar con el backend al cerrar sesión:', error);
+      })
+      .finally(function() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('role');
+        localStorage.removeItem('login_time');
+
+        if (mensaje) {
+          alert(mensaje);
+        }
+
+        window.location.href = '../public/login.html';
+      });
+    } else {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('role');
+      localStorage.removeItem('login_time');
+
+      if (mensaje) {
+        alert(mensaje);
+      }
+
+      window.location.href = '../public/login.html';
+    }
+  }
+
+  function toggleDropdown() {
+    var dropdown = document.getElementById('userDropdown');
+    if (dropdown) {
+      dropdown.classList.toggle('show');
+    }
+  }
+
+  function cerrarDropdown() {
+    var dropdown = document.getElementById('userDropdown');
+    if (dropdown) {
+      dropdown.classList.remove('show');
+    }
+  }
+
+  function initUserControls() {
+    var container = document.getElementById('navUserContainer');
+    var logoutBtn = document.getElementById('dropdownLogout');
+
+    if (container) {
+      container.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleDropdown();
+      });
+    }
+
+    document.addEventListener('click', function() {
+      cerrarDropdown();
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        cerrarDropdown();
+      }
+      if (e.ctrlKey && e.shiftKey && (e.key === 'L' || e.key === 'l')) {
+        e.preventDefault();
+        if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+          cerrarSesion('👋 Sesión cerrada exitosamente.');
+        }
+      }
+    });
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+          cerrarSesion('👋 Sesión cerrada exitosamente.');
+        }
+      });
+    }
+
+    console.log('✅ Controles de usuario inicializados');
+  }
+
   /* ================================================================
      1. CONFIGURACIÓN Y CONSTANTES
   ================================================================ */
@@ -980,6 +1142,10 @@
      8. INICIALIZACIÓN
   ================================================================ */
 
+    /* ================================================================
+     8. INICIALIZACIÓN
+  ================================================================ */
+
   function init() {
     log('🚀 Iniciando auditoria.js...');
     renderChecklist('proceso');
@@ -989,14 +1155,14 @@
     cargarOpcionesFiltros();
     
     // Cargar auditorías sin filtros
-    cargarAuditorias({}).then(() => {
+    cargarAuditorias({}).then(function() {
       log('💡 Para prueba manual, ejecuta en consola: window.actualizarForzado()');
       log('✅ auditoria.js iniciado correctamente');
-    }).catch(error => {
+    }).catch(function(error) {
       logError('Error en la inicialización:', error);
     });
   }
-
+  
   /* Función de prueba manual (global) */
   window.actualizarForzado = async function() {
     if (!auditoriaActiva) {
@@ -1036,7 +1202,8 @@
     }
   };
 
-  // Iniciar
-  init();
+   // Iniciar - Verificar sesión primero
+  console.log('🔐 Verificando sesión...');
+  verificarSesion();
 
 })();

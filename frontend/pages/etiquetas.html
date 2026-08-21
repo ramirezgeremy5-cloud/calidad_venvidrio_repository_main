@@ -39,122 +39,35 @@ href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min
 
 
 <nav class="navbar">
-
-
-<div class="nav-brand">
-
-VENV<span>IDRIO</span>
-
-</div>
-
-
-
-
-<ul class="nav-links">
-
-
-<li>
-
-<a href="../public/dashboard.html">
-
-<i class="ti ti-layout-dashboard"></i>
-
-Panel Principal
-
-</a>
-
-</li>
-
-
-
-<li>
-
-<a href="../pages/produccion.html">
-
-<i class="ti ti-building-factory-2"></i>
-
-Producción
-
-</a>
-
-</li>
-
-
-
-
-<li>
-
-<a href="../pages/defectos.html">
-
-<i class="ti ti-alert-triangle"></i>
-
-Defectos
-
-</a>
-
-</li>
-
-
-
-
-<li>
-
-<a class="active"
-href="../pages/etiquetas.html">
-
-<i class="ti ti-qrcode"></i>
-
-Etiquetas y QR
-
-</a>
-
-</li>
-
-
-
-
-<li>
-
-<a href="../pages/auditoria.html">
-
-<i class="ti ti-clipboard-check"></i>
-
-Auditoría
-
-</a>
-
-</li>
-
-<li><a href="../pages/auditoria_producto.html" class="active"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
-
-
-</ul>
-
-
-
-
-
-<div class="nav-user">
-
-
-<div class="nav-avatar">
-
-JR
-
-</div>
-
-
-<span class="nav-username">
-
-J. Ramírez
-
-</span>
-
-
-</div>
-
-
-
+  <div class="nav-brand">VENV<span>IDRIO</span></div>
+  <ul class="nav-links">
+    <li><a href="../public/dashboard.html"><i class="ti ti-layout-dashboard"></i> Panel Principal</a></li>
+    <li><a href="../pages/produccion.html"><i class="ti ti-building-factory-2"></i> Producción</a></li>
+    <li><a href="../pages/defectos.html"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
+    <li><a href="../pages/etiquetas.html" class="active"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
+    <li><a href="../pages/auditoria.html"><i class="ti ti-clipboard-check"></i> Auditoría</a></li>
+    <li><a href="../pages/auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
+  </ul>
+
+  <!-- ===== ÁREA DE USUARIO CON DROPDOWN ===== -->
+  <div class="nav-user" id="navUserContainer">
+    <div class="nav-avatar-circle" id="navAvatar">US</div>
+    <span class="nav-username" id="navUsername">Cargando...</span>
+
+    <div class="user-dropdown" id="userDropdown">
+      <div class="dropdown-header">
+        <div class="dropdown-avatar-circle" id="dropdownAvatar">US</div>
+        <div>
+          <div class="dropdown-name" id="dropdownName">Cargando...</div>
+          <div class="dropdown-email" id="dropdownEmail">cargando@email.com</div>
+        </div>
+      </div>
+      <div class="dropdown-divider"></div>
+      <a class="dropdown-item dropdown-danger" id="dropdownLogout">
+        <i class="ti ti-logout"></i> Cerrar Sesión
+      </a>
+    </div>
+  </div>
 </nav>
 
 

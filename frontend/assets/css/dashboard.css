@@ -642,8 +642,8 @@
 .dropdown-avatar-circle {
     width: 38px;
     height: 38px;
-    border-radius: 50%; /* Esto hace el círculo */
-    background-color: #1a2436; /* Color azul oscuro */
+    border-radius: 50%;
+    background-color: var(--blue-accent);  /* ✅ AHORA ES AZUL */
     color: #ffffff;
     display: flex;
     align-items: center;

@@ -8,6 +8,147 @@
 
 'use strict';
 
+/* ==========================================
+   CONTROL DE SESIÓN - USUARIO
+========================================== */
+
+function cargarUsuarioNav() {
+  const userData = localStorage.getItem('user');
+  if (userData) {
+    try {
+      const user = JSON.parse(userData);
+      const avatar = document.getElementById('navAvatar');
+      const username = document.getElementById('navUsername');
+      const dropdownAvatar = document.getElementById('dropdownAvatar');
+      const dropdownName = document.getElementById('dropdownName');
+      const dropdownEmail = document.getElementById('dropdownEmail');
+
+      const iniciales = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
+      const nombre = user.nombre || 'Usuario';
+      const correo = user.correo || 'usuario@email.com';
+
+      if (avatar) avatar.textContent = iniciales;
+      if (username) username.textContent = nombre;
+      if (dropdownAvatar) dropdownAvatar.textContent = iniciales;
+      if (dropdownName) dropdownName.textContent = nombre;
+      if (dropdownEmail) dropdownEmail.textContent = correo;
+    } catch (e) {
+      console.error('Error cargando usuario:', e);
+    }
+  }
+}
+
+function verificarSesion() {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    window.location.href = '../public/login.html';
+    return;
+  }
+
+  fetch(`${API_URL}/auth/verify`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Token inválido');
+    }
+    return response.json();
+  })
+  .then(() => {
+    cargarUsuarioNav();
+    initUserControls();
+    cargarEtiquetas();
+  })
+  .catch(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('role');
+    window.location.href = '../public/login.html';
+  });
+}
+
+function cerrarSesion(mensaje) {
+  const token = localStorage.getItem('token');
+  
+  if (token) {
+    fetch(`${API_URL}/auth/logout`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    .catch(() => {})
+    .finally(() => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('role');
+      if (mensaje) alert(mensaje);
+      window.location.href = '../public/login.html';
+    });
+  } else {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('role');
+    if (mensaje) alert(mensaje);
+    window.location.href = '../public/login.html';
+  }
+}
+
+function toggleDropdown() {
+  const dropdown = document.getElementById('userDropdown');
+  if (dropdown) {
+    dropdown.classList.toggle('show');
+  }
+}
+
+function cerrarDropdown() {
+  const dropdown = document.getElementById('userDropdown');
+  if (dropdown) {
+    dropdown.classList.remove('show');
+  }
+}
+
+function initUserControls() {
+  const container = document.getElementById('navUserContainer');
+  const logoutBtn = document.getElementById('dropdownLogout');
+
+  if (container) {
+    container.addEventListener('click', function(e) {
+      e.stopPropagation();
+      toggleDropdown();
+    });
+  }
+
+  document.addEventListener('click', function() {
+    cerrarDropdown();
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      cerrarDropdown();
+    }
+    if (e.ctrlKey && e.shiftKey && (e.key === 'L' || e.key === 'l')) {
+      e.preventDefault();
+      if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+        cerrarSesion('👋 Sesión cerrada exitosamente.');
+      }
+    }
+  });
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+        cerrarSesion('👋 Sesión cerrada exitosamente.');
+      }
+    });
+  }
+}
+
 
 
 const API_URL =
@@ -841,6 +982,7 @@ document
 
 document.getElementById(id).value="";
 
+
 });
 
 
@@ -931,7 +1073,12 @@ behavior:"smooth"
 document.addEventListener(
 "DOMContentLoaded",
 ()=>{
+/* ==========================================
+   INICIO - Verificar sesión primero
+========================================== */
 
+console.log('🔐 Verificando sesión...');
+verificarSesion();
 
 console.log(
 "Etiquetas Venvidrio iniciado"

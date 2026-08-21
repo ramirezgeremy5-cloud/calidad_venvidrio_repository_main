@@ -1,33 +1,178 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Venvidrio | Sistema</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Venvidrio | Calidad y Precisión</title>
+    
+    <!-- Iconos Tabler -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+    
+    <!-- CSS Externo -->
+    <link rel="stylesheet" href="../assets/css/landing.css" />
 
-    <!-- CSS global -->
-    <link rel="stylesheet" href="../assets/css/shared.css">
-    <link rel="stylesheet" href="../assets/css/index.css">
+    <!-- CSS INLINE PARA EL FONDO PERSONALIZADO -->
+    <style>
+        .hero {
+            background-image: url('../assets/img/fondo-venvidrio-fabrica.jpeg') !important;
+            background-size: cover;
+            background-position: center bottom;
+            background-repeat: no-repeat;
+        }
+    </style>
 </head>
-
 <body>
 
-    <!-- ================= LOADING ================= -->
-    <div class="index-container">
-
-        <div class="loader-box">
-            <h1 class="brand">VENVIDRIO</h1>
-            <p class="subtitle">Sistema de Control de Calidad</p>
-
-            <div class="spinner"></div>
-
-            <p class="text-muted">Cargando sistema...</p>
+    <!-- ================= NAVBAR ================= -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo" class="nav-logo" />
         </div>
 
-    </div>
+        <button class="menu-toggle">
+            <i class="ti ti-menu-2"></i>
+        </button>
 
-    <!-- ================= JS ================= -->
-    <script src="../assets/js/index.js"></script>
+        <ul class="nav-links">
+            <li><a href="#inicio">Inicio</a></li>
+            <li><a href="#nosotros">Nosotros</a></li>
+            <li><a href="#contacto">Contacto</a></li>
+            <li>
+                <a href="login.html" class="btn-nav-primary">
+                    <i class="ti ti-login"></i> Iniciar Sesión
+                </a>
+            </li>
+        </ul>
+    </nav>
 
+    <!-- ================= HERO / BIENVENIDA ================= -->
+    <section class="hero" id="inicio">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <span class="hero-badge">Sistema de Control de Calidad</span>
+            <h1>Bienvenido a <strong>Venvidrio</strong></h1>
+            <p class="hero-subtitle">
+                Innovación y precisión en la fabricación de vidrio. <br />
+                Optimizamos tu producción con tecnología de vanguardia.
+            </p>
+            <div class="hero-actions">
+                <a href="login.html" class="btn btn-primary">
+                    <i class="ti ti-login"></i> Acceder al Sistema
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= NOSOTROS / MISIÓN Y VISIÓN ================= -->
+    <section class="section-nosotros" id="nosotros">
+        <div class="container">
+            
+            <!-- Descripción y Reseña -->
+            <div class="about-header">
+                <h2>Sobre Venvidrio</h2>
+                <p class="about-subtitle">Excelencia en la industria del vidrio desde 1982</p>
+            </div>
+
+            <div class="about-grid">
+                <div class="about-text">
+                    <h3>Venezolana del Vidrio</h3>
+                    <p>
+                        Venvidrio es una empresa venezolana con más de 40 años de trayectoria en la fabricación 
+                        y transformación de vidrio para la industria de la construcción y el diseño arquitectónico. 
+                        Nos distinguimos por nuestra capacidad de innovación, el uso de tecnología de punta y 
+                        un equipo humano altamente calificado.
+                    </p>
+                    <p>
+                        Nuestra planta, ubicada en Valera, opera bajo los más estrictos estándares de calidad, 
+                        garantizando que cada pieza que sale de nuestras líneas de producción cumpla con las 
+                        exigencias del mercado nacional e internacional.
+                    </p>
+                </div>
+                
+                <div class="about-stats">
+                    <div class="stat-item">
+                        <span class="stat-number">+40</span>
+                        <span class="stat-label">Años de experiencia</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">+500</span>
+                        <span class="stat-label">Proyectos realizados</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Misión y Visión -->
+            <div class="cards-grid">
+                <div class="card-info">
+                    <div class="card-icon">
+                        <i class="ti ti-target"></i>
+                    </div>
+                    <h3>Misión</h3>
+                    <p>
+                        Proveer soluciones en vidrio de la más alta calidad, garantizando seguridad, 
+                        durabilidad y diseño, satisfaciendo las necesidades de nuestros clientes con 
+                        excelencia y responsabilidad.
+                    </p>
+                </div>
+
+                <div class="card-info">
+                    <div class="card-icon">
+                        <i class="ti ti-eye"></i>
+                    </div>
+                    <h3>Visión</h3>
+                    <p>
+                        Ser el referente nacional e internacional en la industria del vidrio, reconocidos 
+                        por nuestra innovación, sostenibilidad y compromiso con el desarrollo de nuestro 
+                        equipo humano.
+                    </p>
+                </div>
+
+                <div class="card-info">
+                    <div class="card-icon">
+                        <i class="ti ti-diamond"></i>
+                    </div>
+                    <h3>Nuestros Valores</h3>
+                    <p>
+                        <strong>Calidad</strong> · <strong>Innovación</strong> · 
+                        <strong>Integridad</strong> · <strong>Trabajo en Equipo</strong> · 
+                        <strong>Compromiso</strong>
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ================= CONTACTO / PIE DE PÁGINA ================= -->
+    <footer class="footer" id="contacto">
+        <div class="container footer-grid">
+            <div>
+                <h4>Venvidrio</h4>
+                <p>Sistema de Control de Calidad</p>
+                <p style="font-size: 13px; color: #94a3b8; margin-top: 4px;">
+                    © 2026 Todos los derechos reservados.
+                </p>
+            </div>
+            <div>
+                <h4>Enlaces Rápidos</h4>
+                <ul>
+                    <li><a href="login.html">Iniciar Sesión</a></li>
+                    <li><a href="#inicio">Inicio</a></li>
+                    <li><a href="#nosotros">Nosotros</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4>Contacto</h4>
+                <ul>
+                    <li><i class="ti ti-mail"></i> contacto@venvidrio.com</li>
+                    <li><i class="ti ti-phone"></i> +58 (212) 555-0199</li>
+                    <li><i class="ti ti-map-pin"></i> Valera, estado Trujillo</li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ================= JS Externo ================= -->
+    <script src="../assets/js/landing.js"></script>
 </body>
 </html>

@@ -6,7 +6,7 @@
   <title>Venvidrio — Control de Calidad</title>
 
   <!-- CSS -->
-  <link rel="stylesheet" href="../assets/css/Login_styless.css" />
+  <link rel="stylesheet" href="../assets/css/login_styless.css" />
 
   <!-- Tabler Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
@@ -26,7 +26,12 @@
 
     <div class="card" id="loginCard">
 
-      <!-- Overlay éxito -->
+      <!-- ================= BOTÓN VOLVER AL INICIO ================= -->
+      <a href="index.html" class="back-btn" title="Volver a la página de inicio">
+        <i class="ti ti-arrow-left"></i> Volver
+      </a>
+
+      <!-- ================= OVERLAY DE ÉXITO ================= -->
       <div class="success-overlay" id="successOverlay">
         <div class="check-circle">
           <i class="ti ti-check"></i>
@@ -35,59 +40,56 @@
         <p class="success-sub">Cargando sistema...</p>
       </div>
 
-      <!-- LOGO -->
-      <div class="logo-area">
-        <div class="logo-icon">
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-            <rect x="2" y="2" width="10" height="10" rx="2" fill="white" opacity="0.9"/>
-            <rect x="16" y="2" width="10" height="10" rx="2" fill="white" opacity="0.6"/>
-            <rect x="2" y="16" width="10" height="10" rx="2" fill="white" opacity="0.6"/>
-            <rect x="16" y="16" width="10" height="10" rx="2" fill="white" opacity="0.3"/>
-          </svg>
-        </div>
+      <!-- ================= MENSAJE DE ERROR FLOTANTE ================= -->
+      <div class="error-message" id="errorMessage">
+        <i class="ti ti-alert-circle"></i>
+        <span id="errorText">Credenciales incorrectas</span>
+      </div>
 
-        <div class="brand-name">Venvidrio</div>
-        <div class="brand-sub">Control de Calidad</div>
+      <!-- ================= LOGO REAL DE VENVIDRIO ================= -->
+      <div class="logo-area" id="logoArea">
+        <!-- IMPORTANTE: Asegúrate de que la ruta coincida con la ubicación de tu imagen -->
+        <img src="../assets/img/logo-venvidrio.png" alt="Venvidrio Logo" class="login-logo" />
         <div class="divider"></div>
       </div>
 
-      <!-- USUARIO -->
+      <!-- ================= CAMPO USUARIO ================= -->
       <div class="field-group">
         <label class="field-label">Usuario</label>
-
         <div class="field-wrapper">
           <i class="ti ti-user field-icon"></i>
-
-          <input
-            class="field-input"
-            id="username"
-            type="text"
-            autocomplete="username"
-          />
+          <input class="field-input" id="username" type="text" autocomplete="username" placeholder="usuario@venvidrio.com" />
         </div>
       </div>
 
-      <!-- CONTRASEÑA -->
+      <!-- ================= CAMPO CONTRASEÑA ================= -->
       <div class="field-group">
         <label class="field-label">Contraseña</label>
-
         <div class="field-wrapper">
           <i class="ti ti-lock field-icon"></i>
-
-          <input
-            class="field-input"
-            id="password"
-            type="password"
-            autocomplete="current-password"
-          />
-
+          <input class="field-input" id="password" type="password" autocomplete="current-password" placeholder="••••••••" />
           <button class="pw-toggle" id="pwToggle" type="button">
             <i class="ti ti-eye" id="pwIcon"></i>
           </button>
         </div>
       </div>
 
-      <!-- BOTÓN -->
+      <!-- ================= ADVERTENCIA DE CAPS LOCK ================= -->
+      <div class="caps-lock-warning" id="capsLockWarning">
+        <i class="ti ti-alert-triangle"></i>
+        <span>La tecla Bloq Mayús está activa</span>
+      </div>
+
+      <!-- ================= RECORDAR SESIÓN ================= -->
+      <div class="remember-me">
+        <label class="custom-checkbox">
+          <input type="checkbox" id="rememberMe" />
+          <span class="checkmark"></span>
+          Recordar mi sesión
+        </label>
+      </div>
+
+      <!-- ================= BOTÓN INICIAR SESIÓN ================= -->
       <button class="submit-btn" id="submitBtn" type="button">
         <span class="btn-content">
           <span class="loading-ring"></span>
@@ -96,6 +98,7 @@
         </span>
       </button>
 
+      <!-- ================= FOOTER ================= -->
       <div class="footer-note">
         Sistema protegido · <strong>Venvidrio S.A.</strong>
       </div>
@@ -104,7 +107,7 @@
 
   </div>
 
-  <!-- JS -->
+  <!-- ================= JS ================= -->
   <script src="../assets/js/login_app.js"></script>
 
 </body>

@@ -1,6 +1,6 @@
 /* =============================================
    Venvidrio — Sistema de Control de Calidad
-   styles.css
+   Login_styless.css (Con Logo Real)
    ============================================= */
 
 *, *::before, *::after {
@@ -113,7 +113,26 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ---- Área de logo ---- */
+/* ---- Botón Volver ---- */
+.back-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.3s;
+  z-index: 15;
+}
+
+.back-btn:hover {
+  color: #0f172a;
+}
+
+/* ---- Área de logo real ---- */
 .logo-area {
   text-align: center;
   margin-bottom: 2rem;
@@ -126,58 +145,23 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.logo-icon {
-  width: 56px;
-  height: 56px;
-  background: #0f172a;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 12px;
-  position: relative;
-  overflow: hidden;
-}
-
-.logo-icon::after {
-  content: '';
-  position: absolute;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(45deg, transparent 30%, rgba(59,130,246,0.3) 50%, transparent 70%);
-  animation: shimmer 3s ease-in-out infinite;
-}
-
-@keyframes shimmer {
-  0%   { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-  100% { transform: translateX(100%)  translateY(100%)  rotate(45deg); }
-}
-
-.logo-icon svg {
-  position: relative;
-  z-index: 1;
-}
-
-.brand-name {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 28px;
-  color: #0f172a;
-  letter-spacing: 2px;
-}
-
-.brand-sub {
-  font-size: 11px;
-  color: #64748b;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  margin-top: 2px;
+/* Estilo para el logo real de Venvidrio */
+.login-logo {
+  height: 100px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+  /* Un pequeño brillo para que resalte */
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.05));
 }
 
 .divider {
   width: 40px;
   height: 2px;
   background: #0f172a;
-  margin: 10px auto 0;
+  margin: 14px auto 0;
   border-radius: 2px;
   animation: divider-grow 0.6s 0.4s ease forwards;
   transform: scaleX(0);
@@ -234,8 +218,7 @@ body {
   color: #0f172a;
 }
 
-.field-input,
-.field-select {
+.field-input {
   width: 100%;
   background: #f8fafc;
   border: 1.5px solid #e2e8f0;
@@ -254,8 +237,7 @@ body {
   color: #94a3b8;
 }
 
-.field-input:focus,
-.field-select:focus {
+.field-input:focus {
   border-color: #0f172a;
   background: #fff;
   box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
@@ -264,16 +246,6 @@ body {
 /* Input de contraseña con espacio para ícono derecho */
 #password {
   padding-right: 42px;
-}
-
-.select-arrow {
-  position: absolute;
-  right: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-  font-size: 16px;
-  color: #94a3b8;
 }
 
 .pw-toggle {
@@ -295,9 +267,69 @@ body {
   color: #0f172a;
 }
 
-/* Estado de error */
-.field-input.error,
-.field-select.error {
+/* ---- Mensaje de error flotante ---- */
+.error-message {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 10px 14px;
+  border-radius: 8px;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 12px;
+  border: 1px solid #fca5a5;
+  animation: fade-up 0.3s ease forwards;
+}
+
+.error-message.show {
+  display: flex;
+}
+
+/* ---- Advertencia Caps Lock ---- */
+.caps-lock-warning {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #f59e0b;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+.caps-lock-warning i {
+  font-size: 16px;
+}
+
+/* ---- Recordar sesión ---- */
+.remember-me {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  animation: fade-up 0.5s 0.5s ease forwards;
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.custom-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
+}
+
+.custom-checkbox input {
+  accent-color: #0f172a;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* ---- Estado de error en inputs ---- */
+.field-input.error {
   border-color: #ef4444;
   animation: shake 0.4s ease;
 }
@@ -386,22 +418,6 @@ body {
 .submit-btn.loading .btn-icon  { display: none; }
 .submit-btn.loading .loading-ring { display: block; }
 
-/* ---- Nota de pie ---- */
-.footer-note {
-  text-align: center;
-  font-size: 11px;
-  color: #94a3b8;
-  margin-top: 1.5rem;
-
-  animation: fade-up 0.5s 0.7s ease forwards;
-  opacity: 0;
-  transform: translateY(8px);
-}
-
-.footer-note strong {
-  color: #475569;
-}
-
 /* ---- Overlay de éxito ---- */
 .success-overlay {
   position: absolute;
@@ -459,9 +475,35 @@ body {
   margin-top: 4px;
 }
 
+/* ---- Nota de pie ---- */
+.footer-note {
+  text-align: center;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 1.5rem;
+
+  animation: fade-up 0.5s 0.7s ease forwards;
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.footer-note strong {
+  color: #475569;
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 480px) {
   .card {
     padding: 2rem 1.25rem;
+  }
+  
+  .login-logo {
+    height: 80px; /* Un poco más pequeño en móviles */
+  }
+  
+  .back-btn {
+    top: 15px;
+    left: 15px;
+    font-size: 12px;
   }
 }
