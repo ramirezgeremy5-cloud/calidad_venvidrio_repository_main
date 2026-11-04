@@ -3,10 +3,13 @@
    JS v6 - Optimizado, Interactivo y a Prueba de Errores
    ========================================== */
 
-// Detectar dinámicamente la URL del servidor
-const API_URL = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' 
-  ? "http://127.0.0.1:8000" 
-  : `http://${window.location.hostname}:8000`;
+// Detectar dinámicamente la URL del servidor (CORREGIDO)
+let API_URL;
+if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
+  API_URL = "http://127.0.0.1:8000";
+} else {
+  API_URL = "https://calidad-venvidrio-repository-main.onrender.com";
+}
 
 let productionChart = null;
 let defectosChart = null;
@@ -191,7 +194,6 @@ function initUserControls() {
    CARGA PRINCIPAL DE DATOS (CON ABORT CONTROLLER)
 ========================================== */
 async function cargarDashboard(isBackground = false) {
-  // Si ya hay una petición en curso, la cancelamos
   if (abortController) abortController.abort();
   abortController = new AbortController();
 
@@ -242,10 +244,9 @@ async function cargarDashboard(isBackground = false) {
     setText('ultima-actualizacion', new Date().toLocaleTimeString('es-VE'));
 
   } catch (error) {
-    if (error.name === 'AbortError') return; // Ignorar cancelaciones
+    if (error.name === 'AbortError') return;
     logError('Error cargando dashboard:', error);
     
-    // Mostrar errores visuales
     ['top-productos', 'top-tipos-defecto', 'top-clientes-retencion', 'auditorias-pendientes', 'dashboard-alerts', 'dashboard-table'].forEach(id => {
       renderError(id, 'No se pudieron cargar los datos', () => cargarDashboard());
     });
@@ -317,7 +318,7 @@ function renderChartProduccion(lotes) {
 
   const fechas = Object.keys(porDia).sort().slice(-14);
   const labels = fechas.map(f => {
-    const d = new Date(f + 'T00:00:00'); // Evitar desfase de zona horaria
+    const d = new Date(f + 'T00:00:00');
     return `${d.getDate()}/${d.getMonth() + 1}`;
   });
 
@@ -470,7 +471,6 @@ function renderChartApto(lotes) {
       onClick: (e, activeElements) => {
         if (activeElements.length > 0) {
           const index = activeElements[0].index;
-          // Si hacen clic en RETENIDO (índice 1) los llevamos a la pestaña de defectos
           if (index === 1) window.location.href = `../pages/defectos.html`;
         }
       },
@@ -983,10 +983,9 @@ function iniciarDashboard() {
   // Auto-actualización inteligente cada 30 segundos
   if (intervaloCarga) clearInterval(intervaloCarga);
   intervaloCarga = setInterval(() => {
-    // Solo recargar si la pestaña está visible para no saturar el servidor
     if (document.visibilityState === 'visible') {
       log('🔄 Auto-actualización de datos en segundo plano...');
-      cargarDashboard(true); // Carga en segundo plano
+      cargarDashboard(true);
     }
   }, 30000);
 
