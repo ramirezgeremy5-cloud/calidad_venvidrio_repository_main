@@ -548,7 +548,10 @@
       setVal('miPerfil-nombre', u.nombre || '');
       setVal('miPerfil-cedula', u.cedula || '');
       setVal('miPerfil-correo', u.correo || '');
-      setVal('miPerfil-turno', u.turno || 'No asignado');
+      
+      // 👇 CORRECCIÓN: El turno se muestra como número o vacío
+      setVal('miPerfil-turno', u.turno ? String(u.turno) : '');
+      
       setVal('miPerfil-cargo', u.cargo || 'No asignado');
       setVal('miPerfil-fecha-ingreso', u.fecha_ingreso || '');
       setVal('miPerfil-fecha-nacimiento', u.fecha_nacimiento || '');
@@ -687,10 +690,15 @@
         }
 
         // 2. Actualizar datos
+        // 👇 CORRECCIÓN: Convertimos el turno a número (parseInt) o null si está vacío
+        var turnoVal = document.getElementById('miPerfil-turno').value;
+        var turnoNum = turnoVal ? parseInt(turnoVal, 10) : null;
+        if (isNaN(turnoNum)) turnoNum = null;
+
         var payload = {
           nombre: nombre,
           cedula: (document.getElementById('miPerfil-cedula').value || '').trim() || null,
-          turno: document.getElementById('miPerfil-turno').value || null,
+          turno: turnoNum, // 👈 Enviamos el número o null
           fecha_ingreso: document.getElementById('miPerfil-fecha-ingreso').value || null,
           fecha_nacimiento: document.getElementById('miPerfil-fecha-nacimiento').value || null,
           foto_url: fotoUrlFinal
@@ -726,7 +734,9 @@
               alert('Perfil actualizado correctamente');
             }
           } else {
-            mostrarErrorPerfil('Error al actualizar el perfil.');
+            // Si falla, mostramos el detalle del error del backend
+            var errorData = await res.json().catch(() => ({}));
+            mostrarErrorPerfil(errorData.detail || 'Error al actualizar el perfil.');
           }
         } catch (err) {
           mostrarErrorPerfil('Error de conexión.');
