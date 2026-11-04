@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 import os
 import uuid
+from supabase import create_client, Client  # 👈 IMPORTANTE: Importamos Supabase
 
 from app.models.usuario import Usuario
 from app.models.cargo import Cargo
@@ -28,27 +29,59 @@ router = APIRouter(
 )
 
 # =========================
-# SUBIR FOTO DE PERFIL
+# CONFIGURACIÓN DE SUPABASE STORAGE
+# =========================
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+
+# Inicializamos el cliente solo si las variables existen
+supabase: Client = None
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        print("✅ Cliente de Supabase Storage inicializado correctamente.")
+    except Exception as e:
+        print(f"⚠️ Error inicializando Supabase: {e}")
+else:
+    print("⚠️ ADVERTENCIA: SUPABASE_URL o SUPABASE_SERVICE_KEY no están configuradas en el entorno.")
+
+
+# =========================
+# SUBIR FOTO DE PERFIL (SUPABASE STORAGE)
 # =========================
 @router.post("/upload-foto")
 def subir_foto(
     file: UploadFile = File(...),
-    current_user: Usuario = Depends(get_current_active_user)  # 👈 Cualquier usuario logueado
+    current_user: Usuario = Depends(get_current_active_user)
 ):
     if not file.content_type.startswith("image/"):
         raise HTTPException(400, "El archivo debe ser una imagen")
     
-    # Crear la carpeta si no existe
-    os.makedirs("app/static/uploads", exist_ok=True)
+    if not supabase:
+        raise HTTPException(500, "Servicio de almacenamiento no configurado en el servidor.")
     
     ext = file.filename.split(".")[-1]
     filename = f"{uuid.uuid4()}.{ext}"
-    filepath = f"app/static/uploads/{filename}"
     
-    with open(filepath, "wb") as buffer:
-        buffer.write(file.file.read())
+    try:
+        # Leemos el contenido del archivo
+        file_content = file.file.read()
         
-    return {"url": f"/static/uploads/{filename}"}
+        # Subimos el archivo al bucket "avatars" en Supabase
+        supabase.storage.from_("avatars").upload(
+            path=filename,
+            file=file_content,
+            file_options={"content-type": file.content_type}
+        )
+        
+        # Obtenemos la URL pública del archivo subido
+        public_url = supabase.storage.from_("avatars").get_public_url(filename)
+        
+        return {"url": public_url}
+        
+    except Exception as e:
+        print(f"❌ Error subiendo foto a Supabase: {e}")
+        raise HTTPException(500, "Error interno al subir la imagen al almacenamiento.")
 
 
 # =========================
@@ -172,9 +205,8 @@ def actualizar_usuario(
     usuario_id: int,
     usuario_data: UsuarioUpdate,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_active_user)  # 👈 Cualquier usuario logueado
+    current_user: Usuario = Depends(get_current_active_user)
 ):
-    # 👇 VALIDACIÓN CLAVE: Solo el mismo usuario o un admin/supervisor puede editar
     if current_user.id != usuario_id and current_user.rol_id not in [2, 3]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
