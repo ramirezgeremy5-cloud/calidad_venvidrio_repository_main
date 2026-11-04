@@ -3,7 +3,14 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 import os
 import uuid
-from supabase import create_client, Client  # 👈 IMPORTANTE: Importamos Supabase
+
+# 👇 Importación protegida de Supabase
+try:
+    from supabase import create_client, Client
+    print("✅ Librería 'supabase' importada correctamente.")
+except ImportError:
+    print("❌ ERROR: La librería 'supabase' no está instalada. Revisa requirements.txt.")
+    create_client, Client = None, None
 
 from app.models.usuario import Usuario
 from app.models.cargo import Cargo
@@ -34,16 +41,21 @@ router = APIRouter(
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
-# Inicializamos el cliente solo si las variables existen
+print("==========================================")
+print("🔍 DIAGNÓSTICO DE SUPABASE STORAGE")
+print(f"URL configurada: {SUPABASE_URL}")
+print(f"KEY configurada: {'SÍ' if SUPABASE_KEY else 'NO'}")
+print("==========================================")
+
 supabase: Client = None
-if SUPABASE_URL and SUPABASE_KEY:
+if SUPABASE_URL and SUPABASE_KEY and create_client:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
         print("✅ Cliente de Supabase Storage inicializado correctamente.")
     except Exception as e:
-        print(f"⚠️ Error inicializando Supabase: {e}")
+        print(f"❌ Error inicializando Supabase: {e}")
 else:
-    print("⚠️ ADVERTENCIA: SUPABASE_URL o SUPABASE_SERVICE_KEY no están configuradas en el entorno.")
+    print("⚠️ ADVERTENCIA: Variables de Supabase no configuradas o librería no importada.")
 
 
 # =========================
@@ -54,6 +66,8 @@ def subir_foto(
     file: UploadFile = File(...),
     current_user: Usuario = Depends(get_current_active_user)
 ):
+    print("📤 [UPLOAD] Iniciando subida de foto...")
+    
     if not file.content_type.startswith("image/"):
         raise HTTPException(400, "El archivo debe ser una imagen")
     
@@ -62,26 +76,28 @@ def subir_foto(
     
     ext = file.filename.split(".")[-1]
     filename = f"{uuid.uuid4()}.{ext}"
+    print(f"📤 [UPLOAD] Archivo: {filename}, Tipo: {file.content_type}")
     
     try:
-        # Leemos el contenido del archivo
         file_content = file.file.read()
+        print(f"📤 [UPLOAD] Tamaño del archivo: {len(file_content)} bytes")
         
-        # Subimos el archivo al bucket "avatars" en Supabase
-        supabase.storage.from_("avatars").upload(
+        # Subir a Supabase
+        response = supabase.storage.from_("avatars").upload(
             path=filename,
             file=file_content,
             file_options={"content-type": file.content_type}
         )
+        print(f"📤 [UPLOAD] Respuesta de Supabase: {response}")
         
-        # Obtenemos la URL pública del archivo subido
         public_url = supabase.storage.from_("avatars").get_public_url(filename)
+        print(f"📤 [UPLOAD] URL pública generada: {public_url}")
         
         return {"url": public_url}
         
     except Exception as e:
-        print(f"❌ Error subiendo foto a Supabase: {e}")
-        raise HTTPException(500, "Error interno al subir la imagen al almacenamiento.")
+        print(f"❌ ERROR CRÍTICO SUPABASE UPLOAD: {type(e).__name__} - {str(e)}")
+        raise HTTPException(500, f"Error al subir a Supabase: {str(e)}")
 
 
 # =========================
