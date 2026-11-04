@@ -3,14 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 import os
 import uuid
-
-# 👇 Importación protegida de Supabase
-try:
-    from supabase import create_client, Client
-    print("✅ Librería 'supabase' importada correctamente.")
-except ImportError:
-    print("❌ ERROR: La librería 'supabase' no está instalada. Revisa requirements.txt.")
-    create_client, Client = None, None
+import requests # 👈 Importamos requests para la subida directa
 
 from app.models.usuario import Usuario
 from app.models.cargo import Cargo
@@ -36,43 +29,32 @@ router = APIRouter(
 )
 
 # =========================
-# CONFIGURACIÓN DE SUPABASE STORAGE (HARDCODEADO PARA PRUEBA)
+# CONFIGURACIÓN DE SUPABASE STORAGE (DIRECTA)
 # =========================
-# ⚠️ OJO: Reemplaza estos valores con los tuyos reales
-SUPABASE_URL = "https://rxoiedlrtoumeflqkbzb.supabase.co"
-SUPABASE_KEY = "sb_secret_69F..." # <--- PON AQUÍ TU LLAVE SECRETA COMPLETA
+SUPABASE_URL = os.getenv("SUPABASE_URL")  # Debe ser: https://rxoiedlrtoumeflqkbzb.supabase.co
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
 print("==========================================")
-print("🔍 DIAGNÓSTICO DE SUPABASE STORAGE")
+print("🔍 DIAGNÓSTICO DE SUPABASE STORAGE (HTTP DIRECTO)")
 print(f"URL configurada: {SUPABASE_URL}")
 print(f"KEY configurada: {'SÍ' if SUPABASE_KEY else 'NO'}")
 print("==========================================")
 
-supabase: Client = None
-if SUPABASE_URL and SUPABASE_KEY and create_client:
-    try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        print("✅ Cliente de Supabase Storage inicializado correctamente.")
-    except Exception as e:
-        print(f"❌ Error inicializando Supabase: {e}")
-else:
-    print("⚠️ ADVERTENCIA: Variables de Supabase no configuradas o librería no importada.")
-
 
 # =========================
-# SUBIR FOTO DE PERFIL (SUPABASE STORAGE)
+# SUBIR FOTO DE PERFIL (HTTP DIRECTO)
 # =========================
 @router.post("/upload-foto")
 def subir_foto(
     file: UploadFile = File(...),
     current_user: Usuario = Depends(get_current_active_user)
 ):
-    print("📤 [UPLOAD] Iniciando subida de foto...")
+    print("📤 [UPLOAD] Iniciando subida de foto (HTTP directo)...")
     
     if not file.content_type.startswith("image/"):
         raise HTTPException(400, "El archivo debe ser una imagen")
     
-    if not supabase:
+    if not SUPABASE_URL or not SUPABASE_KEY:
         raise HTTPException(500, "Servicio de almacenamiento no configurado en el servidor.")
     
     ext = file.filename.split(".")[-1]
@@ -83,19 +65,34 @@ def subir_foto(
         file_content = file.file.read()
         print(f"📤 [UPLOAD] Tamaño del archivo: {len(file_content)} bytes")
         
-        # Subir a Supabase
-        response = supabase.storage.from_("avatars").upload(
-            path=filename,
-            file=file_content,
-            file_options={"content-type": file.content_type}
-        )
-        print(f"📤 [UPLOAD] Respuesta de Supabase: {response}")
+        # Construimos la URL de la API de Storage de Supabase
+        bucket_name = "avatars"
+        upload_url = f"{SUPABASE_URL}/storage/v1/object/{bucket_name}/{filename}"
         
-        public_url = supabase.storage.from_("avatars").get_public_url(filename)
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": file.content_type
+        }
+        
+        # Hacemos la petición POST con requests (fuerza IPv4)
+        response = requests.post(upload_url, headers=headers, data=file_content, timeout=30)
+        
+        if response.status_code not in [200, 201]:
+            print(f"❌ ERROR SUPABASE API: {response.status_code} - {response.text}")
+            raise HTTPException(500, f"Error de Supabase: {response.text}")
+            
+        print(f"📤 [UPLOAD] Respuesta de Supabase: {response.status_code}")
+        
+        # Construimos la URL pública
+        public_url = f"{SUPABASE_URL}/storage/v1/object/public/{bucket_name}/{filename}"
         print(f"📤 [UPLOAD] URL pública generada: {public_url}")
         
         return {"url": public_url}
         
+    except requests.exceptions.RequestException as e:
+        print(f"❌ ERROR DE RED (requests): {type(e).__name__} - {str(e)}")
+        raise HTTPException(500, f"Error de conexión con Supabase: {str(e)}")
     except Exception as e:
         print(f"❌ ERROR CRÍTICO SUPABASE UPLOAD: {type(e).__name__} - {str(e)}")
         raise HTTPException(500, f"Error al subir a Supabase: {str(e)}")
