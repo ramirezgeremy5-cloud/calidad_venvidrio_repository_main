@@ -35,11 +35,10 @@ class UsuarioCreate(UsuarioBase):
         description="ID del cargo asignado (opcional). Debe existir en la tabla cargos."
     )
     
-    # Nuevos campos
     cedula: Optional[str] = Field(None, max_length=20, description="Cédula de identidad (opcional)")
     
-    # 👇 CAMBIO: Turno ahora acepta solo 1, 2, 3 o A, B, C
-    turno: str = Field(..., min_length=1, max_length=20, description="Turno del usuario (Ej: 1, 2, 3 o A, B, C)")
+    # 👇 CAMBIO: Turno ahora es un entero
+    turno: int = Field(..., ge=1, le=4, description="Turno del usuario (1, 2, 3 o 4)")
     
     fecha_ingreso: Optional[date] = Field(None, description="Fecha de ingreso (opcional)")
     fecha_nacimiento: Optional[date] = Field(None, description="Fecha de nacimiento (opcional)")
@@ -59,25 +58,6 @@ class UsuarioCreate(UsuarioBase):
         if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", v):
             raise ValueError('Debe tener al menos un carácter especial (!@#$%^&*(),.?":{}|<>)')
         return v
-
-    # 👇 VALIDACIÓN PARA EL TURNO
-    @validator('turno')
-    def validar_turno(cls, v):
-        """Validar que el turno sea solo 1, 2, 3 (o A, B, C)"""
-        # Limpiamos el texto (quitamos espacios y pasamos a mayúscula)
-        v_limpio = v.strip().upper()
-        
-        # Si el usuario envía "Turno 1", lo convertimos automáticamente a "1"
-        if v_limpio.startswith('TURNO '):
-            v_limpio = v_limpio.replace('TURNO ', '')
-            
-        # Lista de turnos permitidos (puedes quitar las letras si solo usas números)
-        permitidos = ['1', '2', '3', '4', 'A', 'B', 'C']
-        
-        if v_limpio not in permitidos:
-            raise ValueError(f'El turno debe ser uno de los siguientes valores: {", ".join(permitidos)}')
-            
-        return v_limpio
 
 # ==========================================
 # LOGIN
@@ -108,13 +88,11 @@ class UsuarioResponse(UsuarioBase):
     intentos_fallidos: Optional[int] = Field(0, description="Intentos fallidos de login")
     bloqueado_hasta: Optional[datetime] = Field(None, description="Fecha de bloqueo")
 
-    # Relación con Cargo
     cargo_id: Optional[int] = Field(None, description="ID del cargo asignado")
     cargo: Optional[str] = Field(None, description="Nombre del cargo (resuelto)")
 
-    # Nuevos campos de perfil
     cedula: Optional[str] = Field(None, description="Cédula de identidad")
-    turno: Optional[str] = Field(None, description="Turno del usuario")
+    turno: Optional[int] = Field(None, description="Turno del usuario")
     fecha_ingreso: Optional[date] = Field(None, description="Fecha de ingreso")
     fecha_nacimiento: Optional[date] = Field(None, description="Fecha de nacimiento")
     foto_url: Optional[str] = Field(None, description="URL de la foto de perfil")
@@ -152,9 +130,9 @@ class UsuarioUpdate(BaseModel):
         description="ID del cargo. Use 0 para quitar el cargo, omitir para no tocarlo."
     )
     
-    # Nuevos campos actualizables
     cedula: Optional[str] = Field(None, max_length=20)
-    turno: Optional[str] = Field(None, min_length=1, max_length=20)
+    # 👇 CAMBIO: Turno ahora es un entero
+    turno: Optional[int] = Field(None, ge=1, le=4)
     fecha_ingreso: Optional[date] = None
     fecha_nacimiento: Optional[date] = None
     foto_url: Optional[str] = Field(None, max_length=255)
@@ -169,23 +147,6 @@ class UsuarioUpdate(BaseModel):
             return v.strip()
         return v
 
-    # 👇 MISMA VALIDACIÓN PARA ACTUALIZACIÓN
-    @validator('turno')
-    def validar_turno(cls, v):
-        """Validar que el turno sea solo 1, 2, 3 (o A, B, C)"""
-        if v is not None:
-            v_limpio = v.strip().upper()
-            if v_limpio.startswith('TURNO '):
-                v_limpio = v_limpio.replace('TURNO ', '')
-                
-            permitidos = ['1', '2', '3', '4', 'A', 'B', 'C']
-            
-            if v_limpio not in permitidos:
-                raise ValueError(f'El turno debe ser uno de los siguientes valores: {", ".join(permitidos)}')
-                
-            return v_limpio
-        return v
-
 # ==========================================
 # CAMBIO DE CONTRASEÑA
 # ==========================================
@@ -197,7 +158,6 @@ class CambioPassword(BaseModel):
 
     @validator('password_nueva')
     def validar_password_nueva(cls, v):
-        """Validar fortaleza de la nueva contraseña"""
         if len(v) < 8:
             raise ValueError('La contraseña debe tener al menos 8 caracteres')
         if not re.search(r"[A-Z]", v):
@@ -215,14 +175,12 @@ class CambioPassword(BaseModel):
 # ==========================================
 
 class Token(BaseModel):
-    """Esquema de respuesta con token JWT"""
     access_token: str = Field(..., description="Token de acceso JWT")
     token_type: str = Field(default="bearer", description="Tipo de token")
     role: int = Field(..., description="Rol del usuario autenticado")
     user: UsuarioResponse = Field(..., description="Datos del usuario autenticado")
 
 class TokenData(BaseModel):
-    """Datos contenidos en el token JWT"""
     sub: Optional[str] = Field(None, description="ID del usuario")
     correo: Optional[str] = Field(None, description="Correo del usuario")
     rol: Optional[int] = Field(None, description="Rol del usuario")
@@ -234,17 +192,14 @@ class TokenData(BaseModel):
 # ==========================================
 
 class SolicitarRecuperacion(BaseModel):
-    """Esquema para solicitar recuperación de contraseña"""
     correo: EmailStr = Field(..., description="Correo del usuario")
 
 class RestablecerPassword(BaseModel):
-    """Esquema para restablecer contraseña"""
     token: str = Field(..., description="Token de recuperación")
     nueva_password: str = Field(..., min_length=8, description="Nueva contraseña")
 
     @validator('nueva_password')
     def validar_nueva_password(cls, v):
-        """Validar fortaleza de la nueva contraseña"""
         if len(v) < 8:
             raise ValueError('La contraseña debe tener al menos 8 caracteres')
         if not re.search(r"[A-Z]", v):
@@ -262,7 +217,6 @@ class RestablecerPassword(BaseModel):
 # ==========================================
 
 class UsuarioFiltros(BaseModel):
-    """Esquema para filtrar usuarios"""
     nombre: Optional[str] = Field(None, description="Filtrar por nombre")
     correo: Optional[str] = Field(None, description="Filtrar por correo")
     rol_id: Optional[int] = Field(None, ge=1, le=3, description="Filtrar por rol")
@@ -272,7 +226,6 @@ class UsuarioFiltros(BaseModel):
     creado_hasta: Optional[datetime] = Field(None, description="Fecha de creación hasta")
 
 class Paginacion(BaseModel):
-    """Esquema para paginación"""
     skip: int = Field(default=0, ge=0, description="Número de registros a saltar")
     limit: int = Field(default=100, ge=1, le=1000, description="Límite de registros")
 
@@ -281,7 +234,6 @@ class Paginacion(BaseModel):
 # ==========================================
 
 class UsuarioListaResponse(BaseModel):
-    """Esquema de respuesta con lista paginada"""
     total: int = Field(..., description="Total de registros")
     items: list[UsuarioResponse] = Field(..., description="Lista de usuarios")
     skip: int = Field(..., description="Registros saltados")
@@ -292,7 +244,6 @@ class UsuarioListaResponse(BaseModel):
 # ==========================================
 
 class MensajeResponse(BaseModel):
-    """Esquema para mensajes de respuesta"""
     success: bool = Field(..., description="Éxito de la operación")
     message: str = Field(..., description="Mensaje descriptivo")
     data: Optional[dict] = Field(None, description="Datos adicionales")
@@ -302,8 +253,6 @@ class MensajeResponse(BaseModel):
 # ==========================================
 
 class Ejemplos:
-    """Ejemplos para la documentación"""
-
     usuario_create = {
         "nombre": "Juan Pérez",
         "cedula": "V-12345678",
@@ -311,7 +260,7 @@ class Ejemplos:
         "password": "Password123!",
         "rol_id": 1,
         "cargo_id": 3,
-        "turno": "1",
+        "turno": 1,
         "fecha_ingreso": "2024-01-01",
         "fecha_nacimiento": "1990-05-15",
         "foto_url": "https://ejemplo.com/foto.jpg"
@@ -333,7 +282,7 @@ class Ejemplos:
         "ultimo_login": "2024-01-15T14:30:00",
         "cargo_id": 3,
         "cargo": "Inspector de Calidad",
-        "turno": "1",
+        "turno": 1,
         "fecha_ingreso": "2024-01-01",
         "fecha_nacimiento": "1990-05-15",
         "foto_url": "https://ejemplo.com/foto.jpg"
