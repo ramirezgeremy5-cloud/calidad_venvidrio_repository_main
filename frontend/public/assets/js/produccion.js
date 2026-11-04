@@ -10,9 +10,12 @@
   // CONFIGURACIÓN DINÁMICA DE API (PC y Móvil)
   // ==========================================
   const hostname = window.location.hostname;
-  const API_URL = (hostname === 'localhost' || hostname === '127.0.0.1') 
-    ? 'http://127.0.0.1:8000' 
-    : 'http://' + hostname + ':8000';
+  let API_URL;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    API_URL = 'http://127.0.0.1:8000';
+  } else {
+    API_URL = 'https://calidad-venvidrio-repository-main.onrender.com';
+  }
 
   const VALOR_NUEVO = "__NUEVO__";
   const BOTELLAS_POR_GRUESA = 12;
@@ -63,6 +66,15 @@
     };
   }
 
+  // 👇 NUEVA FUNCIÓN: Normaliza la URL de la foto
+  function obtenerUrlFoto(fotoUrl) {
+    if (!fotoUrl) return null;
+    if (fotoUrl.startsWith('http://') || fotoUrl.startsWith('https://')) {
+      return fotoUrl.replace(/^(https?)\/\//, '$1://');
+    }
+    return `${API_URL}${fotoUrl}`;
+  }
+
   // ==========================================
   // CONTROL DE SESIÓN Y USUARIO
   // ==========================================
@@ -73,7 +85,9 @@
         const user = JSON.parse(userData);
         let avatarHtml = '';
         if (user.foto_url) {
-          avatarHtml = `<img src="${API_URL}${user.foto_url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
+          // 👇 CORREGIDO: Usar la función normalizadora
+          const urlFoto = obtenerUrlFoto(user.foto_url);
+          avatarHtml = `<img src="${urlFoto}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
         } else {
           avatarHtml = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
         }
@@ -90,7 +104,6 @@
         const emailEl = document.getElementById('dropdownEmail');
         if (emailEl) emailEl.textContent = user.correo || 'usuario@email.com';
 
-        // AUTOCOMPLETAR EL OPERADOR CON EL USUARIO LOGUEADO
         const operadorInput = document.getElementById('operador');
         if (operadorInput && !operadorInput.value) {
           operadorInput.value = user.nombre || '';
@@ -152,6 +165,28 @@
         }
       });
     }
+  }
+
+  // ==========================================
+  // CONTROL DE PESTAÑAS (TABS)
+  // ==========================================
+  function inicializarTabs() {
+    const tabs = document.querySelectorAll('.tab-btn');
+    const panels = document.querySelectorAll('.tab-panel');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Quitar activo de todos
+        tabs.forEach(t => t.classList.remove('active'));
+        panels.forEach(p => p.classList.remove('active'));
+
+        // Activar el seleccionado
+        tab.classList.add('active');
+        const targetId = tab.getAttribute('data-tab');
+        const targetPanel = document.getElementById(targetId);
+        if (targetPanel) targetPanel.classList.add('active');
+      });
+    });
   }
 
   // ==========================================
@@ -1131,7 +1166,6 @@
           if (response.status === 401) { window.location.href = '../public/login.html'; return; }
           const errorData = await response.json().catch(() => ({}));
           
-          // Mostrar el error del Schema de Pydantic
           let errorMsg = errorData.detail || `Error ${response.status} guardando lote`;
           if (Array.isArray(errorMsg)) {
             errorMsg = errorMsg.map(err => `${err.loc.join('.')}: ${err.msg}`).join('\n');
@@ -1426,6 +1460,9 @@
     mostrarSkeleton();
     cargarOpcionesRegistradas();
     cargarProductosYClientes();
+
+    // 👇 INICIALIZAR LAS PESTAÑAS (TABS)
+    inicializarTabs();
 
     const fechaInput = document.getElementById('fecha-prod');
     if (fechaInput) fechaInput.value = new Date().toISOString().split('T')[0];

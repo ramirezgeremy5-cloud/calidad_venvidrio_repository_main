@@ -1,12 +1,21 @@
 (function () {
   'use strict';
 
-  // Detectar la URL de la API (CORREGIDO)
+  // Detectar la URL de la API
   var API_URL;
   if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
     API_URL = "http://127.0.0.1:8000";
   } else {
     API_URL = "https://calidad-venvidrio-repository-main.onrender.com";
+  }
+
+  // 👇 NUEVA FUNCIÓN: Normaliza la URL de la foto
+  function obtenerUrlFoto(fotoUrl) {
+    if (!fotoUrl) return null;
+    if (fotoUrl.startsWith('http://') || fotoUrl.startsWith('https://')) {
+      return fotoUrl.replace(/^(https?)\/\//, '$1://');
+    }
+    return `${API_URL}${fotoUrl}`;
   }
 
   // =============================================

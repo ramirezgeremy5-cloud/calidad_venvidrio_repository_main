@@ -142,6 +142,72 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ================= PESTAÑAS (TABS) ================= */
+.tabs-container {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--border);
+  overflow-x: auto;
+  padding-bottom: 0;
+  scrollbar-width: none; /* Firefox */
+}
+.tabs-container::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  font-family: var(--font-body);
+}
+.tab-btn:hover {
+  color: var(--brand-1);
+  background: rgba(26, 35, 126, 0.05);
+  border-radius: 8px 8px 0 0;
+}
+.tab-btn.active {
+  color: var(--brand-1);
+  border-bottom-color: var(--brand-1);
+}
+.tab-btn i { font-size: 18px; }
+
+.tab-panel {
+  display: none;
+  animation: fadeTab 0.3s ease;
+}
+.tab-panel.active {
+  display: block;
+}
+@keyframes fadeTab {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Contenedor scrolleable para las pestañas */
+.form-card-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 8px; /* Espacio para el scroll */
+  padding-bottom: 10px;
+}
+.form-card-content::-webkit-scrollbar { width: 6px; }
+.form-card-content::-webkit-scrollbar-track { background: transparent; }
+.form-card-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.form-card-content::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
 /* ================= BADGES ================= */
 .badge {
   display: inline-flex;
@@ -1342,6 +1408,9 @@ body {
   .btn-primary, .btn-outline { width: 100%; }
   .modal-container-detalle { border-radius: 16px; }
   .input-pair-3 { gap: 8px; }
+  .tabs-container { gap: 4px; }
+  .tab-btn { padding: 10px 14px; font-size: 12px; }
+  .tab-btn i { font-size: 16px; }
 }
 
 @media (max-width: 380px) {
