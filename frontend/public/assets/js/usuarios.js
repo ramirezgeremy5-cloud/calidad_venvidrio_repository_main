@@ -6,10 +6,13 @@
 (function () {
   'use strict';
 
-  // Detectar la URL de la API
-  const API_URL = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' 
-    ? "http://127.0.0.1:8000" 
-    : `http://${window.location.hostname}:8000`;
+  // Detectar la URL de la API (CORREGIDO)
+  let API_URL;
+  if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
+    API_URL = "http://127.0.0.1:8000";
+  } else {
+    API_URL = "https://calidad-venvidrio-repository-main.onrender.com";
+  }
 
   const ROLES_PERMITIDOS = [3]; // Solo admin
 
@@ -611,7 +614,6 @@
     const rol = parseInt(val('modal-rol'), 10);
     const cargoId = val('modal-cargo');
     
-    // 👇 AHORA EL TURNO ES NUMÉRICO (1, 2, 3, 4)
     const turno = val('modal-turno'); 
     
     const fechaIngreso = val('modal-fecha-ingreso');
@@ -667,7 +669,7 @@
       rol_id: rol,
       activo,
       cargo_id: cargoId ? parseInt(cargoId, 10) : null,
-      turno: turno, // El schema ya valida que sea "1", "2", etc.
+      turno: turno,
       fecha_ingreso: fechaIngreso || null,
       fecha_nacimiento: fechaNacimiento || null,
       foto_url: fotoUrlFinal || null
@@ -686,7 +688,6 @@
       if (response.ok) {
         const data = await response.json();
         
-        // 👇 Si editamos al usuario logueado, actualizamos el localStorage
         if (esEdicion && usuarioActual && String(usuarioActual.id) === String(usuarioEditando.id)) {
           const userLocal = JSON.parse(localStorage.getItem('user'));
           userLocal.nombre = nombre;
@@ -702,7 +703,6 @@
           localStorage.setItem('user', JSON.stringify(userLocal));
           usuarioActual = userLocal;
           
-          // Refrescar navbar
           const navAvatar = $('navAvatar');
           if (navAvatar) {
             navAvatar.innerHTML = fotoUrlFinal 
@@ -855,7 +855,6 @@
     renderTabla();
   };
 
-  // 👇 AQUÍ SE LLAMA A LA FUNCIÓN QUE FALTABA
   verificarSesion();
 
 })();
