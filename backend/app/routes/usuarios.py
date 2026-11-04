@@ -36,10 +36,11 @@ router = APIRouter(
 )
 
 # =========================
-# CONFIGURACIÓN DE SUPABASE STORAGE
+# CONFIGURACIÓN DE SUPABASE STORAGE (HARDCODEADO PARA PRUEBA)
 # =========================
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+# ⚠️ OJO: Reemplaza estos valores con los tuyos reales
+SUPABASE_URL = "https://rxoiedlrtoumeflqkbzb.supabase.co"
+SUPABASE_KEY = "sb_secret_69F..." # <--- PON AQUÍ TU LLAVE SECRETA COMPLETA
 
 print("==========================================")
 print("🔍 DIAGNÓSTICO DE SUPABASE STORAGE")
