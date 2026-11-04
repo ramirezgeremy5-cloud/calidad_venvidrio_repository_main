@@ -8,7 +8,7 @@
   'use strict';
 
   // =========================
-  // CONFIGURACIÓN DINÁMICA DE API (CORREGIDA)
+  // CONFIGURACIÓN DINÁMICA DE API
   // =========================
   var hostname = window.location.hostname;
   var API_URL;
