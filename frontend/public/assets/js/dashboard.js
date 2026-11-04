@@ -3,7 +3,7 @@
    JS v6 - Optimizado, Interactivo y a Prueba de Errores
    ========================================== */
 
-// Detectar dinámicamente la URL del servidor (CORREGIDO)
+// Detectar dinámicamente la URL del servidor
 let API_URL;
 if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
   API_URL = "http://127.0.0.1:8000";
@@ -20,7 +20,7 @@ let intervaloCarga = null;
 let datosDashboard = null;
 let periodoActual = 7;
 let filtroGrafico = 'ambos';
-let abortController = null; // Para cancelar peticiones en vuelo
+let abortController = null;
 
 // Colores de clasificación
 const CLASE_COLOR = {
@@ -92,6 +92,18 @@ function filtrarPorDias(lista, campoFecha) {
   });
 }
 
+// 👇 NUEVA FUNCIÓN: Normaliza la URL de la foto
+function obtenerUrlFoto(fotoUrl) {
+  if (!fotoUrl) return null;
+  // Si ya es una URL completa (empieza con http), usarla directamente
+  if (fotoUrl.startsWith('http://') || fotoUrl.startsWith('https://')) {
+    // Corregir URLs malformadas como "https//" (sin los dos puntos)
+    return fotoUrl.replace(/^(https?)\/\//, '$1://');
+  }
+  // Si es una ruta relativa (ej: /static/uploads/...), concatenar con API_URL
+  return `${API_URL}${fotoUrl}`;
+}
+
 /* ==========================================
    MANEJO DE ERRORES EN INTERFAZ
 ========================================== */
@@ -122,7 +134,9 @@ function cargarUsuarioNav() {
     
     let avatarHtml = '';
     if (user.foto_url) {
-      avatarHtml = `<img src="${API_URL}${user.foto_url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
+      // 👇 CORREGIDO: Usar la función normalizadora
+      const urlFoto = obtenerUrlFoto(user.foto_url);
+      avatarHtml = `<img src="${urlFoto}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
     } else {
       avatarHtml = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
     }

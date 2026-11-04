@@ -59,7 +59,7 @@
         var dropdownAvatar = document.getElementById('dropdownAvatar');
 
         var avatarHtml = usuario.foto_url
-          ? '<img src="' + API_URL + usuario.foto_url + '?t=' + Date.now() + '" alt="" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">'
+          ? '<img src="' + usuario.foto_url + '?t=' + Date.now() + '" alt="" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">'
           : (usuario.nombre ? usuario.nombre.substring(0, 2).toUpperCase() : 'US');
 
         if (navAvatar) navAvatar.innerHTML = avatarHtml;
@@ -562,7 +562,7 @@
       var icono = document.getElementById('miPerfil-icono-camara');
 
       if (u.foto_url) {
-        if (preview) { preview.src = API_URL + u.foto_url + '?t=' + Date.now(); preview.style.display = 'block'; }
+        if (preview) { preview.src = u.foto_url + '?t=' + Date.now(); preview.style.display = 'block'; }
         if (icono) icono.style.display = 'none';
       } else {
         if (preview) { preview.removeAttribute('src'); preview.style.display = 'none'; }
