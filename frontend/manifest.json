@@ -1,0 +1,24 @@
+{
+  "name": "Venvidrio Control de Calidad",
+  "short_name": "Venvidrio CQ",
+  "description": "Sistema de Control de Calidad para Venvidrio C.A.",
+  "start_url": "./public/dashboard.html",
+  "display": "standalone",
+  "background_color": "#f4f6f8",
+  "theme_color": "#1a237e",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./assets/img/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./assets/img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

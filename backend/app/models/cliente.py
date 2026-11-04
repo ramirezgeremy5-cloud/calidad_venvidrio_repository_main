@@ -1,17 +1,27 @@
-from sqlalchemy import Column, Integer, String, DateTime
-from sqlalchemy.sql import func
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
+from datetime import datetime
+
 from app.database.connection import Base
 
+
 class Cliente(Base):
-    __tablename__ = "clientes"
+    __tablename__ = "cliente"
 
     id = Column(Integer, primary_key=True, index=True)
-    nombre = Column(String(100), nullable=False, unique=True)
-    direccion = Column(String(200), nullable=True)
-    contacto = Column(String(100), nullable=True)
     
-    fecha_registro = Column(DateTime(timezone=True), server_default=func.now())
+    # ===== Datos Principales =====
+    nombre = Column(String, nullable=False, unique=True, index=True)
+    rif = Column(String, nullable=True, index=True)
+    direccion = Column(Text, nullable=True)  # Text permite direcciones largas
+    telefono = Column(String, nullable=True)
+    correo = Column(String, nullable=True)
+    
+    # ===== Control =====
+    activo = Column(Boolean, default=True, index=True)
+    fecha_creacion = Column(DateTime, default=datetime.utcnow, index=True)
 
-    # Método opcional para que se vea bonito si lo imprimes en consola
     def __repr__(self):
-        return f"<Cliente(nombre='{self.nombre}', id={self.id})>"
+        return (
+            f"<Cliente(id={self.id}, nombre='{self.nombre}', "
+            f"rif='{self.rif}', activo={self.activo})>"
+        )

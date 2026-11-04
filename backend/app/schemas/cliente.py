@@ -1,22 +1,44 @@
-# app/schemas/cliente.py
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
 
-# Esquema Base
-class ClienteBase(BaseModel):
-    nombre: str
-    direccion: Optional[str] = None
-    contacto: Optional[str] = None
 
-# Esquema para Creación
+class ClienteBase(BaseModel):
+    nombre: str = Field(..., max_length=150, description="Nombre o razón social del cliente")
+    rif: Optional[str] = Field(None, max_length=50)
+    direccion: Optional[str] = Field(None, description="Dirección física del cliente")
+    telefono: Optional[str] = Field(None, max_length=50)
+    correo: Optional[str] = Field(None, max_length=100)
+    activo: Optional[bool] = True
+
+
 class ClienteCreate(ClienteBase):
+    """
+    Esquema para crear un cliente. 
+    Hereda todos los campos de ClienteBase y sus validaciones.
+    """
     pass
 
-# Esquema para Respuesta (incluye ID y fecha de registro)
+
+class ClienteUpdate(BaseModel):
+    """
+    Esquema para actualizar un cliente. 
+    Todos los campos son opcionales para permitir actualizaciones parciales (PUT/PATCH).
+    """
+    nombre: Optional[str] = Field(None, max_length=150)
+    rif: Optional[str] = Field(None, max_length=50)
+    direccion: Optional[str] = None
+    telefono: Optional[str] = Field(None, max_length=50)
+    correo: Optional[str] = Field(None, max_length=100)
+    activo: Optional[bool] = None
+
+
 class ClienteResponse(ClienteBase):
+    """
+    Esquema de respuesta que FastAPI enviará al frontend.
+    """
     id: int
-    fecha_registro: datetime
+    fecha_creacion: Optional[datetime] = None
 
     class Config:
         from_attributes = True

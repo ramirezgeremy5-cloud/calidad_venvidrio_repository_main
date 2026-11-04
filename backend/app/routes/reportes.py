@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 
 from app.database.connection import SessionLocal
-from app.models.auditoria import Auditoria
+from app.models.auditoria_calidad import AuditoriaCalidad
 
 router = APIRouter(
     prefix="/reportes",
@@ -63,11 +63,11 @@ def descargar_excel(
     auditoria_id: int,
     db: Session = Depends(get_db)
 ):
-    """Genera un reporte Excel profesional de una auditoría específica"""
+    """Genera un reporte Excel profesional de una evaluación de calidad específica"""
     
-    auditoria = db.query(Auditoria).filter(Auditoria.id == auditoria_id).first()
+    auditoria = db.query(AuditoriaCalidad).filter(AuditoriaCalidad.id == auditoria_id).first()
     if not auditoria:
-        raise HTTPException(status_code=404, detail="Auditoría no encontrada")
+        raise HTTPException(status_code=404, detail="Evaluación no encontrada")
     
     try:
         from openpyxl import Workbook
@@ -75,7 +75,7 @@ def descargar_excel(
         
         wb = Workbook()
         ws = wb.active
-        ws.title = "Auditoría de Calidad"
+        ws.title = "Evaluación de Calidad"
         
         # ============================================
         # ESTILOS
@@ -126,7 +126,7 @@ def descargar_excel(
         
         # Título principal
         ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=10)
-        ws.cell(row=row, column=1, value="REGISTRO DE AUDITORÍA DE CALIDAD").font = titulo_font
+        ws.cell(row=row, column=1, value="REGISTRO DE EVALUACIÓN DE CALIDAD").font = titulo_font
         ws.cell(row=row, column=1).alignment = center_align
         row += 1
         
@@ -153,17 +153,15 @@ def descargar_excel(
         ws.cell(row=row, column=1).border = thin_border
         row += 1
         
-        # CAMBIADO: Mostrar CÓDIGO en lugar de ID
+        # Adaptado a los campos de AuditoriaCalidad
         datos = [
-            ("Código", auditoria.codigo or f"AUD-{auditoria.id}"),
-            ("Tipo de Auditoría", auditoria.tipo_auditoria or ""),
-            ("Área / Línea", auditoria.area or ""),
-            ("Auditor Responsable", auditoria.auditor or ""),
-            ("Norma de Referencia", auditoria.norma or ""),
-            ("Estado", auditoria.estado or ""),
-            ("Fecha de Registro", formatear_fecha(auditoria.fecha_registro)),
-            ("Cumplimiento", f"{auditoria.cumplimiento}%"),
-            ("No Conformidades", str(auditoria.no_conformidades)),
+            ("ID Evaluación", auditoria.id),
+            ("Periodo", auditoria.periodo),
+            ("Evaluado (ID)", auditoria.evaluado_id),
+            ("Evaluador (ID)", auditoria.evaluador_id),
+            ("Puntaje", f"{auditoria.puntaje}%"),
+            ("Categoría", auditoria.categoria),
+            ("Fecha de Registro", formatear_fecha(auditoria.fecha)),
         ]
         
         for label, value in datos:
@@ -172,14 +170,14 @@ def descargar_excel(
             ws.cell(row=row, column=1).border = thin_border
             ws.cell(row=row, column=1).fill = header_fill_light
             
-            ws.cell(row=row, column=2, value=value).font = normal_font
+            ws.cell(row=row, column=2, value=str(value)).font = normal_font
             ws.cell(row=row, column=2).alignment = left_align
             ws.cell(row=row, column=2).border = thin_border
             
-            if label == "Cumplimiento":
-                if auditoria.cumplimiento >= 90:
+            if label == "Puntaje":
+                if auditoria.puntaje >= 90:
                     ws.cell(row=row, column=2).fill = success_fill
-                elif auditoria.cumplimiento < 75:
+                elif auditoria.puntaje < 75:
                     ws.cell(row=row, column=2).fill = danger_fill
             
             row += 1
@@ -230,7 +228,7 @@ def descargar_excel(
         ws.cell(row=row, column=1).border = thin_border
         
         ws.merge_cells(start_row=row, start_column=2, end_row=row, end_column=5)
-        ws.cell(row=row, column=2, value=auditoria.auditor or "").font = normal_font
+        ws.cell(row=row, column=2, value=f"Evaluador ID {auditoria.evaluador_id}").font = normal_font
         ws.cell(row=row, column=2).alignment = left_align
         ws.cell(row=row, column=2).border = thin_border
         
@@ -278,7 +276,7 @@ def descargar_excel(
             content=output.getvalue(),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={
-                "Content-Disposition": f'attachment; filename="Auditoria_{auditoria.codigo or auditoria.id}_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx"'
+                "Content-Disposition": f'attachment; filename="Evaluacion_{auditoria.id}_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx"'
             }
         )
         
@@ -296,11 +294,11 @@ def descargar_pdf(
     auditoria_id: int,
     db: Session = Depends(get_db)
 ):
-    """Genera un reporte PDF profesional de una auditoría específica"""
+    """Genera un reporte PDF profesional de una evaluación de calidad específica"""
     
-    auditoria = db.query(Auditoria).filter(Auditoria.id == auditoria_id).first()
+    auditoria = db.query(AuditoriaCalidad).filter(AuditoriaCalidad.id == auditoria_id).first()
     if not auditoria:
-        raise HTTPException(status_code=404, detail="Auditoría no encontrada")
+        raise HTTPException(status_code=404, detail="Evaluación no encontrada")
     
     try:
         from reportlab.lib.pagesizes import A4
@@ -349,7 +347,7 @@ def descargar_pdf(
             spaceAfter=5,
             textColor=colors.HexColor('#1a237e')
         )
-        elements.append(Paragraph('REGISTRO DE AUDITORÍA DE CALIDAD', titulo_style))
+        elements.append(Paragraph('REGISTRO DE EVALUACIÓN DE CALIDAD', titulo_style))
         
         subtitulo_style = ParagraphStyle(
             'Subtitulo',
@@ -381,17 +379,14 @@ def descargar_pdf(
         elements.append(Paragraph('DATOS GENERALES', sec_style))
         elements.append(Spacer(1, 0.2*cm))
         
-        # CAMBIADO: Mostrar CÓDIGO en lugar de ID
         data = [
-            ['Código', auditoria.codigo or f"AUD-{auditoria.id}"],
-            ['Tipo de Auditoría', auditoria.tipo_auditoria or ''],
-            ['Área / Línea', auditoria.area or ''],
-            ['Auditor Responsable', auditoria.auditor or ''],
-            ['Norma de Referencia', auditoria.norma or ''],
-            ['Estado', auditoria.estado or ''],
-            ['Fecha de Registro', formatear_fecha(auditoria.fecha_registro)],
-            ['Cumplimiento', f"{auditoria.cumplimiento}%"],
-            ['No Conformidades', str(auditoria.no_conformidades)],
+            ['ID Evaluación', str(auditoria.id)],
+            ['Periodo', auditoria.periodo or ''],
+            ['Evaluado (ID)', str(auditoria.evaluado_id)],
+            ['Evaluador (ID)', str(auditoria.evaluador_id)],
+            ['Puntaje', f"{auditoria.puntaje}%"],
+            ['Categoría', auditoria.categoria or ''],
+            ['Fecha de Registro', formatear_fecha(auditoria.fecha)],
         ]
         
         table = Table(data, colWidths=[4.5*cm, 9.5*cm])
@@ -403,7 +398,7 @@ def descargar_pdf(
             ('ALIGN', (1, 0), (1, -1), 'LEFT'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#e3f2fd')),
-            ('BACKGROUND', (1, 7), (1, 7), colors.HexColor('#e8f5e9') if auditoria.cumplimiento >= 90 else colors.HexColor('#ffebee') if auditoria.cumplimiento < 75 else colors.white),
+            ('BACKGROUND', (1, 4), (1, 4), colors.HexColor('#e8f5e9') if auditoria.puntaje >= 90 else colors.HexColor('#ffebee') if auditoria.puntaje < 75 else colors.white),
         ]))
         elements.append(table)
         elements.append(Spacer(1, 0.5*cm))
@@ -431,7 +426,7 @@ def descargar_pdf(
         elements.append(Spacer(1, 0.3*cm))
         
         val_data = [
-            ['Responsable:', auditoria.auditor or '', 'Fecha:', datetime.now().strftime("%d/%m/%Y")]
+            ['Responsable:', f"Evaluador ID {auditoria.evaluador_id}", 'Fecha:', datetime.now().strftime("%d/%m/%Y")]
         ]
         
         val_table = Table(val_data, colWidths=[2.5*cm, 6*cm, 2.5*cm, 4*cm])
@@ -470,7 +465,7 @@ def descargar_pdf(
             content=buffer.getvalue(),
             media_type="application/pdf",
             headers={
-                "Content-Disposition": f'attachment; filename="Auditoria_{auditoria.codigo or auditoria.id}_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf"'
+                "Content-Disposition": f'attachment; filename="Evaluacion_{auditoria.id}_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf"'
             }
         )
         
@@ -487,12 +482,12 @@ def descargar_pdf(
 def descargar_excel_todas(
     db: Session = Depends(get_db)
 ):
-    """Genera un reporte Excel con todas las auditorías"""
+    """Genera un reporte Excel con todas las evaluaciones de calidad"""
     
-    auditorias = db.query(Auditoria).order_by(Auditoria.id.desc()).all()
+    auditorias = db.query(AuditoriaCalidad).order_by(AuditoriaCalidad.id.desc()).all()
     
     if not auditorias:
-        raise HTTPException(status_code=404, detail="No hay auditorías registradas")
+        raise HTTPException(status_code=404, detail="No hay evaluaciones registradas")
     
     try:
         from openpyxl import Workbook
@@ -500,7 +495,7 @@ def descargar_excel_todas(
         
         wb = Workbook()
         ws = wb.active
-        ws.title = "Auditorías"
+        ws.title = "Evaluaciones"
         
         # ============================================
         # ESTILOS
@@ -532,17 +527,17 @@ def descargar_excel_todas(
         
         # Título
         ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=9)
-        ws.cell(row=row, column=1, value="REPORTE DE AUDITORÍAS").font = titulo_font
+        ws.cell(row=row, column=1, value="REPORTE DE EVALUACIONES DE CALIDAD").font = titulo_font
         ws.cell(row=row, column=1).alignment = center_align
         row += 1
         
         ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=9)
-        ws.cell(row=row, column=1, value=f"Total: {len(auditorias)} auditorías").font = Font(name='Arial', size=10, italic=True, color='666666')
+        ws.cell(row=row, column=1, value=f"Total: {len(auditorias)} evaluaciones").font = Font(name='Arial', size=10, italic=True, color='666666')
         ws.cell(row=row, column=1).alignment = center_align
         row += 2
         
-        # Encabezados - CAMBIADO: Código en lugar de ID
-        headers = ['Código', 'Tipo', 'Área', 'Auditor', 'Norma', 'Cumplimiento', 'NC', 'Estado', 'Fecha']
+        # Encabezados
+        headers = ['ID', 'Periodo', 'Evaluado (ID)', 'Evaluador (ID)', 'Puntaje', 'Categoría', 'Fecha']
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=row, column=col, value=header)
             cell.font = header_font
@@ -554,44 +549,40 @@ def descargar_excel_todas(
         
         # Datos
         for aud in auditorias:
-            ws.cell(row=row, column=1, value=aud.codigo or f"AUD-{aud.id}").alignment = center_align
-            ws.cell(row=row, column=2, value=aud.tipo_auditoria or '').alignment = left_align
-            ws.cell(row=row, column=3, value=aud.area or '').alignment = left_align
-            ws.cell(row=row, column=4, value=aud.auditor or '').alignment = left_align
-            ws.cell(row=row, column=5, value=aud.norma or '').alignment = left_align
+            ws.cell(row=row, column=1, value=aud.id).alignment = center_align
+            ws.cell(row=row, column=2, value=aud.periodo or '').alignment = left_align
+            ws.cell(row=row, column=3, value=aud.evaluado_id).alignment = center_align
+            ws.cell(row=row, column=4, value=aud.evaluador_id).alignment = center_align
             
-            cumplimiento_cell = ws.cell(row=row, column=6, value=aud.cumplimiento)
-            cumplimiento_cell.alignment = center_align
-            if aud.cumplimiento >= 90:
-                cumplimiento_cell.fill = PatternFill(start_color='e8f5e9', end_color='e8f5e9', fill_type='solid')
-            elif aud.cumplimiento < 75:
-                cumplimiento_cell.fill = PatternFill(start_color='ffebee', end_color='ffebee', fill_type='solid')
+            puntaje_cell = ws.cell(row=row, column=5, value=aud.puntaje)
+            puntaje_cell.alignment = center_align
+            if aud.puntaje >= 90:
+                puntaje_cell.fill = PatternFill(start_color='e8f5e9', end_color='e8f5e9', fill_type='solid')
+            elif aud.puntaje < 75:
+                puntaje_cell.fill = PatternFill(start_color='ffebee', end_color='ffebee', fill_type='solid')
             
-            ws.cell(row=row, column=7, value=aud.no_conformidades).alignment = center_align
-            ws.cell(row=row, column=8, value=aud.estado or '').alignment = center_align
-            ws.cell(row=row, column=9, value=formatear_fecha_corta(aud.fecha_registro)).alignment = center_align
+            ws.cell(row=row, column=6, value=aud.categoria or '').alignment = center_align
+            ws.cell(row=row, column=7, value=formatear_fecha_corta(aud.fecha)).alignment = center_align
             
-            for col in range(1, 10):
+            for col in range(1, 8):
                 ws.cell(row=row, column=col).border = thin_border
             
             row += 1
         
         # Pie de página
         row += 1
-        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=9)
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=7)
         ws.cell(row=row, column=1, value=f"Documento generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}").font = Font(name='Arial', size=8, color='888888')
         ws.cell(row=row, column=1).alignment = center_align
         
         # Ajustar anchos
-        ws.column_dimensions['A'].width = 16
-        ws.column_dimensions['B'].width = 25
-        ws.column_dimensions['C'].width = 20
-        ws.column_dimensions['D'].width = 20
-        ws.column_dimensions['E'].width = 20
-        ws.column_dimensions['F'].width = 14
-        ws.column_dimensions['G'].width = 10
-        ws.column_dimensions['H'].width = 14
-        ws.column_dimensions['I'].width = 18
+        ws.column_dimensions['A'].width = 10
+        ws.column_dimensions['B'].width = 16
+        ws.column_dimensions['C'].width = 16
+        ws.column_dimensions['D'].width = 16
+        ws.column_dimensions['E'].width = 12
+        ws.column_dimensions['F'].width = 16
+        ws.column_dimensions['G'].width = 18
         
         output = io.BytesIO()
         wb.save(output)
@@ -601,7 +592,7 @@ def descargar_excel_todas(
             content=output.getvalue(),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={
-                "Content-Disposition": f'attachment; filename="Todas_Auditorias_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx"'
+                "Content-Disposition": f'attachment; filename="Evaluaciones_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx"'
             }
         )
         
@@ -618,12 +609,12 @@ def descargar_excel_todas(
 def descargar_pdf_todas(
     db: Session = Depends(get_db)
 ):
-    """Genera un reporte PDF con todas las auditorías"""
+    """Genera un reporte PDF con todas las evaluaciones de calidad"""
     
-    auditorias = db.query(Auditoria).order_by(Auditoria.id.desc()).all()
+    auditorias = db.query(AuditoriaCalidad).order_by(AuditoriaCalidad.id.desc()).all()
     
     if not auditorias:
-        raise HTTPException(status_code=404, detail="No hay auditorías registradas")
+        raise HTTPException(status_code=404, detail="No hay evaluaciones registradas")
     
     try:
         from reportlab.lib.pagesizes import landscape, A4
@@ -665,7 +656,7 @@ def descargar_pdf_todas(
             spaceAfter=5,
             textColor=colors.HexColor('#1a237e')
         )
-        elements.append(Paragraph('REPORTE DE AUDITORÍAS', titulo_style))
+        elements.append(Paragraph('REPORTE DE EVALUACIONES DE CALIDAD', titulo_style))
         
         total_style = ParagraphStyle(
             'Total',
@@ -675,29 +666,27 @@ def descargar_pdf_todas(
             spaceAfter=10,
             textColor=colors.HexColor('#666666')
         )
-        elements.append(Paragraph(f'Total: {len(auditorias)} auditorías', total_style))
+        elements.append(Paragraph(f'Total: {len(auditorias)} evaluaciones', total_style))
         
-        # Tabla de datos - CAMBIADO: Código en lugar de ID
-        data = [['Código', 'Tipo', 'Área', 'Auditor', 'Norma', 'Cumpl.', 'NC', 'Estado', 'Fecha']]
+        # Tabla de datos
+        data = [['ID', 'Periodo', 'Evaluado (ID)', 'Evaluador (ID)', 'Puntaje', 'Categoría', 'Fecha']]
         
         for aud in auditorias:
             data.append([
-                aud.codigo or f"AUD-{aud.id}",
-                aud.tipo_auditoria[:18] if aud.tipo_auditoria else '',
-                aud.area[:15] if aud.area else '',
-                aud.auditor[:18] if aud.auditor else '',
-                aud.norma[:15] if aud.norma else '',
-                f"{aud.cumplimiento}%",
-                str(aud.no_conformidades),
-                aud.estado[:12] if aud.estado else '',
-                formatear_fecha_corta(aud.fecha_registro)
+                str(aud.id),
+                aud.periodo or '',
+                str(aud.evaluado_id),
+                str(aud.evaluador_id),
+                f"{aud.puntaje}%",
+                aud.categoria or '',
+                formatear_fecha_corta(aud.fecha)
             ])
         
-        table = Table(data, colWidths=[2.5*cm, 2.8*cm, 2.2*cm, 2.5*cm, 2.2*cm, 1.8*cm, 1.2*cm, 2.2*cm, 2.2*cm])
+        table = Table(data, colWidths=[2*cm, 3*cm, 3*cm, 3*cm, 2.5*cm, 3*cm, 3*cm])
         table.setStyle(TableStyle([
             ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
             ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 7),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a237e')),
@@ -718,7 +707,7 @@ def descargar_pdf_todas(
             content=buffer.getvalue(),
             media_type="application/pdf",
             headers={
-                "Content-Disposition": f'attachment; filename="Todas_Auditorias_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf"'
+                "Content-Disposition": f'attachment; filename="Evaluaciones_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf"'
             }
         )
         

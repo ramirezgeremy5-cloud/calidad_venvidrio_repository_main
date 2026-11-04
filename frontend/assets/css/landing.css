@@ -33,7 +33,6 @@ body {
     transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Estado del navbar cuando se hace scroll hacia abajo */
 .navbar.scrolled {
     background-color: #0a0f1f;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
@@ -42,18 +41,17 @@ body {
 .nav-brand {
     display: flex;
     align-items: center;
-    flex-shrink: 0; /* Evita que el logo se aplaste en móviles */
+    flex-shrink: 0;
 }
 
 .nav-logo {
-    height: 55px; /* Tamaño grande para que resalte */
+    height: 55px;
     width: auto;
     object-fit: contain;
     display: block;
     filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.1));
 }
 
-/* Botón para abrir menú en móviles */
 .menu-toggle {
     display: none;
     background: none;
@@ -90,9 +88,8 @@ body {
     color: #ffffff;
 }
 
-/* BOTÓN DE INICIAR SESIÓN (ÚNICO) */
 .btn-nav-primary {
-    background-color: #0a3d91; /* Azul del logo */
+    background-color: #0a3d91;
     color: #ffffff;
     padding: 0.6rem 1.5rem;
     border-radius: 6px;
@@ -101,12 +98,12 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
-    height: 42px; /* Igualado a la altura visual del logo */
+    height: 42px;
     box-sizing: border-box;
 }
 
 .btn-nav-primary:hover {
-    background-color: #c8102e; /* Rojo del logo al pasar el mouse */
+    background-color: #c8102e;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(200, 16, 46, 0.4);
 }
@@ -115,7 +112,6 @@ body {
 .hero {
     position: relative;
     background-color: #0f172a;
-    /* La foto se define en el HTML vía <style>, pero dejamos un fallback */
     background-size: cover;
     background-position: center bottom;
     background-repeat: no-repeat;
@@ -128,7 +124,6 @@ body {
     padding: 2rem;
 }
 
-/* Capa oscura semitransparente que permite ver la foto sin que estorbe */
 .hero-overlay {
     position: absolute;
     top: 0;
@@ -143,12 +138,13 @@ body {
     position: relative;
     z-index: 2;
     max-width: 800px;
+    margin: 0 auto; /* Centrado horizontal */
+    text-align: center; /* Centrado de texto dentro del bloque */
     opacity: 0;
     transform: translateY(30px);
     transition: opacity 0.8s ease, transform 0.8s ease;
 }
 
-/* Clase que activa el JS para mostrar el hero */
 .hero-content.visible {
     opacity: 1;
     transform: translateY(0);
@@ -156,7 +152,7 @@ body {
 
 .hero-badge {
     display: inline-block;
-    background: rgba(10, 61, 145, 0.2); /* Azul del logo */
+    background: rgba(10, 61, 145, 0.2);
     border: 1px solid rgba(10, 61, 145, 0.4);
     padding: 6px 16px;
     border-radius: 99px;
@@ -172,10 +168,33 @@ body {
     font-weight: 700;
     margin-bottom: 1rem;
     line-height: 1.1;
+    text-align: center;
 }
 
+/* Elimina el azul fijo del strong para permitir los colores de Venezuela */
 .hero h1 strong {
-    color: #0a3d91; /* Azul del logo */
+    color: inherit;
+    font-weight: 700;
+}
+
+/* =============================================
+   COLORES DE VENEZUELA EN "Venvidrio"
+   ============================================= */
+.ven-amarillo {
+    color: #FFCC00; /* Amarillo bandera de Venezuela */
+}
+
+.vi-azul {
+    color: #0033A0; /* Azul bandera de Venezuela */
+}
+
+.drio-rojo {
+    color: #CF142B; /* Rojo bandera de Venezuela */
+}
+
+/* Opcional: sombra sutil para mejor contraste sobre la foto */
+.hero h1 strong span {
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
 .hero-subtitle {
@@ -183,6 +202,7 @@ body {
     color: #cbd5e1;
     margin-bottom: 2.5rem;
     line-height: 1.6;
+    text-align: center;
 }
 
 .hero-actions {
@@ -205,12 +225,12 @@ body {
 }
 
 .btn-primary {
-    background-color: #0a3d91; /* Azul del logo */
+    background-color: #0a3d91;
     color: #ffffff;
 }
 
 .btn-primary:hover {
-    background-color: #c8102e; /* Rojo del logo */
+    background-color: #c8102e;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(200, 16, 46, 0.4);
 }
@@ -265,104 +285,8 @@ body {
 }
 
 .footer ul li i {
-    color: #0a3d91; /* Azul del logo */
+    color: #0a3d91;
     font-size: 18px;
-}
-
-/* --- RESPONSIVE --- */
-@media (max-width: 1024px) {
-    .hero h1 {
-        font-size: 2.8rem;
-    }
-}
-
-@media (max-width: 768px) {
-    /* Ajuste del Navbar para móviles */
-    .navbar {
-        flex-wrap: wrap;
-        padding: 0.8rem 1.5rem;
-    }
-    
-    .nav-brand {
-        flex: 1;
-    }
-
-    .menu-toggle {
-        display: block;
-    }
-
-    .nav-links {
-        display: none;
-        flex-direction: column;
-        width: 100%;
-        background-color: #0f172a;
-        padding: 1rem 0;
-        margin-top: 1rem;
-        border-top: 1px solid rgba(255,255,255,0.1);
-        gap: 0.8rem;
-    }
-
-    /* Clase activada por el JS para abrir el menú */
-    .nav-links.nav-open {
-        display: flex;
-    }
-
-    .nav-links li {
-        width: 100%;
-        text-align: center;
-    }
-
-    .nav-links a {
-        justify-content: center;
-        padding: 0.3rem 0;
-        font-size: 1rem;
-    }
-
-    /* Ajuste del botón en móvil */
-    .btn-nav-primary {
-        width: 80%;
-        margin: 0 auto;
-        justify-content: center;
-    }
-
-    /* Ajuste del Hero */
-    .hero {
-        min-height: 70vh;
-        padding: 1.5rem;
-    }
-    
-    .hero h1 {
-        font-size: 2.2rem;
-    }
-    
-    .hero-subtitle {
-        font-size: 1rem;
-    }
-    
-    .footer-grid {
-        grid-template-columns: 1fr;
-        text-align: center;
-    }
-}
-
-@media (max-width: 480px) {
-    .hero h1 {
-        font-size: 1.8rem;
-    }
-    
-    .hero-badge {
-        font-size: 10px;
-        padding: 4px 12px;
-    }
-    
-    .btn {
-        padding: 0.6rem 1.2rem;
-        font-size: 0.9rem;
-    }
-    
-    .footer ul li {
-        font-size: 0.8rem;
-    }
 }
 
 /* --- SECCIÓN NOSOTROS --- */
@@ -409,6 +333,24 @@ body {
     font-size: 1.05rem;
 }
 
+/* =============================================
+   CLASE OBLIGATORIA: CENTRADO DE TEXTO
+   ============================================= */
+.text-center {
+    text-align: center;
+}
+
+/* Ajuste específico para que el about-text centrado no quede pegado */
+.about-text.text-center {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Centrado del contenedor del about-grid cuando solo hay texto */
+.about-grid:has(.about-text.text-center) {
+    grid-template-columns: 1fr;
+}
+
 .about-stats {
     display: flex;
     justify-content: space-around;
@@ -436,7 +378,6 @@ body {
     margin-top: 4px;
 }
 
-/* Ajuste de las cards de Misión/Visión para que no choquen con la sección */
 .cards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -483,8 +424,78 @@ body {
     font-size: 0.95rem;
 }
 
-/* Responsive para la sección Nosotros */
+/* --- RESPONSIVE --- */
+@media (max-width: 1024px) {
+    .hero h1 {
+        font-size: 2.8rem;
+    }
+}
+
 @media (max-width: 768px) {
+    .navbar {
+        flex-wrap: wrap;
+        padding: 0.8rem 1.5rem;
+    }
+    
+    .nav-brand {
+        flex: 1;
+    }
+
+    .menu-toggle {
+        display: block;
+    }
+
+    .nav-links {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        background-color: #0f172a;
+        padding: 1rem 0;
+        margin-top: 1rem;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        gap: 0.8rem;
+    }
+
+    .nav-links.nav-open {
+        display: flex;
+    }
+
+    .nav-links li {
+        width: 100%;
+        text-align: center;
+    }
+
+    .nav-links a {
+        justify-content: center;
+        padding: 0.3rem 0;
+        font-size: 1rem;
+    }
+
+    .btn-nav-primary {
+        width: 80%;
+        margin: 0 auto;
+        justify-content: center;
+    }
+
+    .hero {
+        min-height: 70vh;
+        padding: 1.5rem;
+    }
+    
+    .hero h1 {
+        font-size: 2.2rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1rem;
+    }
+    
+    .footer-grid {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+
+    /* Responsive para la sección Nosotros */
     .about-grid {
         grid-template-columns: 1fr;
         gap: 2rem;
@@ -498,5 +509,25 @@ body {
     }
     .cards-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero h1 {
+        font-size: 1.8rem;
+    }
+    
+    .hero-badge {
+        font-size: 10px;
+        padding: 4px 12px;
+    }
+    
+    .btn {
+        padding: 0.6rem 1.2rem;
+        font-size: 0.9rem;
+    }
+    
+    .footer ul li {
+        font-size: 0.8rem;
     }
 }

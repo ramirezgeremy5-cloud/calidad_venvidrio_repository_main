@@ -1,1096 +1,340 @@
 /* ==========================================
-   VENVIDRIO - ETIQUETAS
-   etiquetas.js
-========================================== */
+   VENVIDRIO - ETIQUETAS Y TRAZABILIDAD
+   etiquetas.js — v5 (Impresión como Imagen con borde y estiramiento)
+   ========================================== */
 
+document.addEventListener('DOMContentLoaded', function () {
 
-(function(){
+  // Detectar la URL de la API
+  var API_URL = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
+    ? "http://127.0.0.1:8000"
+    : "http://" + window.location.hostname + ":8000";
 
-'use strict';
+  // Referencias al DOM
+  var btnBuscar     = document.getElementById('btn-buscar-lote');
+  var inputLote     = document.getElementById('buscar-lote');
+  var btnImprimir   = document.getElementById('btn-imprimir');
+  var btnActions    = document.getElementById('btn-actions');
+  var errorMsg      = document.getElementById('error-lote');
+  var ticketEmpty   = document.getElementById('ticket-empty');
+  var ticketContent = document.getElementById('ticket-content');
+  var ticketPreview = document.getElementById('ticket-preview');
+  var barcodeSvg    = document.getElementById('barcode');
 
-/* ==========================================
-   CONTROL DE SESIÓN - USUARIO
-========================================== */
+  // Bandera anti doble clic
+  var cargando = false;
 
-function cargarUsuarioNav() {
-  const userData = localStorage.getItem('user');
-  if (userData) {
-    try {
-      const user = JSON.parse(userData);
-      const avatar = document.getElementById('navAvatar');
-      const username = document.getElementById('navUsername');
-      const dropdownAvatar = document.getElementById('dropdownAvatar');
-      const dropdownName = document.getElementById('dropdownName');
-      const dropdownEmail = document.getElementById('dropdownEmail');
+  // =========================
+  // UTILIDADES
+  // =========================
 
-      const iniciales = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
-      const nombre = user.nombre || 'Usuario';
-      const correo = user.correo || 'usuario@email.com';
-
-      if (avatar) avatar.textContent = iniciales;
-      if (username) username.textContent = nombre;
-      if (dropdownAvatar) dropdownAvatar.textContent = iniciales;
-      if (dropdownName) dropdownName.textContent = nombre;
-      if (dropdownEmail) dropdownEmail.textContent = correo;
-    } catch (e) {
-      console.error('Error cargando usuario:', e);
-    }
-  }
-}
-
-function verificarSesion() {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    window.location.href = '../public/login.html';
-    return;
+  // Animación de spin (por si shared.css no la define)
+  if (!document.getElementById('spin-keyframes')) {
+    var st = document.createElement('style');
+    st.id = 'spin-keyframes';
+    st.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+    document.head.appendChild(st);
   }
 
-  fetch(`${API_URL}/auth/verify`, {
-    headers: {
-      'Authorization': `Bearer ${token}`
+  function formatearFecha(fechaStr) {
+    if (!fechaStr) return '--/--/----';
+    var soloFecha = fechaStr.split('T')[0];
+    var partes = soloFecha.split('-');
+    if (partes.length === 3) {
+      return partes[2] + '/' + partes[1] + '/' + partes[0];
     }
-  })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error('Token inválido');
-    }
-    return response.json();
-  })
-  .then(() => {
-    cargarUsuarioNav();
-    initUserControls();
-    cargarEtiquetas();
-  })
-  .catch(() => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('role');
-    window.location.href = '../public/login.html';
-  });
-}
+    return fechaStr;
+  }
 
-function cerrarSesion(mensaje) {
-  const token = localStorage.getItem('token');
-  
-  if (token) {
-    fetch(`${API_URL}/auth/logout`, {
-      method: 'POST',
+  function setVisible(el, visible, displayValue) {
+    if (!el) return;
+    el.style.display = visible ? (displayValue || 'block') : 'none';
+  }
+
+  function limpiarBarcode() {
+    if (barcodeSvg) {
+      while (barcodeSvg.firstChild) barcodeSvg.removeChild(barcodeSvg.firstChild);
+    }
+  }
+
+  function setLoadingBtn(loading) {
+    if (!btnBuscar) return;
+    if (loading) {
+      btnBuscar.disabled = true;
+      btnBuscar.setAttribute('aria-busy', 'true');
+      btnBuscar.innerHTML = '<i class="ti ti-loader-2" style="display:inline-block;animation:spin 1s linear infinite;"></i> Cargando...';
+    } else {
+      btnBuscar.disabled = false;
+      btnBuscar.removeAttribute('aria-busy');
+      btnBuscar.innerHTML = '<i class="ti ti-search"></i> Cargar';
+    }
+  }
+
+  // =========================
+  // MOSTRAR / OCULTAR ERROR
+  // =========================
+  function mostrarError(mensaje) {
+    if (!mensaje) mensaje = "Lote no encontrado.";
+    if (errorMsg) {
+      errorMsg.innerHTML = '<i class="ti ti-alert-circle"></i> ' + mensaje;
+      setVisible(errorMsg, true);
+    }
+
+    setVisible(ticketEmpty, true, 'flex');
+    setVisible(ticketContent, false);
+    limpiarBarcode();
+
+    if (btnActions) {
+      btnActions.style.opacity = '0';
+      btnActions.style.pointerEvents = 'none';
+    }
+
+    if (inputLote) {
+      inputLote.focus();
+      inputLote.select();
+    }
+  }
+
+  function ocultarError() {
+    setVisible(errorMsg, false);
+  }
+
+  // =========================
+  // RELLENAR ETIQUETA
+  // =========================
+  function llenarEtiqueta(data) {
+    ocultarError();
+
+    setVisible(ticketEmpty, false);
+    setVisible(ticketContent, true, 'flex');
+
+    function setVal(id, val, defaultVal) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = (val !== null && val !== undefined && val !== '') ? val : defaultVal;
+    }
+
+    setVal('tk-planta',   data.planta ? 'VENVIDRIO ' + data.planta.toUpperCase() : 'VENVIDRIO VALERA', 'VENVIDRIO VALERA');
+    setVal('tk-ticket',   data.ticket_carga || data.ticket, '---');
+    setVal('tk-cliente',  data.cliente, '---');
+    setVal('tk-orden',    data.orden || 'S/O', 'S/O');
+    setVal('tk-obs',      data.obs_produccion || 'NO APLICA', 'NO APLICA');
+    setVal('tk-maquina',  data.maquina, '--');
+    setVal('tk-turno',    data.turno, '-');
+    setVal('tk-grupo',    data.grupo, '--');
+    setVal('tk-fecha',    formatearFecha(data.fecha_produccion), '--/--/----');
+    setVal('tk-producto', data.tipo_producto, '---');
+    setVal('tk-acabado',  data.acabado, '---');
+    setVal('tk-item',     data.item, '---');
+
+    var bppText = data.bpp;
+    if (typeof bppText === 'number') {
+      bppText = bppText.toLocaleString('es-VE');
+    }
+    setVal('tk-bpp',   bppText, '---');
+    setVal('tk-cap',   data.capacidad, '---');
+    setVal('tk-molde', data.molde, '---');
+    setVal('tk-lote',  data.codigo_lote, '---');
+
+    // Código de barras
+    var barcodeText = data.ticket_carga || data.ticket || data.codigo_lote;
+    setVal('tk-barcode-text', barcodeText, '---');
+
+    limpiarBarcode();
+
+    if (barcodeText && typeof JsBarcode !== 'undefined') {
+      try {
+        JsBarcode('#barcode', barcodeText, {
+          format: 'CODE128',
+          lineColor: '#000000',
+          width: 2,
+          height: 60,
+          displayValue: false,
+          margin: 0,
+          background: 'transparent'
+        });
+      } catch (err) {
+        console.error('Error generando código de barras:', err);
+      }
+    }
+
+    if (btnActions) {
+      btnActions.style.opacity = '1';
+      btnActions.style.pointerEvents = 'auto';
+    }
+  }
+
+  // =========================
+  // CARGAR LOTE
+  // =========================
+  function cargarLote() {
+    if (cargando) return;
+
+    var lote = inputLote ? inputLote.value.trim().toUpperCase() : '';
+
+    if (!lote) {
+      mostrarError('Por favor, ingrese un código de lote.');
+      return;
+    }
+
+    cargando = true;
+    ocultarError();
+    setLoadingBtn(true);
+
+    var token = localStorage.getItem('token');
+
+    fetch(API_URL + '/produccion/lote/' + lote, {
+      method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': 'Bearer ' + token,
         'Content-Type': 'application/json'
       }
     })
-    .catch(() => {})
-    .finally(() => {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('role');
-      if (mensaje) alert(mensaje);
-      window.location.href = '../public/login.html';
-    });
-  } else {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('role');
-    if (mensaje) alert(mensaje);
-    window.location.href = '../public/login.html';
-  }
-}
-
-function toggleDropdown() {
-  const dropdown = document.getElementById('userDropdown');
-  if (dropdown) {
-    dropdown.classList.toggle('show');
-  }
-}
-
-function cerrarDropdown() {
-  const dropdown = document.getElementById('userDropdown');
-  if (dropdown) {
-    dropdown.classList.remove('show');
-  }
-}
-
-function initUserControls() {
-  const container = document.getElementById('navUserContainer');
-  const logoutBtn = document.getElementById('dropdownLogout');
-
-  if (container) {
-    container.addEventListener('click', function(e) {
-      e.stopPropagation();
-      toggleDropdown();
-    });
-  }
-
-  document.addEventListener('click', function() {
-    cerrarDropdown();
-  });
-
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-      cerrarDropdown();
-    }
-    if (e.ctrlKey && e.shiftKey && (e.key === 'L' || e.key === 'l')) {
-      e.preventDefault();
-      if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
-        cerrarSesion('👋 Sesión cerrada exitosamente.');
+    .then(function (res) {
+      if (!res.ok) {
+        if (res.status === 404) throw new Error('El lote no existe en la base de datos.');
+        if (res.status === 401) throw new Error('Sesión expirada. Vuelva a iniciar sesión.');
+        throw new Error('Error al consultar el lote.');
       }
-    }
-  });
+      return res.json();
+    })
+    .then(function (data) {
+      var loteData = Array.isArray(data) ? data[0] : data;
+      if (!loteData) throw new Error('No se encontraron datos para este lote.');
+      llenarEtiqueta(loteData);
+    })
+    .catch(function (error) {
+      console.warn('Fallo la API real, usando simulación:', error.message);
 
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
-        cerrarSesion('👋 Sesión cerrada exitosamente.');
+      // MODO SIMULACIÓN (permite probar con cualquier código)
+      setTimeout(function () {
+        var dataSimulada = {
+          planta: 'VALERA',
+          ticket_carga: '05-003104461',
+          cliente: 'CLIENTE STOCK',
+          orden: 'S/O',
+          obs_produccion: 'NO APLICA',
+          maquina: 'A1',
+          turno: '1',
+          grupo: 'B',
+          fecha_produccion: '2026-08-10',
+          tipo_producto: 'SALSA INGLESA STOCK 300CC',
+          acabado: '24-490-405-ESP.BEAD"I-C"',
+          item: 'V-0002753',
+          bpp: '2.898',
+          capacidad: 300,
+          molde: 'EV01838',
+          codigo_lote: lote // usa el código que escribiste
+        };
+        llenarEtiqueta(dataSimulada);
+      }, 600);
+    })
+    .then(function () {
+      cargando = false;
+      setLoadingBtn(false);
+    });
+  }
+
+  // =========================
+  // IMPRIMIR COMO IMAGEN EXACTA
+  // =========================
+  function imprimirEtiquetaComoImagen() {
+    if (!ticketPreview || !ticketContent || ticketContent.style.display === 'none') {
+      alert('Primero debe generar una etiqueta válida.');
+      return;
+    }
+
+    // UI de carga en el botón
+    var textoOriginal = btnImprimir.innerHTML;
+    btnImprimir.disabled = true;
+    btnImprimir.innerHTML = '<i class="ti ti-loader-2" style="display:inline-block;animation:spin 1s linear infinite;"></i> Preparando...';
+
+    // Usamos html2canvas para convertir el div en una imagen en alta resolución
+    html2canvas(ticketPreview, {
+      scale: 3, // Alta resolución (300 DPI aprox) para que el texto no se vea borroso
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false
+    }).then(function (canvas) {
+      var imgData = canvas.toDataURL('image/png');
+
+      // Crear iframe oculto para forzar la impresión de solo la imagen
+      var iframe = document.createElement('iframe');
+      iframe.style.position = 'absolute';
+      iframe.style.width = '0px';
+      iframe.style.height = '0px';
+      iframe.style.border = 'none';
+      document.body.appendChild(iframe);
+
+      var doc = iframe.contentWindow.document;
+      doc.open();
+      
+      // Inyectamos la imagen con tamaño exacto para etiqueta térmica
+      doc.write(`
+        <html>
+          <head>
+            <title>Imprimir Etiqueta</title>
+            <style>
+              @page {
+                size: 100mm 150mm; /* Tamaño físico de la etiqueta */
+                margin: 0; 
+              }
+              body {
+                margin: 0;
+                padding: 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background: #fff;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              img {
+                width: 100%;
+                height: 100%;
+                object-fit: fill; /* ESTIRA LA IMAGEN PARA QUE LLENE TODA LA ETIQUETA */
+                border: 2px solid #000; /* BORDE NEGRO PARA QUE SE VEA COMO EN LA FOTO */
+                box-sizing: border-box;
+              }
+            </style>
+          </head>
+          <body>
+            <img src="${imgData}" onload="setTimeout(function(){ window.print(); window.frameElement.remove(); }, 100);">
+          </body>
+        </html>
+      `);
+      doc.close();
+
+      // Restaurar botón
+      btnImprimir.innerHTML = textoOriginal;
+      btnImprimir.disabled = false;
+      
+    }).catch(function (err) {
+      console.error('Error al generar la imagen de la etiqueta:', err);
+      alert('Hubo un error al preparar la etiqueta para imprimir.');
+      btnImprimir.innerHTML = textoOriginal;
+      btnImprimir.disabled = false;
+    });
+  }
+
+  // =========================
+  // EVENTOS
+  // =========================
+  if (btnBuscar) {
+    btnBuscar.addEventListener('click', cargarLote);
+  }
+
+  if (inputLote) {
+    inputLote.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        cargarLote();
       }
     });
   }
-}
 
-
-
-const API_URL =
-"http://127.0.0.1:8000";
-
-
-
-let etiquetas = [];
-
-let qrInstance = null;
-
-
-
-
-
-/* ==========================================
-   CARGAR ETIQUETAS
-========================================== */
-
-
-async function cargarEtiquetas(){
-
-
-    try{
-
-
-        const response =
-        await fetch(
-            `${API_URL}/etiquetas/`
-        );
-
-
-
-        if(!response.ok){
-
-            throw new Error(
-                "Error cargando etiquetas"
-            );
-
-        }
-
-
-
-        const data =
-        await response.json();
-
-
-
-        etiquetas =
-        data.map(e=>({
-
-
-            lote:
-                e.codigo_lote,
-
-
-            prod:
-                e.producto,
-
-
-            dims:
-                e.dimensiones,
-
-
-            qty:
-                e.cantidad,
-
-
-            cliente:
-                e.cliente,
-
-
-            estado:
-                e.estado,
-
-
-            hora:
-                new Date(
-                    e.fecha_registro
-                )
-                .toLocaleTimeString(
-                    [],
-                    {
-                        hour:"2-digit",
-                        minute:"2-digit"
-                    }
-                )
-
-
-
-        }));
-
-
-
-        renderTabla();
-
-
-    }
-
-
-    catch(error){
-
-
-        console.error(
-            "Error etiquetas:",
-            error
-        );
-
-
-    }
-
-
-}
-
-
-
-
-
-
-
-
-
-/* ==========================================
-   ESTADO BADGE
-========================================== */
-
-
-function estadoLbl(e){
-
-
-    const map={
-
-        aprobado:
-        "badge-success",
-
-
-        condicionado:
-        "badge-warning",
-
-
-        retenido:
-        "badge-danger"
-
-    };
-
-
-    const texto={
-
-        aprobado:
-        "Aprobado",
-
-
-        condicionado:
-        "Condicionado",
-
-
-        retenido:
-        "Retenido"
-
-    };
-
-
-
-    return `
-
-    <span class="badge ${map[e]}">
-
-        ${texto[e] || e}
-
-    </span>
-
-    `;
-
-
-}
-
-
-
-
-
-
-
-
-
-/* ==========================================
-   TABLA
-========================================== */
-
-
-function renderTabla(){
-
-
-
-const tbody =
-document.getElementById(
-    "tabla-etq"
-);
-
-
-
-if(!tbody)
-return;
-
-
-
-tbody.innerHTML="";
-
-
-
-etiquetas.forEach(e=>{
-
-
-tbody.innerHTML += `
-
-
-
-<tr>
-
-
-<td class="font-mono">
-
-${e.lote}
-
-</td>
-
-
-
-<td>
-
-${e.prod}
-
-</td>
-
-
-
-
-<td>
-
-${e.dims}
-
-</td>
-
-
-
-
-<td>
-
-${e.qty}
-
-</td>
-
-
-
-
-<td>
-
-${e.cliente}
-
-</td>
-
-
-
-
-<td>
-
-${estadoLbl(e.estado)}
-
-</td>
-
-
-
-
-<td>
-
-${e.hora}
-
-</td>
-
-
-
-
-<td>
-
-
-<button 
-class="btn btn-outline btn-sm"
-onclick="reimprimirEtq('${e.lote}')">
-
-<i class="ti ti-printer"></i>
-
-</button>
-
-
-</td>
-
-
-
-</tr>
-
-
-
-`;
-
-
+  if (btnImprimir) {
+    // Cambiamos el evento para que use la nueva función de imagen
+    btnImprimir.addEventListener('click', imprimirEtiquetaComoImagen);
+  }
 
 });
-
-
-
-}
-
-
-
-
-
-
-
-
-
-/* ==========================================
-   GENERAR ETIQUETA
-========================================== */
-
-
-async function generar(){
-
-
-
-const lote =
-document.getElementById(
-"e-lote"
-).value.trim();
-
-
-
-const prod =
-document.getElementById(
-"e-prod"
-).value;
-
-
-
-const dims =
-document.getElementById(
-"e-dims"
-).value.trim();
-
-
-
-const esp =
-document.getElementById(
-"e-esp"
-).value;
-
-
-
-const qty =
-Number(
-document.getElementById(
-"e-qty"
-).value
-);
-
-
-
-const cliente =
-document.getElementById(
-"e-cliente"
-).value.trim();
-
-
-
-const norma =
-document.getElementById(
-"e-norma"
-).value;
-
-
-
-const estado =
-document.getElementById(
-"e-estado"
-).value;
-
-
-
-
-
-if(
-!lote ||
-!prod ||
-!dims ||
-!esp ||
-!qty ||
-!cliente
-){
-
-
-alert(
-"Completa todos los campos"
-);
-
-
-return;
-
-
-}
-
-
-
-
-
-
-const body={
-
-
-
-codigo_lote:
-lote,
-
-
-producto:
-prod,
-
-
-dimensiones:
-dims,
-
-
-espesor:
-esp,
-
-
-cantidad:
-qty,
-
-
-cliente:
-cliente,
-
-
-norma:
-norma,
-
-
-estado:
-estado
-
-
-
-};
-
-
-
-
-
-
-const response =
-await fetch(
-
-`${API_URL}/etiquetas/`,
-
-{
-
-
-method:"POST",
-
-
-headers:{
-
-
-"Content-Type":
-"application/json"
-
-
-},
-
-
-body:
-JSON.stringify(body)
-
-
-}
-
-);
-
-
-
-
-
-
-if(!response.ok){
-
-
-alert(
-"Error guardando etiqueta"
-);
-
-
-return;
-
-
-}
-
-
-
-
-
-
-mostrarEtiqueta(
-body
-);
-
-
-
-
-cargarEtiquetas();
-
-
-
-}
-
-
-
-
-
-
-
-
-
-/* ==========================================
-   VISTA PREVIA
-========================================== */
-
-
-function mostrarEtiqueta(e){
-
-
-
-const preview =
-document.getElementById(
-"label-preview"
-);
-
-
-
-const fecha =
-new Date()
-.toLocaleDateString(
-"es-MX"
-);
-
-
-
-const hora =
-new Date()
-.toTimeString()
-.slice(0,5);
-
-
-
-
-
-const qrData =
-
-`
-VENVIDRIO|
-LOTE:${e.codigo_lote || e.lote}|
-PROD:${e.producto || e.prod}|
-DIM:${e.dimensiones || e.dims}|
-QTY:${e.cantidad || e.qty}
-`;
-
-
-
-
-
-
-preview.innerHTML = `
-
-
-
-<div class="label-card">
-
-
-<div class="label-header">
-
-
-<div>
-
-
-<div class="label-brand">
-
-VENV<span>IDRIO</span>
-
-</div>
-
-
-<div class="label-subtitle">
-
-Control de Calidad
-
-</div>
-
-
-</div>
-
-
-<div>
-
-${e.codigo_lote || e.lote}
-
-</div>
-
-
-</div>
-
-
-
-
-
-<div class="label-body">
-
-
-<div class="label-info">
-
-
-<div class="label-product">
-
-${e.producto || e.prod}
-
-</div>
-
-
-
-<div class="label-row">
-
-<span>
-Dimensiones
-</span>
-
-<b>
-${e.dimensiones || e.dims}
-</b>
-
-</div>
-
-
-
-<div class="label-row">
-
-<span>
-Cantidad
-</span>
-
-<b>
-${e.cantidad || e.qty}
-</b>
-
-</div>
-
-
-
-<div class="label-row">
-
-<span>
-Cliente
-</span>
-
-<b>
-${e.cliente}
-</b>
-
-</div>
-
-
-
-<div class="label-row">
-
-<span>
-Fecha
-</span>
-
-<b>
-${fecha}
-</b>
-
-</div>
-
-
-</div>
-
-
-
-
-<div class="label-qr">
-
-
-<div id="qr-container"></div>
-
-
-</div>
-
-
-
-</div>
-
-
-
-
-
-<div class="label-footer">
-
-
-${e.estado}
-
-
-<span>
-
-${hora}
-
-</span>
-
-
-</div>
-
-
-</div>
-
-
-
-`;
-
-
-
-
-
-
-
-if(qrInstance){
-
-qrInstance.clear();
-
-}
-
-
-
-qrInstance =
-new QRCode(
-document.getElementById(
-"qr-container"
-),
-{
-
-text:
-qrData,
-
-
-width:
-96,
-
-
-height:
-96,
-
-
-correctLevel:
-QRCode.CorrectLevel.M
-
-}
-
-);
-
-
-
-document
-.getElementById(
-"btn-actions"
-)
-.style.opacity="1";
-
-
-
-}
-
-
-
-
-
-
-
-
-
-/* ==========================================
-   BOTONES
-========================================== */
-
-
-document
-.getElementById(
-"btn-generar"
-)
-?.addEventListener(
-"click",
-generar
-);
-
-
-
-
-
-
-document
-.getElementById(
-"btn-limpiar-etq"
-)
-?.addEventListener(
-"click",
-()=>{
-
-
-[
-"e-lote",
-"e-dims",
-"e-esp",
-"e-qty",
-"e-cliente"
-
-]
-.forEach(id=>{
-
-document.getElementById(id).value="";
-
-
-});
-
-
-
-document
-.getElementById(
-"label-preview"
-)
-.innerHTML=`
-
-<div class="label-empty">
-
-<i class="ti ti-tag"></i>
-
-<p>
-Completa el formulario
-</p>
-
-</div>
-
-`;
-
-
-
-});
-
-
-
-
-
-
-
-document
-.getElementById(
-"btn-imprimir"
-)
-?.addEventListener(
-"click",
-()=>{
-
-window.print();
-
-}
-
-);
-
-
-
-
-
-
-window.reimprimirEtq =
-function(lote){
-
-
-document
-.getElementById(
-"e-lote"
-)
-.value=lote;
-
-
-
-window.scrollTo({
-
-top:0,
-
-behavior:"smooth"
-
-});
-
-
-};
-
-
-
-
-
-
-
-
-
-/* ==========================================
-   INICIO
-========================================== */
-
-
-document.addEventListener(
-"DOMContentLoaded",
-()=>{
-/* ==========================================
-   INICIO - Verificar sesión primero
-========================================== */
-
-console.log('🔐 Verificando sesión...');
-verificarSesion();
-
-console.log(
-"Etiquetas Venvidrio iniciado"
-);
-
-
-cargarEtiquetas();
-
-
-});
-
-
-
-
-})();

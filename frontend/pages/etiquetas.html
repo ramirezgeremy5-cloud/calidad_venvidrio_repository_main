@@ -1,59 +1,41 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-
-<title>Etiquetas y QR — Venvidrio CQ</title>
-
-
-<link rel="stylesheet"
-href="../assets/css/shared.css">
-
-
-<link rel="stylesheet"
-href="../assets/css/etiquetas.css">
-
-
-<link rel="stylesheet"
-href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
-
-
-
-<!-- QR -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Etiquetas y Trazabilidad — Venvidrio CQ</title>
+  
+  <!-- Hojas de estilo -->
+  <link rel="stylesheet" href="../assets/css/shared.css">
+  <link rel="stylesheet" href="../assets/css/etiquetas.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  
+  <!-- Librería para generar el código de barras -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 </head>
-
-
-
 <body>
 
-
-
 <!-- ================= NAVBAR ================= -->
-
-
 <nav class="navbar">
-  <div class="nav-brand">VENV<span>IDRIO</span></div>
-  <ul class="nav-links">
+  <div class="nav-brand">
+    <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
+  </div>
+  
+  <ul class="nav-links" id="navLinks">
     <li><a href="../public/dashboard.html"><i class="ti ti-layout-dashboard"></i> Panel Principal</a></li>
     <li><a href="../pages/produccion.html"><i class="ti ti-building-factory-2"></i> Producción</a></li>
     <li><a href="../pages/defectos.html"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
     <li><a href="../pages/etiquetas.html" class="active"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
-    <li><a href="../pages/auditoria.html"><i class="ti ti-clipboard-check"></i> Auditoría</a></li>
+    <li><a href="../pages/auditoria_interna.html"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a></li>
     <li><a href="../pages/auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
+    <li id="navUsuariosLink" style="display:none;">
+      <a href="../pages/usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
+    </li>
   </ul>
 
-  <!-- ===== ÁREA DE USUARIO CON DROPDOWN ===== -->
   <div class="nav-user" id="navUserContainer">
     <div class="nav-avatar-circle" id="navAvatar">US</div>
     <span class="nav-username" id="navUsername">Cargando...</span>
-
     <div class="user-dropdown" id="userDropdown">
       <div class="dropdown-header">
         <div class="dropdown-avatar-circle" id="dropdownAvatar">US</div>
@@ -70,823 +52,182 @@ href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min
   </div>
 </nav>
 
-
-
-
-
-
-
-
-
+<!-- ================= CONTENIDO PRINCIPAL ================= -->
 <main class="page">
 
-
-
-
-
-<!-- HEADER -->
-
-
-<div class="page-header">
-
-
-<h1>
-
-Etiquetas y QR
-
-</h1>
-
-
-<p>
-
-Generación, impresión y trazabilidad de etiquetas de producto y lote
-
-</p>
-
-
-</div>
-
-
-
-
-
-
-
-
-
-<!-- ESTADÍSTICAS -->
-
-
-<div class="stats-grid">
-
-
-<div class="stat-card">
-
-<div class="stat-label">
-
-Generadas Hoy
-
-</div>
-
-
-<div class="stat-value"
-id="etq-hoy">
-
-0
-
-</div>
-
-
-<div class="stat-sub">
-
-Etiquetas emitidas
-
-</div>
-
-</div>
-
-
-
-
-
-<div class="stat-card">
-
-
-<div class="stat-label">
-
-Impresas
-
-</div>
-
-
-<div class="stat-value success">
-
-0
-
-</div>
-
-
-<div class="stat-sub">
-
-Proceso completado
-
-</div>
-
-
-</div>
-
-
-
-
-
-<div class="stat-card">
-
-
-<div class="stat-label">
-
-Pendientes
-
-</div>
-
-
-<div class="stat-value warning">
-
-0
-
-</div>
-
-
-<div class="stat-sub">
-
-Pendientes impresión
-
-</div>
-
-
-</div>
-
-
-
-
-
-
-<div class="stat-card">
-
-
-<div class="stat-label">
-
-Lotes Activos
-
-</div>
-
-
-<div class="stat-value">
-
-0
-
-</div>
-
-
-<div class="stat-sub">
-
-Con etiqueta asignada
-
-</div>
-
-
-</div>
-
-
-
-</div>
-
-
-
-
-
-
-
-
-
-
-
-<!-- ================= LAYOUT ================= -->
-
-
-<div class="etq-layout">
-
-
-
-
-
-
-
-<!-- FORMULARIO -->
-
-
-<div class="card anim-card">
-
-
-<div class="card-header">
-
-
-<div class="card-title">
-
-
-<i class="ti ti-tag"></i>
-
-
-Generar Etiqueta
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-
-
-<div class="card-body">
-
-
-
-
-
-<div class="grid-2">
-
-
-
-
-
-<div class="field">
-
-
-<label>
-
-Código de Lote
-
-</label>
-
-
-<input
-type="text"
-id="e-lote"
-placeholder="VV-2026-XXXX">
-
-
-</div>
-
-
-
-
-
-
-
-
-<div class="field">
-
-
-<label>
-
-Producto
-
-</label>
-
-
-<select id="e-prod">
-
-
-<option value="">
-
-Seleccionar
-
-</option>
-
-
-<option>
-Vidrio Templado 6mm
-</option>
-
-
-<option>
-Vidrio Laminado 8mm
-</option>
-
-
-<option>
-Vidrio Reflectivo
-</option>
-
-
-<option>
-Vidrio Serigrafiado
-</option>
-
-
-<option>
-Vidrio Curvo
-</option>
-
-
-</select>
-
-
-</div>
-
-
-
-
-
-
-
-
-<div class="field">
-
-
-<label>
-
-Dimensiones
-
-</label>
-
-
-<input
-id="e-dims"
-type="text"
-placeholder="1200x800">
-
-
-</div>
-
-
-
-
-
-
-
-<div class="field">
-
-
-<label>
-
-Espesor (mm)
-
-</label>
-
-
-<input
-id="e-esp"
-type="number"
-step="0.5"
-placeholder="6">
-
-
-</div>
-
-
-
-
-
-
-
-
-<div class="field">
-
-
-<label>
-
-Cantidad piezas
-
-</label>
-
-
-<input
-id="e-qty"
-type="number"
-min="1"
-placeholder="0">
-
-
-</div>
-
-
-
-
-
-
-
-<div class="field">
-
-
-<label>
-
-Cliente
-
-</label>
-
-
-<input
-id="e-cliente"
-type="text"
-placeholder="Cliente">
-
-
-</div>
-
-
-
-
-
-
-
-
-<div class="field">
-
-
-<label>
-
-Norma
-
-</label>
-
-
-<select id="e-norma">
-
-
-<option>
-NMX-C-175
-</option>
-
-
-<option>
-NMX-C-431
-</option>
-
-
-<option>
-ASTM C1048
-</option>
-
-
-<option>
-EN 12150
-</option>
-
-
-
-</select>
-
-
-</div>
-
-
-
-
-
-
-
-<div class="field">
-
-
-<label>
-
-Estado Calidad
-
-</label>
-
-
-<select id="e-estado">
-
-
-<option value="aprobado">
-
-Aprobado
-
-</option>
-
-
-<option value="condicionado">
-
-Condicionado
-
-</option>
-
-
-<option value="retenido">
-
-Retenido
-
-</option>
-
-
-
-</select>
-
-
-</div>
-
-
-
-
-
-</div>
-
-
-
-
-
-
-
-
-
-
-<div class="flex gap-2">
-
-
-<button
-class="btn btn-primary"
-id="btn-generar">
-
-
-<i class="ti ti-qrcode"></i>
-
-
-Generar Etiqueta
-
-
-</button>
-
-
-
-
-
-<button
-class="btn btn-outline"
-id="btn-limpiar-etq">
-
-
-<i class="ti ti-eraser"></i>
-
-
-Limpiar
-
-
-</button>
-
-
-</div>
-
-
-
-
-
-
-
-</div>
-
-
-
-</div>
-
-
-
-
-
-
-
-
-
-<!-- PREVIEW -->
-
-
-<div class="card anim-card">
-
-
-<div class="card-header">
-
-
-<div class="card-title">
-
-
-<i class="ti ti-eye"></i>
-
-
-Vista Previa
-
-
-</div>
-
-
-
-
-<div id="btn-actions"
-style="opacity:0">
-
-
-<button
-class="btn btn-outline btn-sm"
-id="btn-imprimir">
-
-
-<i class="ti ti-printer"></i>
-
-Imprimir
-
-</button>
-
-
-
-
-<button
-class="btn btn-primary btn-sm"
-id="btn-descargar">
-
-
-<i class="ti ti-download"></i>
-
-Descargar
-
-</button>
-
-
-
-</div>
-
-
-
-</div>
-
-
-
-
-
-
-<div class="card-body">
-
-
-
-<div
-class="label-preview"
-id="label-preview">
-
-
-
-<div class="label-empty">
-
-
-<i class="ti ti-tag"></i>
-
-
-<p>
-
-Completa el formulario
-
-</p>
-
-
-
-</div>
-
-
-</div>
-
-
-
-
-</div>
-
-
-
-
-</div>
-
-
-
-
-
-
-</div>
-
-
-
-
-
-
-
-
-
-<!-- TABLA -->
-
-
-<div class="card anim-card">
-
-
-<div class="card-header">
-
-
-<div class="card-title">
-
-
-<i class="ti ti-history"></i>
-
-
-Etiquetas Recientes
-
-
-</div>
-
-
-
-</div>
-
-
-
-
-
-
-<div class="table-wrap">
-
-
-<table>
-
-
-
-<thead>
-
-
-<tr>
-
-
-<th>
-Lote
-</th>
-
-
-<th>
-Producto
-</th>
-
-
-<th>
-Dimensiones
-</th>
-
-
-<th>
-Cantidad
-</th>
-
-
-<th>
-Cliente
-</th>
-
-
-<th>
-Estado
-</th>
-
-
-<th>
-Hora
-</th>
-
-
-<th>
-Acción
-</th>
-
-
-</tr>
-
-
-
-</thead>
-
-
-
-<tbody id="tabla-etq">
-
-
-</tbody>
-
-
-
-
-</table>
-
-
-
-</div>
-
-
-
-</div>
-
-
-
-
-
-
-
-
-
+  <div class="page-header">
+    <h1>Generación de Etiquetas</h1>
+    <p>Consulte un lote para generar y descargar su ticket de trazabilidad</p>
+  </div>
+
+  <div class="etq-layout">
+
+    <!-- COLUMNA IZQUIERDA: BÚSQUEDA -->
+    <div class="card anim-card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="ti ti-search"></i> Cargar Datos del Lote
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="etq-info">
+          <i class="ti ti-info-circle"></i>
+          <span>Ingrese el código de lote generado en el módulo de Producción para cargar los datos y previsualizar la etiqueta.</span>
+        </div>
+
+        <div class="field">
+          <label for="buscar-lote">Código de Lote *</label>
+          <div class="select-with-button">
+            <input type="text" id="buscar-lote" placeholder="Ej: 20260810A1" style="font-family:monospace; text-transform:uppercase;">
+            <button type="button" class="btn btn-primary" id="btn-buscar-lote">
+              <i class="ti ti-search"></i> Cargar
+            </button>
+          </div>
+          <small class="field-hint">Ingrese el código y presione Enter o "Cargar"</small>
+        </div>
+        
+        <div id="error-lote" style="display:none;">
+          <i class="ti ti-alert-circle"></i> Lote no encontrado.
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMNA DERECHA: VISTA PREVIA -->
+    <div class="card anim-card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="ti ti-printer"></i> Vista Previa de Impresión
+        </div>
+        <div id="btn-actions" style="opacity:0; pointer-events:none;">
+          <button class="btn btn-outline btn-sm" id="btn-imprimir">
+            <i class="ti ti-printer"></i> Imprimir
+          </button>
+        </div>
+      </div>
+      
+      <div class="card-body etq-preview-area">
+        
+        <!-- ETIQUETA FÍSICA (TICKET) -->
+        <div class="ticket-preview" id="ticket-preview">
+          
+          <!-- Estado Vacío -->
+          <div class="ticket-empty" id="ticket-empty">
+            <i class="ti ti-tag" style="font-size:3rem;color:#cbd5e1;margin-bottom:1rem;"></i>
+            <p>Esperando carga de datos...</p>
+          </div>
+
+          <!-- Contenido Real (Oculto inicialmente) -->
+          <div class="ticket-content" id="ticket-content" style="display:none;">
+            
+            <!-- Cabecera -->
+            <div class="ticket-header">
+              <div class="ticket-logo">
+                <img src="../assets/img/logo-venvidrio_index.png" alt="Logo">
+                <div class="ticket-sub">venvidrio<br>venezolana del vidrio</div>
+              </div>
+              <div class="ticket-planta">
+                <div class="ticket-planta-nombre" id="tk-planta">VENVIDRIO VALERA</div>
+                <div class="ticket-ticket" id="tk-ticket">05-003104461</div>
+              </div>
+            </div>
+
+            <div class="ticket-divider"></div>
+
+            <!-- Cliente -->
+            <div class="ticket-row-flex">
+              <div><span class="tk-label">CLIENT / CLIENTE</span></div>
+              <div class="tk-val" id="tk-cliente">CLIENTE STOCK</div>
+            </div>
+
+            <!-- Orden y Observaciones -->
+            <div class="ticket-grid-2">
+              <div>
+                <div class="tk-label">ORDER / ORDEN</div>
+                <div class="tk-val" id="tk-orden">S/O</div>
+              </div>
+              <div>
+                <div class="tk-label">OBS.</div>
+                <div class="tk-val" id="tk-obs">NO APLICA</div>
+              </div>
+            </div>
+
+            <div class="ticket-divider"></div>
+
+            <!-- Máquina, Turno, Grupo -->
+            <div class="ticket-row-flex">
+              <div>
+                <div class="tk-label">MACH / SHIFT / GROUP</div>
+                <div class="tk-label">MAQ / TURNO / GRUPO</div>
+              </div>
+              <div style="text-align:right;">
+                <div class="tk-label">DATE / FECHA</div>
+              </div>
+            </div>
+            
+            <div class="ticket-row-flex" style="margin-top:4px; margin-bottom:8px;">
+              <div class="tk-val" style="display:flex; gap:16px;">
+                <span id="tk-maquina" style="width:30px;">A1</span>
+                <span id="tk-turno" style="width:30px;">1</span>
+                <span id="tk-grupo">B</span>
+              </div>
+              <div class="tk-val" id="tk-fecha">10/08/2026</div>
+            </div>
+
+            <!-- Producto -->
+            <div class="tk-label">PRODUCT / PRODUCTO</div>
+            <div class="tk-val" id="tk-producto">SALSA INGLESA STOCK 300CC</div>
+
+            <!-- Acabado -->
+            <div class="tk-label" style="margin-top:8px;">Acabado / Finished</div>
+            <div class="tk-val" id="tk-acabado">24-490-405-ESP.BEAD"I-C"</div>
+
+            <!-- Item, BPP, CAP -->
+            <div class="ticket-row-flex" style="margin-top:12px; align-items:flex-end;">
+              <div style="font-size:20px; font-weight:800;">
+                ITEM <span id="tk-item">V-0002753</span>
+              </div>
+              <div style="text-align:right;">
+                <div class="tk-label">BPP <span class="tk-val" id="tk-bpp">2.898</span></div>
+                <div class="tk-label">CAP <span class="tk-val" id="tk-cap">300</span></div>
+              </div>
+            </div>
+
+            <!-- Molde -->
+            <div style="font-size:22px; font-weight:800; margin-top:4px;">
+              MOLD / MOLDE <span id="tk-molde">EV01838</span>
+            </div>
+
+            <!-- Lote -->
+            <div style="font-size:22px; font-weight:800; margin-top:4px; margin-bottom:16px;">
+              LOT / LOTE <span id="tk-lote">20260810A1</span>
+            </div>
+
+            <!-- Código de Barras -->
+            <div style="text-align:center; margin: 16px 0;">
+              <svg id="barcode"></svg>
+              <div style="font-size:18px; font-weight:800; letter-spacing:1px; margin-top:8px;" id="tk-barcode-text">05-003104461</div>
+            </div>
+
+            <!-- Footer -->
+            <div class="ticket-footer">
+              MADE IN VENEZUELA / HECHO EN VENEZUELA
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
 </main>
 
-
-
-
-
-
-
+<!-- ================= SCRIPTS ================= -->
+<script src="../assets/js/shared.js"></script>
+<script src="../assets/js/login_app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="../assets/js/etiquetas.js"></script>
 
 
 </body>
-
-
 </html>

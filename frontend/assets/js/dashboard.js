@@ -1,1263 +1,1031 @@
 /* ==========================================
    VENVIDRIO - DASHBOARD
-   dashboard.js - Versión Completa con Control de Sesión y Logout Backend
-   ========================================= */
+   JS v6 - Optimizado, Interactivo y a Prueba de Errores
+   ========================================== */
 
-const API_URL = "http://127.0.0.1:8000";
+// Detectar dinámicamente la URL del servidor
+const API_URL = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' 
+  ? "http://127.0.0.1:8000" 
+  : `http://${window.location.hostname}:8000`;
 
 let productionChart = null;
 let defectosChart = null;
+let aptoChart = null;
 let lineasChart = null;
 let eficienciaChart = null;
 let intervaloCarga = null;
 let datosDashboard = null;
 let periodoActual = 7;
 let filtroGrafico = 'ambos';
+let abortController = null; // Para cancelar peticiones en vuelo
 
-// Variables de control de sesión
-let temporizadorInactividad = null;
-let TIEMPO_INACTIVIDAD = 5 * 60 * 1000; // 5 minutos
-let tiempoRestante = TIEMPO_INACTIVIDAD / 1000;
-let intervaloContador = null;
-let sesionActiva = true;
+// Colores de clasificación
+const CLASE_COLOR = {
+  "Crítico": "#dc3545",
+  "Mayor B+": "#e65100",
+  "Mayor B-": "#f57f17",
+  "Menor": "#1565c0"
+};
+
+const ESTATUS_BADGE = {
+  "100": { class: 'badge-warning', label: 'Pendiente' },
+  "200": { class: 'badge-success', label: 'Apto' },
+  "300": { class: 'badge-danger', label: 'Retenido' },
+  "600": { class: 'badge-info', label: 'Despachado' },
+  "910": { class: 'badge-info', label: 'Decorado' },
+  "950": { class: 'badge-warning', label: 'Reselec.' },
+  "999": { class: 'badge-warning', label: 'Sobrante' }
+};
 
 /* ==========================================
-   UTILIDADES Y LOGS
+   LOGS
 ========================================== */
-
-function log(message, data = null) {
-    const timestamp = new Date().toLocaleTimeString();
-    if (data) {
-        console.log(`[${timestamp}] 📊 ${message}`, data);
-    } else {
-        console.log(`[${timestamp}] 📊 ${message}`);
-    }
+function log(msg, data = null) {
+  const t = new Date().toLocaleTimeString();
+  data ? console.log(`[${t}] 📊 ${msg}`, data) : console.log(`[${t}] 📊 ${msg}`);
 }
-
-function logError(message, error = null) {
-    const timestamp = new Date().toLocaleTimeString();
-    if (error) {
-        console.error(`[${timestamp}] ❌ ${message}`, error);
-    } else {
-        console.error(`[${timestamp}] ❌ ${message}`);
-    }
+function logError(msg, err = null) {
+  const t = new Date().toLocaleTimeString();
+  err ? console.error(`[${t}] ❌ ${msg}`, err) : console.error(`[${t}] ❌ ${msg}`);
 }
-
-function logSuccess(message, data = null) {
-    const timestamp = new Date().toLocaleTimeString();
-    if (data) {
-        console.log(`[${timestamp}] ✅ ${message}`, data);
-    } else {
-        console.log(`[${timestamp}] ✅ ${message}`);
-    }
+function logSuccess(msg, data = null) {
+  const t = new Date().toLocaleTimeString();
+  data ? console.log(`[${t}] ✅ ${msg}`, data) : console.log(`[${t}] ✅ ${msg}`);
 }
 
 /* ==========================================
-   CONTROL DE SESIÓN - USUARIO
+   UTILIDADES
 ========================================== */
+function esc(v) {
+  if (v === null || v === undefined) return '';
+  return String(v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 
-// Cargar datos del usuario en el navbar
+function fmtNum(n) {
+  if (n === null || n === undefined) return '0';
+  return Number(n).toLocaleString('es-VE');
+}
+
+function fmtFecha(fecha) {
+  if (!fecha) return '—';
+  const d = new Date(fecha);
+  return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('es-ES');
+}
+
+function setText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
+function filtrarPorDias(lista, campoFecha) {
+  if (periodoActual === 'all' || periodoActual >= 365) return lista;
+  const hoy = new Date();
+  const limite = new Date(hoy.getTime() - (periodoActual * 24 * 60 * 60 * 1000));
+  return lista.filter(item => {
+    const f = new Date(item[campoFecha]);
+    return !isNaN(f.getTime()) && f >= limite;
+  });
+}
+
+/* ==========================================
+   MANEJO DE ERRORES EN INTERFAZ
+========================================== */
+function renderError(contenedorId, mensaje, callbackReintentar) {
+  const el = document.getElementById(contenedorId);
+  if (!el) return;
+  el.innerHTML = `
+    <div class="error-state">
+      <i class="ti ti-cloud-off"></i>
+      <p>${mensaje}</p>
+      <button class="btn-reintentar" id="btn-reintentar-${contenedorId}">Reintentar</button>
+    </div>
+  `;
+  document.getElementById(`btn-reintentar-${contenedorId}`)?.addEventListener('click', () => {
+    el.innerHTML = `<div class="loading-placeholder"><i class="ti ti-loader-2 loading-spinner"></i> Reintentando...</div>`;
+    callbackReintentar();
+  });
+}
+
+/* ==========================================
+   SESIÓN BÁSICA (Usuario y Logout)
+========================================== */
 function cargarUsuarioNav() {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-        try {
-            const user = JSON.parse(userData);
-            const avatar = document.getElementById('navAvatar');
-            const username = document.getElementById('navUsername');
-            const dropdownAvatar = document.getElementById('dropdownAvatar');
-            const dropdownName = document.getElementById('dropdownName');
-            const dropdownEmail = document.getElementById('dropdownEmail');
-
-            const iniciales = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
-            const nombre = user.nombre || 'Usuario';
-            const correo = user.correo || 'usuario@email.com';
-
-            if (avatar) avatar.textContent = iniciales;
-            if (username) username.textContent = nombre;
-            if (dropdownAvatar) dropdownAvatar.textContent = iniciales;
-            if (dropdownName) dropdownName.textContent = nombre;
-            if (dropdownEmail) dropdownEmail.textContent = correo;
-
-            logSuccess('Usuario cargado en navbar:', nombre);
-        } catch (e) {
-            logError('Error parseando usuario:', e);
-        }
-    }
-}
-
-// Verificar sesión activa
-function verificarSesion() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        window.location.href = 'login.html';
-        return;
-    }
-
-    fetch(`${API_URL}/auth/verify`, {
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Token inválido');
-        }
-        return response.json();
-    })
-    .then(data => {
-        logSuccess('Sesión verificada');
-        cargarUsuarioNav();
-        iniciarControlInactividad();
-    })
-    .catch(error => {
-        logError('Error verificando sesión:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('role');
-        window.location.href = 'login.html';
-    });
-}
-
-// Iniciar control de inactividad
-function iniciarControlInactividad() {
-    // Detectar actividad del usuario
-    const eventos = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart', 'touchmove'];
-    eventos.forEach(evento => {
-        document.addEventListener(evento, function() {
-            if (sesionActiva) {
-                reiniciarTemporizador();
-            }
-        });
-    });
-
-    reiniciarTemporizador();
-    iniciarContador();
-}
-
-// Iniciar contador de tiempo
-function iniciarContador() {
-    if (intervaloContador) {
-        clearInterval(intervaloContador);
-    }
-
-    tiempoRestante = TIEMPO_INACTIVIDAD / 1000;
-
-    intervaloContador = setInterval(function() {
-        tiempoRestante--;
-        actualizarTimerDisplay();
-
-        if (tiempoRestante <= 0) {
-            clearInterval(intervaloContador);
-            intervaloContador = null;
-        }
-    }, 1000);
-}
-
-// Actualizar display del timer
-function actualizarTimerDisplay() {
-    const timerDisplay = document.getElementById('timerDisplay');
-    const timerBadge = document.getElementById('timerBadge');
+  const userData = localStorage.getItem('user');
+  if (!userData) return;
+  try {
+    const user = JSON.parse(userData);
     
-    if (timerDisplay) {
-        const minutos = Math.floor(tiempoRestante / 60);
-        const segundos = Math.floor(tiempoRestante % 60);
-        timerDisplay.textContent = String(minutos).padStart(2, '0') + ':' + String(segundos).padStart(2, '0');
-    }
-
-    if (timerBadge) {
-        if (tiempoRestante > 120) {
-            timerBadge.className = 'badge-timer';
-            timerBadge.textContent = 'Activo';
-        } else if (tiempoRestante > 60) {
-            timerBadge.className = 'badge-timer warning';
-            timerBadge.textContent = '⚠️ Cerca de expirar';
-        } else {
-            timerBadge.className = 'badge-timer danger';
-            timerBadge.textContent = '🔴 Expirando';
-        }
-    }
-}
-
-// Reiniciar temporizador de inactividad
-function reiniciarTemporizador() {
-    if (!sesionActiva) return;
-
-    if (temporizadorInactividad) {
-        clearTimeout(temporizadorInactividad);
-    }
-
-    tiempoRestante = TIEMPO_INACTIVIDAD / 1000;
-    actualizarTimerDisplay();
-
-    temporizadorInactividad = setTimeout(function() {
-        cerrarSesion('⏳ Tu sesión ha expirado por inactividad. Por favor, inicia sesión nuevamente.');
-    }, TIEMPO_INACTIVIDAD);
-}
-
-// ==========================================================
-// ✅ CERRAR SESIÓN (CORREGIDO: LLAMA AL BACKEND)
-// ==========================================================
-function cerrarSesion(mensaje) {
-    sesionActiva = false;
-
-    // Detener temporizadores locales
-    if (temporizadorInactividad) {
-        clearTimeout(temporizadorInactividad);
-        temporizadorInactividad = null;
-    }
-
-    if (intervaloContador) {
-        clearInterval(intervaloContador);
-        intervaloContador = null;
-    }
-
-    // 1. Obtener el token actual
-    const token = localStorage.getItem('token');
-
-    // 2. Intentar avisar al backend para que borre el token_activo
-    if (token) {
-        fetch(`${API_URL}/auth/logout`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        })
-        .catch(error => {
-            // Solo logueamos el error, no bloqueamos el cierre de sesión
-            console.warn('⚠️ No se pudo comunicar con el backend al cerrar sesión:', error);
-        })
-        .finally(() => {
-            // 3. Siempre limpiar el localStorage y redirigir, haya funcionado o no el backend
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            localStorage.removeItem('role');
-            localStorage.removeItem('login_time');
-            
-            if (mensaje) {
-                alert(mensaje);
-            }
-
-            window.location.href = 'login.html';
-        });
+    let avatarHtml = '';
+    if (user.foto_url) {
+      avatarHtml = `<img src="${API_URL}${user.foto_url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
     } else {
-        // Si no hay token, simplemente redirigir
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('role');
-        localStorage.removeItem('login_time');
-
-        if (mensaje) {
-            alert(mensaje);
-        }
-
-        window.location.href = 'login.html';
+      avatarHtml = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
     }
+
+    const navAvatar = document.getElementById('navAvatar');
+    if (navAvatar) navAvatar.innerHTML = avatarHtml;
+    
+    const dropdownAvatar = document.getElementById('dropdownAvatar');
+    if (dropdownAvatar) dropdownAvatar.innerHTML = avatarHtml;
+
+    setText('navUsername', user.nombre || 'Usuario');
+    setText('dropdownName', user.nombre || 'Usuario');
+    setText('dropdownEmail', user.correo || 'usuario@email.com');
+  } catch (e) { logError('Error parseando usuario:', e); }
 }
 
-// Cerrar sesión manual (desde dropdown)
+function mostrarEnlaceUsuarios() {
+  const rol = parseInt(localStorage.getItem('role'));
+  const link = document.getElementById('navUsuariosLink');
+  if (link && rol === 3) link.style.display = 'flex';
+}
+
 function logoutManual() {
-    if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
-        cerrarSesion('👋 Sesión cerrada exitosamente.');
+  if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+    const token = localStorage.getItem('token');
+    
+    if (token) {
+      fetch(`${API_URL}/auth/logout`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      }).finally(() => {
+        localStorage.clear();
+        window.location.href = 'login.html';
+      });
+    } else {
+      localStorage.clear();
+      window.location.href = 'login.html';
     }
+  }
 }
 
-// Toggle dropdown de usuario
-function toggleDropdown() {
-    const dropdown = document.getElementById('userDropdown');
-    if (dropdown) {
-        dropdown.classList.toggle('show');
-    }
-}
-
-// Cerrar dropdown
-function cerrarDropdown() {
-    const dropdown = document.getElementById('userDropdown');
-    if (dropdown) {
-        dropdown.classList.remove('show');
-    }
-}
-
-// Inicializar controles de usuario
 function initUserControls() {
-    const container = document.getElementById('navUserContainer');
-    const logoutBtn = document.getElementById('dropdownLogout');
+  const container = document.getElementById('navUserContainer');
+  const dropdown = document.getElementById('userDropdown');
+  const logoutBtn = document.getElementById('dropdownLogout');
 
-    // Click en avatar para abrir/cerrar dropdown
-    if (container) {
-        container.addEventListener('click', function(e) {
-            e.stopPropagation();
-            toggleDropdown();
-        });
+  if (container && dropdown) {
+    container.addEventListener('click', e => { e.stopPropagation(); dropdown.classList.toggle('show'); });
+  }
+  document.addEventListener('click', () => dropdown && dropdown.classList.remove('show'));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && dropdown) dropdown.classList.remove('show'); });
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      logoutManual();
+    });
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.shiftKey && (e.key === 'L' || e.key === 'l')) {
+      e.preventDefault();
+      logoutManual();
     }
-
-    // Cerrar dropdown al hacer click fuera
-    document.addEventListener('click', function() {
-        cerrarDropdown();
-    });
-
-    // Cerrar dropdown con ESC
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            cerrarDropdown();
-        }
-    });
-
-    // Logout
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            logoutManual();
-        });
-    }
-
-    // Ctrl+Shift+L para logout rápido
-    document.addEventListener('keydown', function(e) {
-        if (e.ctrlKey && e.shiftKey && (e.key === 'L' || e.key === 'l')) {
-            e.preventDefault();
-            logoutManual();
-        }
-    });
-
-    log('Controles de usuario inicializados');
+  });
 }
 
 /* ==========================================
-   SKELETON LOADING
+   CARGA PRINCIPAL DE DATOS (CON ABORT CONTROLLER)
 ========================================== */
+async function cargarDashboard(isBackground = false) {
+  // Si ya hay una petición en curso, la cancelamos
+  if (abortController) abortController.abort();
+  abortController = new AbortController();
 
-function mostrarSkeleton() {
-    const elementos = ['dash-lotes', 'dash-unidades', 'dash-defectos', 'dash-eficiencia'];
-    elementos.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.innerHTML = `<span class="skeleton"></span>`;
-        }
-    });
-}
+  if (!isBackground) {
+    document.getElementById('btn-refresh')?.classList.add('loading');
+  }
 
-/* ==========================================
-   ACTUALIZAR TIMESTAMP
-========================================== */
+  try {
+    log('Cargando dashboard...');
 
-function actualizarTimestamp() {
-    const now = new Date();
-    const el = document.getElementById('ultima-actualizacion');
-    if (el) {
-        el.textContent = now.toLocaleTimeString();
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const headers = { 'Authorization': `Bearer ${token}` };
+
+    const [resLotes, resDefectos] = await Promise.all([
+      fetch(`${API_URL}/produccion?limit=2000`, { headers, signal: abortController.signal }),
+      fetch(`${API_URL}/defectos?limit=2000`, { headers, signal: abortController.signal })
+    ]);
+
+    if (resLotes.status === 401 || resDefectos.status === 401) {
+      logError('Token expirado. Deteniendo carga.');
+      return;
     }
-}
 
-/* ==========================================
-   CARGAR DASHBOARD COMPLETO
-========================================== */
+    if (!resLotes.ok || !resDefectos.ok) throw new Error("Error cargando datos de la API");
 
-async function cargarDashboard() {
-    try {
-        log('Cargando dashboard completo...');
-        
-        mostrarSkeleton();
+    const lotes = await resLotes.json();
+    const defectos = await resDefectos.json();
 
-        async function fetchData(url, fallback = null) {
-            try {
-                const response = await fetch(url);
-                if (!response.ok) {
-                    console.warn(`⚠️ Error ${response.status} en ${url}`);
-                    return fallback;
-                }
-                return await response.json();
-            } catch (e) {
-                console.warn(`⚠️ Error en fetch ${url}:`, e);
-                return fallback;
-            }
-        }
+    datosDashboard = { lotes, defectos };
 
-        const stats = await fetchData(`${API_URL}/dashboard/stats`, { lotes: 0, unidades: 0, defectos: 0, eficiencia: '0%' });
+    logSuccess(`${lotes.length} lotes | ${defectos.length} defectos`);
 
-        const tendencias = await fetchData(`${API_URL}/dashboard/tendencias`, { 
-            tendencia: { lotes: 0, unidades: 0, defectos: 0, eficiencia: 0 },
-            periodo: { actual: { desde: '--', hasta: '--' } }
-        });
+    renderKPIs(lotes, defectos);
+    renderChartProduccion(lotes);
+    renderChartDefectos(defectos);
+    renderChartApto(lotes);
+    renderChartLineas(lotes);
+    renderTopProductos(lotes);
+    renderTopTiposDefecto(defectos);
+    renderChartEficiencia(lotes, defectos);
+    renderTopClientesRetencion(lotes);
+    renderAuditoriasPendientes(lotes);
+    renderAlertas(lotes, defectos);
+    renderTablaUltimosRegistros(lotes);
 
-        const prodGrafico = await fetchData(`${API_URL}/dashboard/grafico/produccion?dias=${periodoActual}`, { labels: [], unidades: [], lotes: [] });
+    setText('ultima-actualizacion', new Date().toLocaleTimeString('es-VE'));
 
-        const defGrafico = await fetchData(`${API_URL}/dashboard/grafico/defectos`, { labels: ['Críticos', 'Mayores', 'Menores'], values: [0, 0, 0], colors: ['#dc3545', '#ffc107', '#17a2b8'] });
-
-        const lineas = await fetchData(`${API_URL}/dashboard/grafico/lineas`, { lineas: [] });
-
-        const eficiencia = await fetchData(`${API_URL}/dashboard/grafico/eficiencia?meses=6`, { labels: [], valores: [] });
-
-        const topDefectos = await fetchData(`${API_URL}/dashboard/top/defectos`, []);
-
-        const auditorias = await fetchData(`${API_URL}/dashboard/auditorias/pendientes`, { total: 0, en_proceso: 0, cerradas: 0, con_nc: 0, criticas: 0 });
-
-        datosDashboard = { stats, tendencias, prodGrafico, defGrafico, lineas, eficiencia, topDefectos, auditorias };
-
-        actualizarKPIsConTendencias(stats, tendencias);
-        actualizarAuditoriasPendientes(auditorias);
-        actualizarTopDefectos(topDefectos);
-
-        crearGraficaProduccion(prodGrafico);
-        crearGraficaDefectos(defGrafico);
-        crearGraficaLineas(lineas);
-        crearGraficaEficiencia(eficiencia);
-
-        actualizarTimestamp();
-
-        logSuccess('Dashboard actualizado correctamente');
-
-    } catch (error) {
-        logError('Error cargando dashboard:', error);
-        mostrarErrorKPI();
-    }
-}
-
-/* ==========================================
-   ACTUALIZAR KPIs CON TENDENCIAS
-========================================== */
-
-function actualizarKPIsConTendencias(stats, tendencias) {
-    const kpis = [
-        {
-            id: 'dash-lotes',
-            valor: stats.lotes || 0,
-            tendencia: tendencias.tendencia?.lotes || 0,
-            label: 'Lotes registrados',
-            formato: 'numero',
-            clase: 'lotes'
-        },
-        {
-            id: 'dash-unidades',
-            valor: stats.unidades || 0,
-            tendencia: tendencias.tendencia?.unidades || 0,
-            label: 'Unidades producidas',
-            formato: 'numero',
-            clase: 'produccion'
-        },
-        {
-            id: 'dash-defectos',
-            valor: stats.defectos || 0,
-            tendencia: tendencias.tendencia?.defectos || 0,
-            label: 'Defectos',
-            formato: 'numero',
-            invertir: true,
-            clase: 'defectos'
-        },
-        {
-            id: 'dash-eficiencia',
-            valor: stats.eficiencia || '0%',
-            tendencia: tendencias.tendencia?.eficiencia || 0,
-            label: 'Eficiencia',
-            formato: 'porcentaje',
-            clase: 'eficiencia'
-        }
-    ];
-
-    kpis.forEach(kpi => {
-        const el = document.getElementById(kpi.id);
-        if (!el) return;
-
-        const esPositiva = kpi.invertir ? kpi.tendencia < 0 : kpi.tendencia > 0;
-        const esCero = kpi.tendencia === 0;
-
-        let color = 'var(--text-hint)';
-        let flecha = '→';
-        let claseTendencia = 'neutral';
-        
-        if (!esCero) {
-            color = esPositiva ? 'var(--success)' : 'var(--danger)';
-            flecha = esPositiva ? '↑' : '↓';
-            claseTendencia = esPositiva ? 'up' : 'down';
-        }
-
-        let valorFormateado;
-        if (kpi.formato === 'porcentaje') {
-            valorFormateado = kpi.valor;
-        } else {
-            valorFormateado = typeof kpi.valor === 'number' 
-                ? kpi.valor.toLocaleString() 
-                : kpi.valor;
-        }
-
-        let colorValor = '';
-        if (kpi.id === 'dash-defectos' && kpi.valor > 0) {
-            colorValor = 'danger';
-        } else if (kpi.id === 'dash-defectos' && kpi.valor === 0) {
-            colorValor = 'success';
-        }
-
-        const tendenciaHTML = !esCero ? `
-            <span class="tendencia ${claseTendencia}">
-                ${flecha} ${Math.abs(kpi.tendencia)}%
-            </span>
-        ` : '';
-
-        el.innerHTML = `
-            ${valorFormateado}
-            ${tendenciaHTML}
-        `;
-
-        if (colorValor) {
-            el.classList.add(colorValor);
-        } else {
-            el.classList.remove('danger', 'success');
-        }
-
-        const card = el.closest('.kpi-card');
-        if (card) {
-            card.className = `kpi-card ${kpi.clase} anim-card`;
-            
-            const metaEl = card.querySelector('.kpi-meta');
-            if (metaEl) {
-                const periodo = tendencias.periodo?.actual;
-                if (periodo) {
-                    metaEl.textContent = `${kpi.label} · ${periodo.desde} - ${periodo.hasta}`;
-                } else {
-                    metaEl.textContent = kpi.label;
-                }
-            }
-        }
+  } catch (error) {
+    if (error.name === 'AbortError') return; // Ignorar cancelaciones
+    logError('Error cargando dashboard:', error);
+    
+    // Mostrar errores visuales
+    ['top-productos', 'top-tipos-defecto', 'top-clientes-retencion', 'auditorias-pendientes', 'dashboard-alerts', 'dashboard-table'].forEach(id => {
+      renderError(id, 'No se pudieron cargar los datos', () => cargarDashboard());
     });
+    
+    mostrarErrorKPI();
+  } finally {
+    document.getElementById('btn-refresh')?.classList.remove('loading');
+  }
 }
 
 function mostrarErrorKPI() {
-    const elementos = ['dash-lotes', 'dash-unidades', 'dash-defectos', 'dash-eficiencia'];
-    elementos.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = '⚠️ Error';
+  ['dash-unidades', 'dash-lotes', 'dash-pendientes', 'dash-defectos', 'dash-rechazo', 'dash-eficiencia'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '⚠️';
+  });
+}
+
+/* ==========================================
+   KPIs
+========================================== */
+function renderKPIs(lotes, defectos) {
+  const lotesFiltrados = filtrarPorDias(lotes, 'fecha_produccion');
+  const defectosFiltrados = filtrarPorDias(defectos, 'fecha_registro');
+
+  const totalUnidades = lotesFiltrados.reduce((a, l) => a + (l.cantidad || 0), 0);
+  const totalLotes = lotesFiltrados.length;
+  const totalDefectos = defectosFiltrados.length;
+  
+  const pendientes = lotesFiltrados.filter(l => String(l.estatus) === '100').length;
+
+  const retenidos = lotesFiltrados.filter(l => String(l.estatus) === '300');
+  const paletasInspeccionadas = lotesFiltrados.reduce((a, l) => a + (l.paletas || 0), 0);
+  const paletasRetenidas = retenidos.reduce((a, l) => a + (l.paletas || 0), 0);
+  const tasaRechazo = paletasInspeccionadas > 0
+    ? ((paletasRetenidas / paletasInspeccionadas) * 100).toFixed(2)
+    : '0.00';
+
+  const eficiencia = totalUnidades > 0
+    ? (((totalUnidades - totalDefectos) / totalUnidades) * 100).toFixed(1)
+    : '0.0';
+
+  setText('dash-unidades', fmtNum(totalUnidades));
+  setText('dash-lotes', fmtNum(totalLotes));
+  setText('dash-pendientes', fmtNum(pendientes));
+  setText('dash-defectos', fmtNum(totalDefectos));
+  setText('dash-rechazo', `${tasaRechazo}%`);
+  setText('dash-eficiencia', `${eficiencia}%`);
+  setText('total-defectos-badge', `Total: ${totalDefectos}`);
+}
+
+/* ==========================================
+   GRÁFICAS INTERACTIVAS (CLICKS Y TOOLTIPS)
+========================================== */
+
+function renderChartProduccion(lotes) {
+  const canvas = document.getElementById('productionChart');
+  if (!canvas) return;
+
+  const lotesFiltrados = filtrarPorDias(lotes, 'fecha_produccion');
+
+  const porDia = {};
+  lotesFiltrados.forEach(l => {
+    if (!l.fecha_produccion) return;
+    const key = new Date(l.fecha_produccion).toISOString().split('T')[0];
+    if (!porDia[key]) porDia[key] = { unidades: 0, lotes: 0 };
+    porDia[key].unidades += (l.cantidad || 0);
+    porDia[key].lotes += 1;
+  });
+
+  const fechas = Object.keys(porDia).sort().slice(-14);
+  const labels = fechas.map(f => {
+    const d = new Date(f + 'T00:00:00'); // Evitar desfase de zona horaria
+    return `${d.getDate()}/${d.getMonth() + 1}`;
+  });
+
+  const datasets = [];
+  if (filtroGrafico === 'unidades' || filtroGrafico === 'ambos') {
+    datasets.push({
+      label: 'Unidades',
+      data: fechas.map(f => porDia[f].unidades),
+      backgroundColor: 'rgba(26, 35, 126, 0.75)',
+      borderColor: 'rgba(26, 35, 126, 1)',
+      borderWidth: 2,
+      borderRadius: 6,
+      order: 1
     });
-}
-
-/* ==========================================
-   ACTUALIZAR AUDITORÍAS PENDIENTES
-========================================== */
-
-function actualizarAuditoriasPendientes(auditorias) {
-    const el = document.getElementById('auditorias-pendientes');
-    if (!el) return;
-
-    const items = [
-        { valor: auditorias.total || 0, label: 'Total', clase: 'azul' },
-        { valor: auditorias.en_proceso || 0, label: 'En proceso', clase: 'naranja' },
-        { valor: auditorias.cerradas || 0, label: 'Cerradas', clase: 'verde' },
-        { valor: auditorias.con_nc || 0, label: 'Con NC', clase: 'rojo' },
-        { valor: auditorias.criticas || 0, label: 'Críticas', clase: 'critico' }
-    ];
-
-    el.innerHTML = `
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;text-align:center;">
-            ${items.map(item => `
-                <div style="padding:8px 4px;border-radius:var(--radius-sm);background:var(--off-white);transition:background var(--transition);">
-                    <div style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:${item.clase === 'azul' ? 'var(--navy)' : item.clase === 'verde' ? 'var(--success)' : item.clase === 'naranja' ? 'var(--warning)' : item.clase === 'rojo' ? 'var(--danger)' : '#dc3545'}">${item.valor}</div>
-                    <div style="font-size:10px;color:var(--text-hint);margin-top:2px;">${item.label}</div>
-                </div>
-            `).join('')}
-        </div>
-    `;
-}
-
-/* ==========================================
-   ACTUALIZAR TOP DEFECTOS
-========================================== */
-
-function actualizarTopDefectos(topDefectos) {
-    const el = document.getElementById('top-defectos');
-    if (!el) return;
-
-    if (!topDefectos || topDefectos.length === 0) {
-        el.innerHTML = `
-            <div style="text-align:center;color:var(--text-muted);padding:10px 0;">
-                <i class="ti ti-circle-check" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;color:var(--success)"></i>
-                No hay defectos registrados
-            </div>
-        `;
-        return;
-    }
-
-    el.innerHTML = topDefectos.map((item, index) => `
-        <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);">
-            <span style="font-weight:700;color:var(--text-hint);width:20px;">${index + 1}</span>
-            <span style="flex:1;font-size:13px;">${item.producto}</span>
-            <span style="font-size:12px;color:var(--danger);font-weight:600;">${item.defectos}</span>
-            <span style="font-size:11px;color:var(--text-hint);">${item.tasa}%</span>
-        </div>
-    `).join('');
-}
-
-/* ==========================================
-   GRÁFICA DE PRODUCCIÓN
-========================================== */
-
-function crearGraficaProduccion(data) {
-    const canvas = document.getElementById("productionChart");
-    if (!canvas) {
-        logError('Canvas de gráfica de producción no encontrado');
-        return;
-    }
-
-    if (productionChart) {
-        productionChart.destroy();
-        productionChart = null;
-    }
-
-    const labels = data.labels || [];
-    const unidades = data.unidades || [];
-    const lotes = data.lotes || [];
-
-    let datasets = [];
-    
-    if (filtroGrafico === 'unidades' || filtroGrafico === 'ambos') {
-        datasets.push({
-            label: 'Unidades',
-            data: unidades,
-            backgroundColor: 'rgba(26, 35, 126, 0.75)',
-            borderColor: 'rgba(26, 35, 126, 1)',
-            borderWidth: 2,
-            borderRadius: 6,
-            order: 1
-        });
-    }
-    
-    if (filtroGrafico === 'lotes' || filtroGrafico === 'ambos') {
-        datasets.push({
-            label: 'Lotes',
-            data: lotes,
-            backgroundColor: 'rgba(76, 175, 80, 0.75)',
-            borderColor: 'rgba(76, 175, 80, 1)',
-            borderWidth: 2,
-            borderRadius: 6,
-            order: 2
-        });
-    }
-
-    productionChart = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    position: 'top',
-                    labels: {
-                        usePointStyle: true,
-                        padding: 20,
-                        font: { size: 12, weight: '500' }
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(255,255,255,0.95)',
-                    titleColor: '#1a237e',
-                    bodyColor: '#333',
-                    borderColor: '#e0e0e0',
-                    borderWidth: 1,
-                    cornerRadius: 8,
-                    padding: 12
-                }
-            },
-            onClick: function(event, elements) {
-                if (elements.length > 0) {
-                    const index = elements[0].index;
-                    const fecha = this.data.labels[index];
-                    const unidadesVal = this.data.datasets[0]?.data[index] || 0;
-                    const lotesVal = this.data.datasets[1]?.data[index] || 0;
-                    alert(`📊 Detalles del día ${fecha}:\n\n📦 Unidades: ${unidadesVal.toLocaleString()}\n📋 Lotes: ${lotesVal}`);
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(0,0,0,0.06)', drawBorder: false },
-                    ticks: { font: { size: 11 } }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { font: { size: 11, weight: '500' } }
-                }
-            },
-            animation: { duration: 800, easing: 'easeOutQuart' }
-        }
+  }
+  if (filtroGrafico === 'lotes' || filtroGrafico === 'ambos') {
+    datasets.push({
+      label: 'Lotes',
+      data: fechas.map(f => porDia[f].lotes),
+      backgroundColor: 'rgba(76, 175, 80, 0.75)',
+      borderColor: 'rgba(76, 175, 80, 1)',
+      borderWidth: 2,
+      borderRadius: 6,
+      order: 2
     });
+  }
 
-    log('Gráfica de producción creada');
+  if (productionChart) productionChart.destroy();
+
+  productionChart = new Chart(canvas, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      onClick: (e, activeElements) => {
+        if (activeElements.length > 0) {
+          const index = activeElements[0].index;
+          const fecha = fechas[index];
+          window.location.href = `../pages/produccion.html?fecha=${fecha}`;
+        }
+      },
+      plugins: {
+        legend: { position: 'top', labels: { usePointStyle: true, padding: 20, font: { size: 12, weight: '500' } } },
+        tooltip: { 
+          backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1a237e', bodyColor: '#333', borderColor: '#e0e0e0', borderWidth: 1, cornerRadius: 8, padding: 12,
+          callbacks: { afterBody: () => 'Haz clic para ver detalle' }
+        }
+      },
+      scales: {
+        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 11 } } },
+        x: { grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
+      },
+      animation: { duration: 800, easing: 'easeOutQuart' }
+    }
+  });
 }
 
-/* ==========================================
-   GRÁFICA DE DEFECTOS POR TIPO
-========================================== */
+function renderChartDefectos(defectos) {
+  const canvas = document.getElementById('defectosChart');
+  if (!canvas) return;
 
-function crearGraficaDefectos(data) {
-    const canvas = document.getElementById("defectosChart");
-    if (!canvas) {
-        logError('Canvas de gráfica de defectos no encontrado');
-        return;
-    }
+  const defectosFiltrados = filtrarPorDias(defectos, 'fecha_registro');
+  const porClase = { 'Crítico': 0, 'Mayor B+': 0, 'Mayor B-': 0, 'Menor': 0 };
 
-    if (defectosChart) {
-        defectosChart.destroy();
-        defectosChart = null;
-    }
+  defectosFiltrados.forEach(d => {
+    if (porClase[d.clasificacion] !== undefined) porClase[d.clasificacion]++;
+  });
 
-    const labels = data.labels || ['Críticos', 'Mayores', 'Menores'];
-    const values = data.values || [0, 0, 0];
-    const colors = data.colors || ['#dc3545', '#ffc107', '#17a2b8'];
+  const labels = Object.keys(porClase);
+  const values = Object.values(porClase);
+  const colors = labels.map(k => CLASE_COLOR[k]);
+  const total = values.reduce((a, b) => a + b, 0);
 
-    const total = values.reduce((a, b) => a + b, 0);
+  if (defectosChart) defectosChart.destroy();
 
-    defectosChart = new Chart(canvas, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: values,
-                backgroundColor: colors.map(c => c + 'CC'),
-                borderColor: colors,
-                borderWidth: 3,
-                hoverOffset: 10
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        usePointStyle: true,
-                        padding: 15,
-                        font: { size: 12, weight: '500' }
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(255,255,255,0.95)',
-                    titleColor: '#1a237e',
-                    bodyColor: '#333',
-                    borderColor: '#e0e0e0',
-                    borderWidth: 1,
-                    cornerRadius: 8,
-                    padding: 12,
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.label || '';
-                            let value = context.raw || 0;
-                            let percentage = total > 0 ? Math.round((value / total) * 100) : 0;
-                            return `${label}: ${value} (${percentage}%)`;
-                        }
-                    }
-                }
-            },
-            animation: { animateRotate: true, duration: 1000, easing: 'easeOutQuart' }
+  defectosChart = new Chart(canvas, {
+    type: 'pie',
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: colors, borderColor: '#fff', borderWidth: 2, hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 4, bottom: 4, left: 4, right: 4 } },
+      onClick: (e, activeElements) => {
+        if (activeElements.length > 0) {
+          const clase = labels[activeElements[0].index];
+          window.location.href = `../pages/defectos.html?clase=${encodeURIComponent(clase)}`;
         }
-    });
-
-    const badge = document.getElementById('total-defectos-badge');
-    if (badge) {
-        badge.textContent = `Total: ${total}`;
-    }
-
-    log('Gráfica de defectos creada');
-}
-
-/* ==========================================
-   GRÁFICA DE PRODUCCIÓN POR LÍNEA
-========================================== */
-
-function crearGraficaLineas(data) {
-    const canvas = document.getElementById("lineasChart");
-    if (!canvas) {
-        logError('Canvas de gráfica de líneas no encontrado');
-        return;
-    }
-
-    if (lineasChart) {
-        lineasChart.destroy();
-        lineasChart = null;
-    }
-
-    const lineas = data.lineas || [];
-    const labels = lineas.map(l => l.linea);
-    const valores = lineas.map(l => l.unidades);
-    const porcentajes = lineas.map(l => l.porcentaje);
-
-    const colores = [
-        'rgba(26, 35, 126, 0.8)',
-        'rgba(76, 175, 80, 0.8)',
-        'rgba(255, 152, 0, 0.8)',
-        'rgba(220, 53, 69, 0.8)',
-        'rgba(23, 162, 184, 0.8)'
-    ];
-
-    lineasChart = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Unidades',
-                data: valores,
-                backgroundColor: colores.slice(0, valores.length),
-                borderColor: colores.slice(0, valores.length).map(c => c.replace('0.8', '1')),
-                borderWidth: 2,
-                borderRadius: 6,
-                barPercentage: 0.6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(255,255,255,0.95)',
-                    titleColor: '#1a237e',
-                    bodyColor: '#333',
-                    borderColor: '#e0e0e0',
-                    borderWidth: 1,
-                    cornerRadius: 8,
-                    padding: 12,
-                    callbacks: {
-                        label: function(context) {
-                            const index = context.dataIndex;
-                            const porcentaje = porcentajes[index] || 0;
-                            return `${context.raw.toLocaleString()} unidades (${porcentaje}%)`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(0,0,0,0.06)', drawBorder: false },
-                    ticks: { font: { size: 11 } }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { font: { size: 10, weight: '500' } }
-                }
-            },
-            animation: { duration: 800, easing: 'easeOutQuart' }
-        }
-    });
-
-    log('Gráfica de líneas creada');
-}
-
-/* ==========================================
-   GRÁFICA DE EFICIENCIA MENSUAL
-========================================== */
-
-function crearGraficaEficiencia(data) {
-    const canvas = document.getElementById("eficienciaChart");
-    if (!canvas) {
-        logError('Canvas de gráfica de eficiencia no encontrado');
-        return;
-    }
-
-    if (eficienciaChart) {
-        eficienciaChart.destroy();
-        eficienciaChart = null;
-    }
-
-    const labels = data.labels || [];
-    const valores = data.valores || [];
-
-    eficienciaChart = new Chart(canvas, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Eficiencia (%)',
-                data: valores,
-                borderColor: 'rgba(26, 35, 126, 1)',
-                backgroundColor: 'rgba(26, 35, 126, 0.1)',
-                fill: true,
-                tension: 0.4,
-                pointBackgroundColor: 'rgba(26, 35, 126, 1)',
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2,
-                pointRadius: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(255,255,255,0.95)',
-                    titleColor: '#1a237e',
-                    bodyColor: '#333',
-                    borderColor: '#e0e0e0',
-                    borderWidth: 1,
-                    cornerRadius: 8,
-                    padding: 12,
-                    callbacks: {
-                        label: function(context) {
-                            return `${context.raw}%`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100,
-                    grid: { color: 'rgba(0,0,0,0.06)', drawBorder: false },
-                    ticks: { font: { size: 11 }, callback: function(v) { return v + '%'; } }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { font: { size: 11, weight: '500' } }
-                }
-            },
-            animation: { duration: 800, easing: 'easeOutQuart' }
-        }
-    });
-
-    log('Gráfica de eficiencia creada');
-}
-
-/* ==========================================
-   CARGAR ÚLTIMOS REGISTROS
-========================================== */
-
-async function cargarUltimos() {
-    try {
-        const response = await fetch(`${API_URL}/dashboard/ultimos`);
-
-        if (!response.ok) {
-            throw new Error(`Error ${response.status}: ${response.statusText}`);
-        }
-
-        const registros = await response.json();
-
-        const tabla = document.getElementById("dashboard-table");
-        if (!tabla) return;
-
-        tabla.innerHTML = "";
-
-        if (registros.length === 0) {
-            tabla.innerHTML = `
-                <tr>
-                    <td colspan="4" style="text-align:center;padding:2rem;color:var(--text-muted);">
-                        <i class="ti ti-inbox" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;"></i>
-                        No hay registros recientes
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-
-        registros.forEach(registro => {
-            const fila = document.createElement("tr");
-            fila.innerHTML = `
-                <td>${registro.fecha || '--'}</td>
-                <td>${registro.linea || '--'}</td>
-                <td>${registro.producto || '--'}</td>
-                <td><span class="badge badge-success">${registro.estado || 'OK'}</span></td>
-            `;
-            tabla.appendChild(fila);
-        });
-
-        const badge = document.getElementById('total-registros-badge');
-        if (badge) {
-            badge.textContent = `${registros.length} registros`;
-        }
-
-    } catch (error) {
-        logError('Error cargando últimos registros:', error);
-        const tabla = document.getElementById("dashboard-table");
-        if (tabla) {
-            tabla.innerHTML = `
-                <tr>
-                    <td colspan="4" style="text-align:center;padding:2rem;color:var(--danger);">
-                        <i class="ti ti-alert-circle" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;"></i>
-                        Error cargando registros
-                    </td>
-                </tr>
-            `;
-        }
-    }
-}
-
-/* ==========================================
-   CARGAR ALERTAS DEL SISTEMA
-========================================== */
-
-async function cargarAlertas() {
-    try {
-        log('Cargando alertas...');
-
-        const response = await fetch(`${API_URL}/dashboard/alerts`);
-
-        if (!response.ok) {
-            throw new Error(`Error ${response.status}: ${response.statusText}`);
-        }
-
-        const alertas = await response.json();
-
-        const lista = document.getElementById("dashboard-alerts");
-        if (!lista) return;
-
-        lista.innerHTML = "";
-
-        if (alertas.length === 0 || (alertas.length === 1 && alertas[0].tipo === 'success')) {
-            lista.innerHTML = `
-                <li style="display:flex;align-items:center;gap:10px;padding:12px 0;color:var(--text-muted);">
-                    <i class="ti ti-circle-check" style="font-size:1.2rem;color:var(--success);"></i>
-                    ✅ Todas las alertas están resueltas
-                </li>
-            `;
-            return;
-        }
-
-        alertas.forEach(alerta => {
-            const li = document.createElement("li");
-            
-            let icono = 'ti ti-info-circle';
-            let color = 'var(--info)';
-
-            if (alerta.tipo === 'warning') {
-                icono = 'ti ti-alert-triangle';
-                color = 'var(--warning)';
-            } else if (alerta.tipo === 'danger') {
-                icono = 'ti ti-alert-circle';
-                color = 'var(--danger)';
-            } else if (alerta.tipo === 'success') {
-                icono = 'ti ti-circle-check';
-                color = 'var(--success)';
+      },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          align: 'center',
+          labels: {
+            usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 8, font: { size: 10, weight: '500' },
+            generateLabels: function (chart) {
+              const data = chart.data;
+              return data.labels.map((label, i) => {
+                const value = data.datasets[0].data[i];
+                const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                return { text: `${label} (${pct}%)`, fillStyle: data.datasets[0].backgroundColor[i], strokeStyle: data.datasets[0].borderColor, lineWidth: data.datasets[0].borderWidth, pointStyle: 'circle', hidden: false, index: i };
+              });
             }
-
-            li.innerHTML = `
-                <i class="${icono}" style="font-size:1.2rem;color:${color};"></i>
-                <div style="flex:1;">
-                    <div style="font-size:13px;color:var(--text-main);">${alerta.mensaje}</div>
-                </div>
-                ${alerta.tipo === 'danger' ? `<span class="badge badge-danger">Crítico</span>` : ''}
-                ${alerta.tipo === 'warning' ? `<span class="badge badge-warning">Atención</span>` : ''}
-            `;
-            li.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);';
-
-            lista.appendChild(li);
-        });
-
-    } catch (error) {
-        logError('Error cargando alertas:', error);
-        const lista = document.getElementById("dashboard-alerts");
-        if (lista) {
-            lista.innerHTML = `
-                <li style="color:var(--danger);padding:10px 0;">
-                    <i class="ti ti-alert-circle"></i> Error cargando alertas
-                </li>
-            `;
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1a237e', bodyColor: '#333', borderColor: '#e0e0e0', borderWidth: 1, cornerRadius: 8, padding: 12,
+          callbacks: { 
+            label: ctx => {
+              const v = ctx.raw || 0;
+              const pct = total > 0 ? Math.round((v / total) * 100) : 0;
+              return ` ${ctx.label}: ${v} (${pct}%)`;
+            },
+            afterBody: () => 'Haz clic para ver en Defectos'
+          }
         }
+      },
+      animation: { animateRotate: true, duration: 1000, easing: 'easeOutQuart' }
     }
+  });
+
+  const centerVal = document.getElementById('defectos-center-value');
+  if (centerVal) centerVal.textContent = fmtNum(total);
+}
+
+function renderChartApto(lotes) {
+  const canvas = document.getElementById('aptoChart');
+  if (!canvas) return;
+
+  const lotesFiltrados = filtrarPorDias(lotes, 'fecha_produccion');
+  const aptos = lotesFiltrados.filter(l => String(l.estatus) === '200').length;
+  const retenidos = lotesFiltrados.filter(l => String(l.estatus) === '300').length;
+  const total = aptos + retenidos;
+
+  if (aptoChart) aptoChart.destroy();
+
+  aptoChart = new Chart(canvas, {
+    type: 'pie',
+    data: {
+      labels: ['APTO', 'RETENIDO'],
+      datasets: [{ data: [aptos, retenidos], backgroundColor: ['#2e7d32', '#dc3545'], borderColor: '#fff', borderWidth: 2, hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 4, bottom: 4, left: 4, right: 4 } },
+      onClick: (e, activeElements) => {
+        if (activeElements.length > 0) {
+          const index = activeElements[0].index;
+          // Si hacen clic en RETENIDO (índice 1) los llevamos a la pestaña de defectos
+          if (index === 1) window.location.href = `../pages/defectos.html`;
+        }
+      },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          align: 'center',
+          labels: {
+            usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 8, font: { size: 10, weight: '500' },
+            generateLabels: function (chart) {
+              const data = chart.data;
+              return data.labels.map((label, i) => {
+                const value = data.datasets[0].data[i];
+                const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                return { text: `${label} (${pct}%)`, fillStyle: data.datasets[0].backgroundColor[i], strokeStyle: data.datasets[0].borderColor, lineWidth: data.datasets[0].borderWidth, pointStyle: 'circle', hidden: false, index: i };
+              });
+            }
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1a237e', bodyColor: '#333', borderColor: '#e0e0e0', borderWidth: 1, cornerRadius: 8, padding: 12,
+          callbacks: { 
+            label: ctx => {
+              const v = ctx.raw || 0;
+              const pct = total > 0 ? Math.round((v / total) * 100) : 0;
+              return ` ${ctx.label}: ${v} (${pct}%)`;
+            }
+          }
+        }
+      },
+      animation: { animateRotate: true, duration: 1000, easing: 'easeOutQuart' }
+    }
+  });
+
+  const centerVal = document.getElementById('apto-center-value');
+  if (centerVal) centerVal.textContent = fmtNum(total);
+}
+
+function renderChartLineas(lotes) {
+  const canvas = document.getElementById('lineasChart');
+  if (!canvas) return;
+
+  const lotesFiltrados = filtrarPorDias(lotes, 'fecha_produccion');
+  const porLinea = {};
+  
+  lotesFiltrados.forEach(l => {
+    const linea = l.linea_produccion || 'Sin línea';
+    if (!porLinea[linea]) porLinea[linea] = 0;
+    porLinea[linea] += (l.cantidad || 0);
+  });
+
+  const ordenados = Object.entries(porLinea).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const labels = ordenados.map(([k]) => k);
+  const valores = ordenados.map(([, v]) => v);
+  const total = valores.reduce((a, b) => a + b, 0);
+
+  const colores = [
+    'rgba(26, 35, 126, 0.8)', 'rgba(76, 175, 80, 0.8)', 'rgba(255, 152, 0, 0.8)',
+    'rgba(220, 53, 69, 0.8)', 'rgba(23, 162, 184, 0.8)', 'rgba(156, 39, 176, 0.8)',
+    'rgba(255, 87, 34, 0.8)', 'rgba(63, 81, 181, 0.8)'
+  ];
+
+  if (lineasChart) lineasChart.destroy();
+
+  lineasChart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Unidades',
+        data: valores,
+        backgroundColor: colores.slice(0, valores.length),
+        borderColor: colores.slice(0, valores.length).map(c => c.replace('0.8', '1')),
+        borderWidth: 2,
+        borderRadius: 6,
+        barPercentage: 0.6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1a237e', bodyColor: '#333', borderColor: '#e0e0e0', borderWidth: 1, cornerRadius: 8, padding: 12,
+          callbacks: { label: ctx => { const pct = total > 0 ? Math.round((ctx.raw / total) * 100) : 0; return `${ctx.raw.toLocaleString()} unidades (${pct}%)`; } }
+        }
+      },
+      scales: {
+        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 11 } } },
+        x: { grid: { display: false }, ticks: { font: { size: 10, weight: '500' } } }
+      },
+      animation: { duration: 800, easing: 'easeOutQuart' }
+    }
+  });
 }
 
 /* ==========================================
-   FILTROS DE TIEMPO
+   TOP PRODUCTOS MÁS PRODUCIDOS
 ========================================== */
+function renderTopProductos(lotes) {
+  const el = document.getElementById('top-productos');
+  if (!el) return;
 
+  const lotesFiltrados = filtrarPorDias(lotes, 'fecha_produccion');
+  const porProducto = {};
+
+  lotesFiltrados.forEach(l => {
+    const prod = l.tipo_producto || 'Sin producto';
+    if (!porProducto[prod]) porProducto[prod] = { unidades: 0, lotes: 0, cliente: l.cliente };
+    porProducto[prod].unidades += (l.cantidad || 0);
+    porProducto[prod].lotes += 1;
+  });
+
+  const ordenados = Object.entries(porProducto).sort((a, b) => b[1].unidades - a[1].unidades).slice(0, 5);
+
+  if (ordenados.length === 0) {
+    el.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:1rem 0;"><i class="ti ti-inbox" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;"></i>Sin datos en este período</div>`;
+    return;
+  }
+
+  const maxUnidades = ordenados[0][1].unidades;
+
+  el.innerHTML = ordenados.map(([prod, data], i) => {
+    const pct = maxUnidades > 0 ? (data.unidades / maxUnidades) * 100 : 0;
+    return `
+      <div class="rank-item">
+        <div class="rank-num">${i + 1}</div>
+        <div class="rank-info">
+          <div class="rank-name">${esc(prod)}</div>
+          <div class="rank-meta">${data.lotes} lote${data.lotes !== 1 ? 's' : ''} · ${esc(data.cliente || '—')}</div>
+          <div class="rank-bar"><div class="rank-bar-fill" style="width:${pct}%"></div></div>
+        </div>
+        <div class="rank-value">${fmtNum(data.unidades)}</div>
+      </div>`;
+  }).join('');
+}
+
+/* ==========================================
+   TOP TIPOS DE DEFECTO
+========================================== */
+function renderTopTiposDefecto(defectos) {
+  const el = document.getElementById('top-tipos-defecto');
+  if (!el) return;
+
+  const defectosFiltrados = filtrarPorDias(defectos, 'fecha_registro');
+  const porTipo = {};
+
+  defectosFiltrados.forEach(d => {
+    const tipo = d.tipo_defecto || 'Sin tipo';
+    if (!porTipo[tipo]) porTipo[tipo] = { piezas: 0, registros: 0, clase: d.clasificacion };
+    porTipo[tipo].piezas += (d.cantidad_piezas || 0);
+    porTipo[tipo].registros += 1;
+  });
+
+  const ordenados = Object.entries(porTipo).sort((a, b) => b[1].piezas - a[1].piezas).slice(0, 5);
+
+  if (ordenados.length === 0) {
+    el.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:1rem 0;"><i class="ti ti-circle-check" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;color:var(--success);"></i>Sin defectos en este período</div>`;
+    return;
+  }
+
+  const maxPiezas = ordenados[0][1].piezas;
+
+  el.innerHTML = ordenados.map(([tipo, data], i) => {
+    const pct = maxPiezas > 0 ? (data.piezas / maxPiezas) * 100 : 0;
+    const color = CLASE_COLOR[data.clase] || '#1565c0';
+    return `
+      <div class="rank-item">
+        <div class="rank-num danger">${i + 1}</div>
+        <div class="rank-info">
+          <div class="rank-name">${esc(tipo)}</div>
+          <div class="rank-meta">
+            <span style="color:${color};font-weight:600;">${esc(data.clase)}</span>
+            · ${data.registros} registro${data.registros !== 1 ? 's' : ''}
+          </div>
+          <div class="rank-bar"><div class="rank-bar-fill danger" style="width:${pct}%"></div></div>
+        </div>
+        <div class="rank-value danger">${fmtNum(data.piezas)}</div>
+      </div>`;
+  }).join('');
+}
+
+/* ==========================================
+   EFICIENCIA MENSUAL
+========================================== */
+function renderChartEficiencia(lotes, defectos) {
+  const canvas = document.getElementById('eficienciaChart');
+  if (!canvas) return;
+
+  const hoy = new Date();
+  const meses = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    meses.push({
+      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+      label: d.toLocaleDateString('es-VE', { month: 'short' })
+    });
+  }
+
+  const valores = meses.map(m => {
+    const lotesMes = lotes.filter(l => {
+      if (!l.fecha_produccion) return false;
+      const d = new Date(l.fecha_produccion);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === m.key;
+    });
+    const defMes = defectos.filter(d => {
+      if (!d.fecha_registro) return false;
+      const f = new Date(d.fecha_registro);
+      return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}` === m.key;
+    });
+
+    const unidades = lotesMes.reduce((a, l) => a + (l.cantidad || 0), 0);
+    const def = defMes.length;
+    return unidades > 0 ? Math.round(((unidades - def) / unidades) * 100) : 0;
+  });
+
+  if (eficienciaChart) eficienciaChart.destroy();
+
+  eficienciaChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: meses.map(m => m.label),
+      datasets: [{
+        label: 'Eficiencia (%)',
+        data: valores,
+        borderColor: 'rgba(26, 35, 126, 1)',
+        backgroundColor: 'rgba(26, 35, 126, 0.1)',
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: 'rgba(26, 35, 126, 1)',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1a237e', bodyColor: '#333', borderColor: '#e0e0e0', borderWidth: 1, cornerRadius: 8, padding: 12,
+          callbacks: { label: ctx => `${ctx.raw}%` }
+        }
+      },
+      scales: {
+        y: { beginAtZero: true, max: 100, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 11 }, callback: v => v + '%' } },
+        x: { grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
+      },
+      animation: { duration: 800, easing: 'easeOutQuart' }
+    }
+  });
+}
+
+/* ==========================================
+   TOP CLIENTES CON RETENCIÓN
+========================================== */
+function renderTopClientesRetencion(lotes) {
+  const el = document.getElementById('top-clientes-retencion');
+  if (!el) return;
+
+  const lotesFiltrados = filtrarPorDias(lotes, 'fecha_produccion');
+  const retenidos = lotesFiltrados.filter(l => String(l.estatus) === '300');
+  const porCliente = {};
+
+  retenidos.forEach(l => {
+    const c = l.cliente || 'Sin cliente';
+    if (!porCliente[c]) porCliente[c] = { lotes: 0, paletas: 0, unidades: 0 };
+    porCliente[c].lotes += 1;
+    porCliente[c].paletas += (l.paletas || 0);
+    porCliente[c].unidades += (l.cantidad || 0);
+  });
+
+  const ordenados = Object.entries(porCliente).sort((a, b) => b[1].paletas - a[1].paletas).slice(0, 5);
+
+  if (ordenados.length === 0) {
+    el.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:1rem 0;"><i class="ti ti-circle-check" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;color:var(--success);"></i>Sin retenciones en este período</div>`;
+    return;
+  }
+
+  const maxPaletas = ordenados[0][1].paletas;
+
+  el.innerHTML = ordenados.map(([cliente, data], i) => {
+    const pct = maxPaletas > 0 ? (data.paletas / maxPaletas) * 100 : 0;
+    return `
+      <div class="rank-item">
+        <div class="rank-num danger">${i + 1}</div>
+        <div class="rank-info">
+          <div class="rank-name">${esc(cliente)}</div>
+          <div class="rank-meta">${data.lotes} lote${data.lotes !== 1 ? 's' : ''} retenido${data.lotes !== 1 ? 's' : ''} · ${fmtNum(data.unidades)} uds</div>
+          <div class="rank-bar"><div class="rank-bar-fill danger" style="width:${pct}%"></div></div>
+        </div>
+        <div class="rank-value danger">${fmtNum(data.paletas)} pal.</div>
+      </div>`;
+  }).join('');
+}
+
+/* ==========================================
+   AUDITORÍAS PENDIENTES
+========================================== */
+function renderAuditoriasPendientes(lotes) {
+  const el = document.getElementById('auditorias-pendientes');
+  if (!el) return;
+
+  const pendientes = lotes.filter(l => String(l.estatus) === '100').length;
+  const aptos = lotes.filter(l => String(l.estatus) === '200').length;
+  const retenidos = lotes.filter(l => String(l.estatus) === '300').length;
+  const despachados = lotes.filter(l => String(l.estatus) === '600').length;
+  const otros = lotes.length - pendientes - aptos - retenidos - despachados;
+
+  const items = [
+    { valor: pendientes, label: 'Pendientes', color: '#f57c00' },
+    { valor: aptos, label: 'Aptos', color: '#2e7d32' },
+    { valor: retenidos, label: 'Retenidos', color: '#dc3545' },
+    { valor: despachados, label: 'Despachados', color: '#1a237e' },
+    { valor: otros, label: 'Otros', color: '#757575' }
+  ];
+
+  el.innerHTML = `
+    <div class="auditorias-grid">
+      ${items.map(it => `
+        <div class="aud-item">
+          <div class="aud-valor" style="color:${it.color};">${it.valor}</div>
+          <div class="aud-label">${it.label}</div>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+/* ==========================================
+   ALERTAS
+========================================== */
+function renderAlertas(lotes, defectos) {
+  const lista = document.getElementById('dashboard-alerts');
+  if (!lista) return;
+
+  const alertas = [];
+  const lotesConRechazo = lotes.filter(l => String(l.estatus) === '300');
+
+  if (lotesConRechazo.length > 0) {
+    alertas.push({ tipo: 'danger', icono: 'ti ti-alert-triangle', titulo: `${lotesConRechazo.length} lote(s) retenido(s)`, desc: 'Requieren revisión inmediata de calidad.' });
+  }
+
+  const criticos = defectos.filter(d => d.clasificacion === 'Crítico');
+  if (criticos.length > 0) {
+    alertas.push({ tipo: 'danger', icono: 'ti ti-flame', titulo: `${criticos.length} defecto(s) crítico(s)`, desc: 'Se recomienda auditar los lotes afectados.' });
+  }
+
+  const pendientes = lotes.filter(l => String(l.estatus) === '100');
+  if (pendientes.length > 0) {
+    alertas.push({ tipo: 'warning', icono: 'ti ti-clock', titulo: `${pendientes.length} lote(s) sin evaluar`, desc: 'Pendientes de aprobación en el módulo Defectos.' });
+  }
+
+  if (lotesConRechazo.length === 0 && criticos.length === 0) {
+    alertas.push({ tipo: 'success', icono: 'ti ti-circle-check', titulo: 'Sin alertas críticas', desc: 'Todos los lotes evaluados sin observaciones.' });
+  }
+
+  const lotesEval = lotes.filter(l => ['200', '300'].includes(String(l.estatus)));
+  if (lotesEval.length > 0) {
+    const efic = (lotes.filter(l => String(l.estatus) === '200').length / lotesEval.length) * 100;
+    if (efic >= 90) {
+      alertas.push({ tipo: 'success', icono: 'ti ti-trending-up', titulo: `Eficiencia del ${efic.toFixed(1)}%`, desc: 'Buen desempeño en control de calidad.' });
+    } else if (efic >= 70) {
+      alertas.push({ tipo: 'warning', icono: 'ti ti-chart-line', titulo: `Eficiencia del ${efic.toFixed(1)}%`, desc: 'Revisar procesos con mayor tasa de rechazo.' });
+    } else {
+      alertas.push({ tipo: 'danger', icono: 'ti ti-trending-down', titulo: `Eficiencia del ${efic.toFixed(1)}%`, desc: 'Atención: tasa de rechazo elevada.' });
+    }
+  }
+
+  if (alertas.length === 0) {
+    lista.innerHTML = `<li style="display:flex;align-items:center;gap:10px;padding:12px 0;color:var(--text-muted);"><i class="ti ti-circle-check" style="font-size:1.2rem;color:var(--success);"></i>Sin alertas activas</li>`;
+    return;
+  }
+
+  lista.innerHTML = alertas.map(a => `
+    <li class="alert-item ${a.tipo}">
+      <i class="${a.icono}"></i>
+      <div class="alert-item-body">
+        <div class="alert-item-title">${esc(a.titulo)}</div>
+        <div class="alert-item-desc">${esc(a.desc)}</div>
+      </div>
+    </li>
+  `).join('');
+}
+
+/* ==========================================
+   TABLA ÚLTIMOS REGISTROS
+========================================== */
+function renderTablaUltimosRegistros(lotes) {
+  const tbody = document.getElementById('dashboard-table');
+  if (!tbody) return;
+
+  const recientes = [...lotes]
+    .sort((a, b) => new Date(b.fecha_produccion || b.fecha_registro) - new Date(a.fecha_produccion || a.fecha_registro))
+    .slice(0, 8);
+
+  if (recientes.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);"><i class="ti ti-inbox" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;"></i>No hay registros recientes</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = recientes.map(l => {
+    const est = String(l.estatus || '100');
+    const badge = ESTATUS_BADGE[est] || { class: 'badge-info', label: est };
+    return `
+      <tr>
+        <td style="padding:8px 12px;font-size:12px;">${fmtFecha(l.fecha_produccion || l.fecha_registro)}</td>
+        <td style="padding:8px 12px;font-size:12px;font-family:monospace;">${esc(l.ticket_carga || '—')}</td>
+        <td style="padding:8px 12px;font-size:12px;font-family:monospace;">${esc(l.codigo_lote || '—')}</td>
+        <td style="padding:8px 12px;font-size:12px;">${esc(l.tipo_producto || '—')}</td>
+        <td style="padding:8px 12px;font-size:12px;">${esc(l.cliente || '—')}</td>
+        <td style="padding:8px 12px;font-size:12px;text-align:right;font-weight:600;">${fmtNum(l.cantidad || 0)}</td>
+        <td style="padding:8px 12px;text-align:center;"><span class="badge ${badge.class}">${badge.label}</span></td>
+      </tr>`;
+  }).join('');
+
+  const badge = document.getElementById('total-registros-badge');
+  if (badge) badge.textContent = `${lotes.length} lotes`;
+}
+
+/* ==========================================
+   FILTROS
+========================================== */
 function initFiltrosTiempo() {
-    document.querySelectorAll('.filtro-tiempo').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.filtro-tiempo').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            
-            const dias = parseInt(this.dataset.dias);
-            if (dias) {
-                periodoActual = dias;
-                log(`🔄 Cambiando período a ${dias} días`);
-                cargarDashboard();
-            } else {
-                periodoActual = 365;
-                log('🔄 Mostrando todos los datos');
-                cargarDashboard();
-            }
-        });
-    });
-}
+  document.querySelectorAll('.filtro-tiempo').forEach(btn => {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.filtro-tiempo').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
 
-/* ==========================================
-   FILTROS DE GRÁFICO
-========================================== */
+      const dias = this.dataset.dias;
+      periodoActual = dias === 'all' ? 'all' : parseInt(dias);
+
+      log(`🔄 Período cambiado a: ${periodoActual} días`);
+
+      if (datosDashboard) {
+        const { lotes, defectos } = datosDashboard;
+        renderKPIs(lotes, defectos);
+        renderChartProduccion(lotes);
+        renderChartDefectos(defectos);
+        renderChartApto(lotes);
+        renderChartLineas(lotes);
+        renderTopProductos(lotes);
+        renderTopTiposDefecto(defectos);
+        renderChartEficiencia(lotes, defectos);
+        renderTopClientesRetencion(lotes);
+      }
+    });
+  });
+}
 
 function initFiltrosGrafico() {
-    document.querySelectorAll('.filtro-grafico').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.filtro-grafico').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            
-            filtroGrafico = this.dataset.filtro;
-            log(`🔄 Cambiando filtro de gráfico a: ${filtroGrafico}`);
-            
-            if (datosDashboard?.prodGrafico) {
-                crearGraficaProduccion(datosDashboard.prodGrafico);
-            }
-        });
+  document.querySelectorAll('.filtro-grafico').forEach(btn => {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.filtro-grafico').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      filtroGrafico = this.dataset.filtro;
+      if (datosDashboard) renderChartProduccion(datosDashboard.lotes);
     });
+  });
 }
 
 /* ==========================================
-   EXPORTAR DASHBOARD A PDF
+   EXPORTAR WORD (FORZAR DESCARGA)
 ========================================== */
-
-function exportarDashboardPDF() {
-    log('📤 Exportando dashboard a PDF...');
-    window.open(`${API_URL}/dashboard/exportar/pdf`, '_blank');
+function exportarDashboardWord() {
+  log('📤 Exportando dashboard a Word...');
+  const link = document.createElement('a');
+  link.href = `${API_URL}/dashboard/exportar/word`;
+  link.setAttribute('download', 'Reporte_Dashboard.docx');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 /* ==========================================
-   SHORTCUTS DE TECLADO
+   SHORTCUTS
 ========================================== */
-
 function initShortcuts() {
-    document.addEventListener('keydown', function(e) {
-        if (e.ctrlKey && e.key === 'r') {
-            e.preventDefault();
-            log('⌨️ Recargando dashboard (Ctrl+R)');
-            recargarDashboard();
-        }
-        if (e.ctrlKey && e.key === 'e') {
-            e.preventDefault();
-            log('⌨️ Exportando dashboard (Ctrl+E)');
-            exportarDashboardPDF();
-        }
-    });
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.key === 'r') { e.preventDefault(); recargarDashboard(); }
+    if (e.ctrlKey && e.key === 'e') { e.preventDefault(); exportarDashboardWord(); }
+  });
 }
-
-/* ==========================================
-   RECARGAR MANUAL
-========================================== */
 
 function recargarDashboard() {
-    log('🔄 Recargando dashboard manualmente...');
-    cargarDashboard();
-    cargarUltimos();
-    cargarAlertas();
+  log('🔄 Recargando dashboard manualmente...');
+  cargarDashboard();
 }
 
 /* ==========================================
-   INICIALIZACIÓN
+   INIT
 ========================================== */
-
 function iniciarDashboard() {
-    log('🚀 Dashboard Venvidrio iniciado');
+  log('🚀 Dashboard Venvidrio iniciado');
 
-    // Verificar sesión primero
-    verificarSesion();
+  cargarUsuarioNav();
+  mostrarEnlaceUsuarios();
+  initUserControls();
+  initFiltrosTiempo();
+  initFiltrosGrafico();
+  initShortcuts();
 
-    // Inicializar controles de usuario
-    initUserControls();
+  document.getElementById('btn-exportar-word')?.addEventListener('click', exportarDashboardWord);
+  document.getElementById('btn-refresh')?.addEventListener('click', recargarDashboard);
 
-    // Inicializar filtros y shortcuts
-    initFiltrosTiempo();
-    initFiltrosGrafico();
-    initShortcuts();
+  // Carga inicial
+  cargarDashboard();
 
-    // Botones
-    document.getElementById('btn-exportar-pdf')?.addEventListener('click', exportarDashboardPDF);
-    document.querySelector('.btn-refresh')?.addEventListener('click', recargarDashboard);
-
-    // Cargar datos
-    cargarDashboard();
-    cargarUltimos();
-    cargarAlertas();
-
-    // Auto-actualización
-    if (intervaloCarga) {
-        clearInterval(intervaloCarga);
+  // Auto-actualización inteligente cada 30 segundos
+  if (intervaloCarga) clearInterval(intervaloCarga);
+  intervaloCarga = setInterval(() => {
+    // Solo recargar si la pestaña está visible para no saturar el servidor
+    if (document.visibilityState === 'visible') {
+      log('🔄 Auto-actualización de datos en segundo plano...');
+      cargarDashboard(true); // Carga en segundo plano
     }
+  }, 30000);
 
-    intervaloCarga = setInterval(() => {
-        log('🔄 Auto-actualización del dashboard...');
-        cargarDashboard();
-        cargarUltimos();
-        cargarAlertas();
-    }, 30000);
+  document.querySelectorAll('.kpi-card').forEach(card => {
+    card.addEventListener('click', recargarDashboard);
+  });
 
-    // Click en KPI recarga
-    document.querySelectorAll('.kpi-card').forEach((card) => {
-        card.addEventListener('click', () => {
-            log('🔄 Recarga manual solicitada');
-            recargarDashboard();
-        });
-    });
-
-    logSuccess('Dashboard inicializado correctamente');
+  logSuccess('Dashboard inicializado');
 }
 
-/* ==========================================
-   EVENTO DOMContentLoaded
-========================================== */
-
-document.addEventListener("DOMContentLoaded", iniciarDashboard);
+document.addEventListener('DOMContentLoaded', iniciarDashboard);
 
 /* ==========================================
    LIMPIEZA AL SALIR
 ========================================== */
-
-window.addEventListener('beforeunload', function() {
-    if (intervaloCarga) {
-        clearInterval(intervaloCarga);
-        intervaloCarga = null;
-    }
-    if (temporizadorInactividad) {
-        clearTimeout(temporizadorInactividad);
-        temporizadorInactividad = null;
-    }
-    if (intervaloContador) {
-        clearInterval(intervaloContador);
-        intervaloContador = null;
-    }
-    if (productionChart) {
-        productionChart.destroy();
-        productionChart = null;
-    }
-    if (defectosChart) {
-        defectosChart.destroy();
-        defectosChart = null;
-    }
-    if (lineasChart) {
-        lineasChart.destroy();
-        lineasChart = null;
-    }
-    if (eficienciaChart) {
-        eficienciaChart.destroy();
-        eficienciaChart = null;
-    }
+window.addEventListener('beforeunload', () => {
+  if (intervaloCarga) clearInterval(intervaloCarga);
+  if (abortController) abortController.abort();
+  if (productionChart) productionChart.destroy();
+  if (defectosChart) defectosChart.destroy();
+  if (aptoChart) aptoChart.destroy();
+  if (lineasChart) lineasChart.destroy();
+  if (eficienciaChart) eficienciaChart.destroy();
 });
 
 /* ==========================================
-   FUNCIONES DE PRUEBA (Consola)
+   EXPOSICIÓN PARA CONSOLA
 ========================================== */
-
 window.recargarDashboard = recargarDashboard;
-window.exportarDashboardPDF = exportarDashboardPDF;
-window.cerrarSesion = cerrarSesion;
-
-window.verEstadoDashboard = function() {
-    console.log('📊 Estado del Dashboard:');
-    console.log('  - Gráfica Producción:', productionChart ? 'Cargada ✅' : 'No cargada ❌');
-    console.log('  - Gráfica Defectos:', defectosChart ? 'Cargada ✅' : 'No cargada ❌');
-    console.log('  - Gráfica Líneas:', lineasChart ? 'Cargada ✅' : 'No cargada ❌');
-    console.log('  - Gráfica Eficiencia:', eficienciaChart ? 'Cargada ✅' : 'No cargada ❌');
-    console.log('  - Auto-actualización:', intervaloCarga ? 'Activa ✅' : 'Inactiva ❌');
-    console.log('  - API:', API_URL);
-    console.log('  - Datos:', datosDashboard ? 'Cargados ✅' : 'No cargados ❌');
-    console.log('  - Período:', periodoActual + ' días');
-    console.log('  - Filtro gráfico:', filtroGrafico);
-    console.log('  - Sesión:', sesionActiva ? 'Activa ✅' : 'Inactiva ❌');
-    console.log('  - Tiempo restante:', Math.floor(tiempoRestante / 60) + ':' + String(Math.floor(tiempoRestante % 60)).padStart(2, '0'));
+window.exportarDashboardWord = exportarDashboardWord;
+window.verEstadoDashboard = function () {
+  console.log('📊 Estado del Dashboard:');
+  console.log('  - Datos:', datosDashboard ? 'Cargados ✅' : 'No cargados ❌');
+  console.log('  - Período:', periodoActual);
+  console.log('  - Filtro gráfico:', filtroGrafico);
+  console.log('  - Gráficas:');
+  console.log('    • Producción:', productionChart ? '✅' : '❌');
+  console.log('    • Defectos:', defectosChart ? '✅' : '❌');
+  console.log('    • Apto/Retenido:', aptoChart ? '✅' : '❌');
+  console.log('    • Líneas:', lineasChart ? '✅' : '❌');
+  console.log('    • Eficiencia:', eficienciaChart ? '✅' : '❌');
 };
-
-console.log('🔐 Dashboard con control de sesión cargado');
-console.log('📋 Comandos disponibles:');
-console.log('  - recargarDashboard() - Recargar datos');
-console.log('  - exportarDashboardPDF() - Exportar a PDF');
-console.log('  - cerrarSesion() - Cerrar sesión manual');
-console.log('  - verEstadoDashboard() - Ver estado actual');
-console.log('⌨️ Atajos: Ctrl+R (recargar), Ctrl+E (exportar), Ctrl+Shift+L (logout)');

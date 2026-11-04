@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recuperar contraseña — Venvidrio</title>
+
+  <!-- CSS base del login -->
+  <link rel="stylesheet" href="../assets/css/login_styless.css" />
+  <!-- CSS específico de auth -->
+  <link rel="stylesheet" href="../assets/css/auth.css" />
+
+  <!-- Tabler Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Bebas+Neue&display=swap" rel="stylesheet" />
+</head>
+
+<body>
+
+  <div class="login-root">
+
+    <div class="bg-orb orb1"></div>
+    <div class="bg-orb orb2"></div>
+    <div class="bg-orb orb3"></div>
+    <div class="glass-lines"></div>
+
+    <div class="card" id="recuperarCard">
+
+      <!-- ================= BOTÓN VOLVER AL LOGIN ================= -->
+      <a href="login.html" class="back-btn" title="Volver al inicio de sesión">
+        <i class="ti ti-arrow-left"></i> Volver
+      </a>
+
+      <!-- ================= MENSAJE DE ERROR ================= -->
+      <div class="error-message" id="errorMessage">
+        <i class="ti ti-alert-circle"></i>
+        <span id="errorText">Ocurrió un error</span>
+      </div>
+
+      <!-- ================= MENSAJE DE ÉXITO ================= -->
+      <div class="success-message" id="successMessage">
+        <i class="ti ti-mail-check"></i>
+        <span id="successText">Revisa tu correo</span>
+      </div>
+
+      <!-- ================= LOGO ================= -->
+      <div class="logo-area">
+        <img src="../assets/img/logo-venvidrio.png" alt="Venvidrio Logo" class="login-logo" />
+        <div class="divider"></div>
+      </div>
+
+      <!-- ================= ENCABEZADO ================= -->
+      <div class="auth-header">
+        <h2 class="auth-title">Recuperar contraseña</h2>
+        <p class="auth-subtitle">
+          Ingresa tu correo y te enviaremos las instrucciones para restablecer tu contraseña.
+        </p>
+      </div>
+
+      <!-- ================= FORMULARIO ================= -->
+      <form id="recuperarForm" novalidate>
+
+        <div class="field-group">
+          <label class="field-label" for="correo">Correo electrónico</label>
+          <div class="field-wrapper">
+            <i class="ti ti-mail field-icon"></i>
+            <input
+              class="field-input"
+              id="correo"
+              name="correo"
+              type="email"
+              autocomplete="email"
+              placeholder="usuario@venvidrio.com"
+              required
+            />
+          </div>
+        </div>
+
+        <button class="submit-btn" id="submitBtn" type="submit">
+          <span class="btn-content">
+            <span class="loading-ring"></span>
+            <i class="ti ti-send btn-icon"></i>
+            <span class="btn-text">Enviar instrucciones</span>
+          </span>
+        </button>
+
+      </form>
+
+      <!-- ================= ENLACES INFERIORES ================= -->
+      <div class="auth-footer">
+        <a href="login.html" class="auth-link">
+          <i class="ti ti-arrow-left"></i> Volver al inicio de sesión
+        </a>
+      </div>
+
+      <!-- ================= NOTA ================= -->
+      <div class="footer-note">
+        Sistema protegido · <strong>Venvidrio S.A.</strong>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script src="../assets/js/recuperar_app.js"></script>
+</body>
+</html>

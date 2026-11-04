@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auditoría Interna de Calidad — Venvidrio CQ</title>
+  
+  <link rel="stylesheet" href="../assets/css/shared.css" />
+  <link rel="stylesheet" href="../assets/css/auditoria.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+</head>
+<body>
+
+<!-- ================= NAVBAR ================= -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
+  </div>
+
+  <ul class="nav-links" id="navLinks">
+    <li><a href="../public/dashboard.html"><i class="ti ti-layout-dashboard"></i> Panel Principal</a></li>
+    <li><a href="../pages/produccion.html"><i class="ti ti-building-factory-2"></i> Producción</a></li>
+    <li><a href="../pages/defectos.html"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
+    <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
+    <li><a href="../pages/auditoria_interna.html" class="active"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a></li>
+    <li><a href="../pages/auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
+    <li id="navUsuariosLink" style="display:none;">
+      <a href="../pages/usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
+    </li>
+  </ul>
+
+  <div class="nav-user" id="navUserContainer">
+    <div class="nav-avatar-circle" id="navAvatar">US</div>
+    <span class="nav-username" id="navUsername">Cargando...</span>
+
+    <div class="user-dropdown" id="userDropdown">
+      <div class="dropdown-header">
+        <div class="dropdown-avatar-circle" id="dropdownAvatar">US</div>
+        <div>
+          <div class="dropdown-name" id="dropdownName">Cargando...</div>
+          <div class="dropdown-email" id="dropdownEmail">cargando@email.com</div>
+        </div>
+      </div>
+      <div class="dropdown-divider"></div>
+      <a class="dropdown-item dropdown-danger" id="dropdownLogout">
+        <i class="ti ti-logout"></i> Cerrar Sesión
+      </a>
+    </div>
+  </div>
+</nav>
+
+<main class="page">
+
+  <!-- ================= HEADER ================= -->
+  <div class="page-header">
+    <h1>Auditoría Interna de Calidad</h1>
+    <p>Evaluación del desempeño del personal del departamento de calidad</p>
+  </div>
+
+  <!-- ================= KPIs ================= -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Evaluaciones del Mes</div>
+      <div class="stat-value" id="kpi-evaluaciones">0</div>
+      <div class="stat-sub" id="kpi-evaluaciones-sub">Cargando...</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Cumplimiento Promedio</div>
+      <div class="stat-value success" id="kpi-promedio">0%</div>
+      <div class="stat-sub" id="kpi-promedio-sub">Cargando...</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Personal Evaluado</div>
+      <div class="stat-value" id="kpi-personas">0</div>
+      <div class="stat-sub" id="kpi-personas-sub">Cargando...</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Planes de Mejora Activos</div>
+      <div class="stat-value warning" id="kpi-planes">0</div>
+      <div class="stat-sub" id="kpi-planes-sub">Cargando...</div>
+    </div>
+  </div>
+
+  <div class="aud-layout">
+
+    <!-- ================= EVALUACIÓN INDIVIDUAL ================= -->
+    <div class="card anim-card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="ti ti-user-check"></i> Evaluación de Desempeño
+        </div>
+        <span class="badge badge-info" id="badge-progreso">0 / 10</span>
+      </div>
+
+      <div class="card-body">
+
+        <div class="grid-2" style="margin-bottom:1rem;">
+          <div class="field">
+            <label for="evaluado">Personal de Calidad a Evaluar *</label>
+            <select id="evaluado">
+              <option value="">-- Seleccione un miembro del personal --</option>
+            </select>
+            <small class="field-hint">Solo personal adscrito al departamento de calidad</small>
+          </div>
+          <div class="field">
+            <label for="periodo">Periodo de Evaluación *</label>
+            <select id="periodo">
+              <option value="mensual">Mensual</option>
+              <option value="trimestral">Trimestral</option>
+              <option value="semestral">Semestral</option>
+              <option value="anual">Anual</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="ficha-evaluado" style="display:none;">
+          <div class="ficha-evaluado">
+            <div class="ficha-avatar" id="ficha-avatar">??</div>
+            <div class="ficha-info">
+              <div class="ficha-nombre" id="ficha-nombre">—</div>
+              <div class="ficha-detalle">
+                <span><i class="ti ti-briefcase"></i> <span id="ficha-cargo">—</span></span>
+                <span><i class="ti ti-clock"></i> Turno <span id="ficha-turno">—</span></span>
+                <span><i class="ti ti-calendar"></i> Ingreso <span id="ficha-ingreso">—</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin:1rem 0 0.5rem;">
+          <div class="aud-progress-track">
+            <div class="aud-progress-fill" id="aud-progress-fill" style="width:0%"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-hint);margin-top:4px">
+            <span>Avance de la evaluación</span>
+            <span id="pct-label">0%</span>
+          </div>
+        </div>
+
+        <!-- Lista de criterios con scroll táctil -->
+        <div class="checklist-body" id="checklist-body">
+          <!-- generado por JS -->
+        </div>
+
+        <div class="field" style="margin-top:1rem;">
+          <label for="obs-eval">Observaciones Generales</label>
+          <textarea id="obs-eval" placeholder="Comentarios del evaluador sobre el desempeño global del evaluado..." rows="3"></textarea>
+        </div>
+
+      </div>
+
+      <div class="card-footer-row">
+        <button class="btn btn-outline btn-sm" id="btn-reset-eval">
+          <i class="ti ti-refresh"></i> Reiniciar
+        </button>
+        <button class="btn btn-primary" id="btn-guardar-eval">
+          <i class="ti ti-device-floppy"></i> Guardar Evaluación
+        </button>
+      </div>
+    </div>
+
+    <!-- ================= PANEL DERECHO ================= -->
+    <div class="aud-right">
+
+      <div class="card anim-card">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="ti ti-target-arrow"></i> Planes de Mejora
+          </div>
+          <span class="badge badge-warning" id="badge-planes">0</span>
+        </div>
+        <div id="lista-planes" style="padding:0">
+          <!-- generado por JS -->
+        </div>
+      </div>
+
+      <div class="card anim-card" style="margin-top:1rem;">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="ti ti-history"></i> Historial del Evaluado
+          </div>
+        </div>
+        <div id="historial-evaluado" style="padding:0">
+          <!-- generado por JS -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= HISTORIAL GENERAL ================= -->
+  <div class="card anim-card" style="margin-top:1.5rem;">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="ti ti-table-options"></i> Historial de Evaluaciones
+      </div>
+      <div class="flex gap-2" style="flex-wrap:wrap;">
+        <button class="btn btn-outline btn-sm" id="btn-export-word-global">
+          <i class="ti ti-file-type-doc"></i> Word
+        </button>
+        <button class="btn btn-danger btn-sm" id="btn-export-pdf-global">
+          <i class="ti ti-file-type-pdf"></i> PDF
+        </button>
+      </div>
+    </div>
+
+    <div class="filtros-bar">
+      <div class="filtros-grid">
+        <div class="field" style="margin:0">
+          <label for="f-cargo" class="filtro-label">Cargo</label>
+          <select id="f-cargo" class="input-filtro">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0">
+          <label for="f-evaluador" class="filtro-label">Evaluador</label>
+          <select id="f-evaluador" class="input-filtro">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0">
+          <label for="f-periodo" class="filtro-label">Periodo</label>
+          <select id="f-periodo" class="input-filtro">
+            <option value="">Todos</option>
+            <option value="mensual">Mensual</option>
+            <option value="trimestral">Trimestral</option>
+            <option value="semestral">Semestral</option>
+            <option value="anual">Anual</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0">
+          <label for="f-categoria" class="filtro-label">Categoría</label>
+          <select id="f-categoria" class="input-filtro">
+            <option value="">Todas</option>
+            <option value="Excelente">Excelente (≥90%)</option>
+            <option value="Bueno">Bueno (75–89%)</option>
+            <option value="Regular">Regular (60–74%)</option>
+            <option value="Deficiente">Deficiente (&lt;60%)</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0">
+          <label for="f-desde" class="filtro-label">Desde</label>
+          <input type="date" id="f-desde" class="input-filtro" />
+        </div>
+        <div class="field" style="margin:0">
+          <label for="f-hasta" class="filtro-label">Hasta</label>
+          <input type="date" id="f-hasta" class="input-filtro" />
+        </div>
+        <div class="filtros-botones">
+          <button class="btn btn-primary btn-sm" id="btn-aplicar-filtros">
+            <i class="ti ti-search"></i> Filtrar
+          </button>
+          <button class="btn btn-outline btn-sm" id="btn-limpiar-filtros">
+            <i class="ti ti-x"></i>
+          </button>
+        </div>
+      </div>
+      <div class="filtro-resultados">
+        <span id="filtro-resultados">📋 Mostrando todas las evaluaciones</span>
+      </div>
+    </div>
+
+    <!-- Tabla con scroll táctil en móviles -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Evaluado</th>
+            <th>Cargo</th>
+            <th>Evaluador</th>
+            <th>Periodo</th>
+            <th>Puntaje</th>
+            <th>Categoría</th>
+            <th>Planes</th>
+            <th>Fecha</th>
+            <th style="text-align:center;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-eval">
+          <!-- generado por JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- ================= MODAL: VER DETALLE DE EVALUACIÓN ================= -->
+<div class="modal-overlay" id="modal-ver-eval" style="display:none;">
+  <div class="modal-container" style="max-width: 650px;">
+    <div class="modal-header">
+      <div class="modal-title"><i class="ti ti-eye"></i> Detalle de Evaluación</div>
+      <button class="modal-close" id="modal-eval-close"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body" id="modal-eval-body">
+      <!-- Se llena por JS -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" id="modal-eval-cerrar-footer">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: CONFIRMAR ELIMINAR EVALUACIÓN ================= -->
+<div class="modal-overlay" id="modal-eliminar-eval" style="display:none;">
+  <div class="modal-container" style="max-width: 420px;">
+    <div class="modal-header" style="background:linear-gradient(135deg, #dc3545 0%, #b71c1c 100%);">
+      <div class="modal-title" style="color:#fff;"><i class="ti ti-alert-triangle"></i> Eliminar Evaluación</div>
+      <button class="modal-close" id="modal-eliminar-close" style="color:#fff; border-color:rgba(255,255,255,0.3);"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--text-main);margin-bottom:1rem;">
+        ¿Estás seguro de que deseas eliminar esta evaluación?
+      </p>
+      <p style="font-size:16px;font-weight:600;color:var(--danger);text-align:center;padding:1rem;background:#fef2f2;border-radius:8px;" id="eliminar-eval-nombre">
+        Nombre del evaluado
+      </p>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:1rem;text-align:center;">
+        ⚠️ Esta acción no se puede deshacer y borrará el registro de la base de datos.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" id="modal-eliminar-cancelar">Cancelar</button>
+      <button class="btn btn-danger" id="modal-eliminar-confirmar">
+        <i class="ti ti-trash"></i> Eliminar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SCRIPTS ================= -->
+<script src="../assets/js/shared.js"></script>
+<script src="../assets/js/login_app.js"></script>
+<script src="../assets/js/auditoria_interna.js" defer></script>
+
+</body>
+</html>

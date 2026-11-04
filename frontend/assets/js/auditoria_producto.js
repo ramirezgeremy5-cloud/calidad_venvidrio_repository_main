@@ -1,674 +1,265 @@
-/* ==========================================
-   VENVIDRIO - AUDITORÍA DE PRODUCTO
-   auditoria_producto.js
-   ========================================= */
+/* ==========================================================
+   VENVIDRIO - AUDITORÍA DE PRODUCTO NO CONFORME
+   Conectado al módulo de Defectos
+   ========================================================== */
 
-(function () {
-  'use strict';
+document.addEventListener('DOMContentLoaded', () => {
+  
+  // Detectar URL de la API
+  const API_URL = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') 
+    ? "http://127.0.0.1:8000" 
+    : `http://${window.location.hostname}:8000`;
 
-  const API_URL = "http://127.0.0.1:8000";
+  const token = localStorage.getItem('token');
+  const headers = { 
+    'Authorization': `Bearer ${token}`, 
+    'Content-Type': 'application/json' 
+  };
 
-  // Variables de control de sesión
-  let temporizadorInactividad = null;
-  let TIEMPO_INACTIVIDAD = 5 * 60 * 1000; // 5 minutos
-  let tiempoRestante = TIEMPO_INACTIVIDAD / 1000;
-  let intervaloContador = null;
-  let sesionActiva = true;
-  let usuarioLogueado = null;
+  let lotesRetenidos = [];
+  let usuarioActual = null;
 
-  /* ==========================================
-     UTILIDADES Y LOGS
-  ========================================== */
+  // ==========================================
+  // 1. CARGAR LOTES RETENIDOS (Estatus 300)
+  // ==========================================
+  async function cargarLotesRetenidos() {
+    try {
+      const selectLote = document.getElementById('lote_id');
+      selectLote.innerHTML = '<option value="">Cargando lotes...</option>';
 
-  function log(message, data = null) {
-    const timestamp = new Date().toLocaleTimeString();
-    if (data) {
-      console.log(`[${timestamp}] 📋 ${message}`, data);
-    } else {
-      console.log(`[${timestamp}] 📋 ${message}`);
-    }
-  }
+      // Buscamos los lotes que fueron rechazados en el módulo de defectos (estatus 300)
+      const res = await fetch(`${API_URL}/produccion?estatus=300&limit=500`, { headers });
+      
+      if (!res.ok) throw new Error("Error al cargar lotes");
 
-  function logError(message, error = null) {
-    const timestamp = new Date().toLocaleTimeString();
-    if (error) {
-      console.error(`[${timestamp}] ❌ ${message}`, error);
-    } else {
-      console.error(`[${timestamp}] ❌ ${message}`);
-    }
-  }
-
-  function logSuccess(message, data = null) {
-    const timestamp = new Date().toLocaleTimeString();
-    if (data) {
-      console.log(`[${timestamp}] ✅ ${message}`, data);
-    } else {
-      console.log(`[${timestamp}] ✅ ${message}`);
-    }
-  }
-
-  /* ==========================================
-     CONTROL DE SESIÓN - USUARIO
-  ========================================== */
-
-  function cargarUsuarioNav() {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        const user = JSON.parse(userData);
-        usuarioLogueado = user;
-        const avatar = document.getElementById('navAvatar');
-        const username = document.getElementById('navUsername');
-        const dropdownAvatar = document.getElementById('dropdownAvatar');
-        const dropdownName = document.getElementById('dropdownName');
-        const dropdownEmail = document.getElementById('dropdownEmail');
-
-        const iniciales = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
-        const nombre = user.nombre || 'Usuario';
-        const correo = user.correo || 'usuario@email.com';
-
-        if (avatar) avatar.textContent = iniciales;
-        if (username) username.textContent = nombre;
-        if (dropdownAvatar) dropdownAvatar.textContent = iniciales;
-        if (dropdownName) dropdownName.textContent = nombre;
-        if (dropdownEmail) dropdownEmail.textContent = correo;
-
-        logSuccess('Usuario cargado en navbar:', nombre);
-      } catch (e) {
-        logError('Error parseando usuario:', e);
+      lotesRetenidos = await res.json();
+      
+      selectLote.innerHTML = '<option value="">-- Seleccione un lote retenido --</option>';
+      
+      if (lotesRetenidos.length === 0) {
+        selectLote.innerHTML = '<option value="">No hay lotes retenidos pendientes de auditoría</option>';
+        return;
       }
-    }
-  }
 
-  function getAuthHeaders() {
-    const token = localStorage.getItem('token');
-    return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    };
-  }
-
-  function verificarSesion() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      log('❌ No hay token, redirigiendo al login...');
-      window.location.href = '../public/login.html';
-      return;
-    }
-
-    log('🔐 Verificando token...');
-
-    fetch(`${API_URL}/auth/verify`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Token inválido');
-      }
-      return response.json();
-    })
-    .then(data => {
-      logSuccess('✅ Sesión verificada');
-      cargarUsuarioNav();
-      iniciarControlInactividad();
-      initUserControls();
-      init();
-    })
-    .catch(error => {
-      logError('❌ Error verificando sesión:', error);
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('role');
-      window.location.href = '../public/login.html';
-    });
-  }
-
-  function iniciarControlInactividad() {
-    const eventos = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart', 'touchmove'];
-    eventos.forEach(evento => {
-      document.addEventListener(evento, function() {
-        if (sesionActiva) {
-          reiniciarTemporizador();
-        }
+      lotesRetenidos.forEach(l => {
+        const opt = document.createElement('option');
+        opt.value = l.id;
+        // Formato: Ticket - Código - Producto (Cliente)
+        const ticket = l.ticket_carga ? `${l.ticket_carga} - ` : '';
+        opt.textContent = `${ticket}${l.codigo_lote} | ${l.tipo_producto} (${l.cliente})`;
+        selectLote.appendChild(opt);
       });
-    });
 
-    reiniciarTemporizador();
-    iniciarContador();
-  }
-
-  function iniciarContador() {
-    if (intervaloContador) {
-      clearInterval(intervaloContador);
+    } catch (e) {
+      console.error("Error:", e);
+      document.getElementById('lote_id').innerHTML = '<option value="">Error al cargar lotes</option>';
     }
-
-    tiempoRestante = TIEMPO_INACTIVIDAD / 1000;
-
-    intervaloContador = setInterval(function() {
-      tiempoRestante--;
-      actualizarTimerDisplay();
-
-      if (tiempoRestante <= 0) {
-        clearInterval(intervaloContador);
-        intervaloContador = null;
-      }
-    }, 1000);
   }
 
-  function actualizarTimerDisplay() {
-    const timerDisplay = document.getElementById('timerDisplay');
-    const timerBadge = document.getElementById('timerBadge');
+  // ==========================================
+  // 2. AUTOCOMPLETAR DATOS AL SELECCIONAR LOTE
+  // ==========================================
+  document.getElementById('lote_id').addEventListener('change', async (e) => {
+    const id = parseInt(e.target.value);
+    const defectosSelect = document.getElementById('defectos');
     
-    if (timerDisplay) {
-      const minutos = Math.floor(tiempoRestante / 60);
-      const segundos = Math.floor(tiempoRestante % 60);
-      timerDisplay.textContent = String(minutos).padStart(2, '0') + ':' + String(segundos).padStart(2, '0');
-    }
+    // Limpiar defectos anteriores
+    defectosSelect.innerHTML = '';
 
-    if (timerBadge) {
-      if (tiempoRestante > 120) {
-        timerBadge.className = 'badge-timer';
-        timerBadge.textContent = 'Activo';
-      } else if (tiempoRestante > 60) {
-        timerBadge.className = 'badge-timer warning';
-        timerBadge.textContent = '⚠️ Cerca de expirar';
-      } else {
-        timerBadge.className = 'badge-timer danger';
-        timerBadge.textContent = '🔴 Expirando';
-      }
-    }
-  }
-
-  function reiniciarTemporizador() {
-    if (!sesionActiva) return;
-
-    if (temporizadorInactividad) {
-      clearTimeout(temporizadorInactividad);
-    }
-
-    tiempoRestante = TIEMPO_INACTIVIDAD / 1000;
-    actualizarTimerDisplay();
-
-    temporizadorInactividad = setTimeout(function() {
-      cerrarSesion('⏳ Tu sesión ha expirado por inactividad. Por favor, inicia sesión nuevamente.');
-    }, TIEMPO_INACTIVIDAD);
-  }
-
-  function cerrarSesion(mensaje) {
-    sesionActiva = false;
-
-    if (temporizadorInactividad) {
-      clearTimeout(temporizadorInactividad);
-      temporizadorInactividad = null;
-    }
-
-    if (intervaloContador) {
-      clearInterval(intervaloContador);
-      intervaloContador = null;
-    }
-
-    const token = localStorage.getItem('token');
-
-    if (token) {
-      fetch(`${API_URL}/auth/logout`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-      .catch(error => {
-        console.warn('⚠️ No se pudo comunicar con el backend al cerrar sesión:', error);
-      })
-      .finally(() => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('role');
-        localStorage.removeItem('login_time');
-
-        if (mensaje) {
-          alert(mensaje);
-        }
-
-        window.location.href = '../public/login.html';
-      });
-    } else {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('role');
-      localStorage.removeItem('login_time');
-
-      if (mensaje) {
-        alert(mensaje);
-      }
-
-      window.location.href = '../public/login.html';
-    }
-  }
-
-  function logoutManual() {
-    if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
-      cerrarSesion('👋 Sesión cerrada exitosamente.');
-    }
-  }
-
-  function toggleDropdown() {
-    const dropdown = document.getElementById('userDropdown');
-    if (dropdown) {
-      dropdown.classList.toggle('show');
-    }
-  }
-
-  function cerrarDropdown() {
-    const dropdown = document.getElementById('userDropdown');
-    if (dropdown) {
-      dropdown.classList.remove('show');
-    }
-  }
-
-  function initUserControls() {
-    const container = document.getElementById('navUserContainer');
-    const logoutBtn = document.getElementById('dropdownLogout');
-
-    if (container) {
-      container.addEventListener('click', function(e) {
-        e.stopPropagation();
-        toggleDropdown();
-      });
-    }
-
-    document.addEventListener('click', function() {
-      cerrarDropdown();
-    });
-
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-        cerrarDropdown();
-      }
-    });
-
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        logoutManual();
-      });
-    }
-
-    document.addEventListener('keydown', function(e) {
-      if (e.ctrlKey && e.shiftKey && (e.key === 'L' || e.key === 'l')) {
-        e.preventDefault();
-        logoutManual();
-      }
-    });
-
-    log('Controles de usuario inicializados');
-  }
-
-  /* ==========================================
-     CARGAR LOTES PENDIENTES
-  ========================================== */
-
-  async function cargarLotesPendientes() {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        window.location.href = '../public/login.html';
-        return;
-      }
-
-      log('Cargando lotes pendientes de auditar...');
-      
-      const response = await fetch(`${API_URL}/auditoria-producto/lotes-pendientes`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.status === 401) {
-        log('⚠️ Sesión expirada (401), redirigiendo...');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('role');
-        window.location.href = '../public/login.html';
-        return;
-      }
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        logError(`Error ${response.status}:`, errorText);
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
-      const lotes = await response.json();
-      log(`Lotes recibidos: ${lotes.length}`);
-
-      const selectLote = document.getElementById('lote_id');
-      if (!selectLote) {
-        logError('❌ Selector de lote no encontrado');
-        return;
-      }
-
-      selectLote.innerHTML = '<option value="">-- Seleccione un lote pendiente --</option>';
-
-      if (!lotes || lotes.length === 0) {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = 'No hay lotes pendientes por auditar';
-        option.disabled = true;
-        selectLote.appendChild(option);
-        log('No hay lotes pendientes.');
-        return;
-      }
-
-      lotes.forEach(lote => {
-        const option = document.createElement('option');
-        option.value = lote.id;
-        const texto = `${lote.codigo_lote} - ${lote.linea_produccion || 'Sin línea'} - ${lote.item || 'Sin producto'}`;
-        option.textContent = texto;
-        selectLote.appendChild(option);
-      });
-
-      logSuccess(`${lotes.length} lotes pendientes cargados.`);
-
-    } catch (error) {
-      logError('Error cargando lotes pendientes:', error);
-      const selectLote = document.getElementById('lote_id');
-      if (selectLote) {
-        selectLote.innerHTML = `<option value="">❌ Error: ${error.message}</option>`;
-      }
-    }
-  }
-
-  /* ==========================================
-     AUTOCARGAR DATOS DEL LOTE AL SELECCIONAR
-  ========================================== */
-
-  function autocompletarDatosLote() {
-    const selectLote = document.getElementById('lote_id');
-    const inputMaquina = document.getElementById('maquina');
-    const inputEv = document.getElementById('ev');
-    const inputItem = document.getElementById('item');
-
-    if (!selectLote) {
-      logError('❌ Selector de lote no encontrado para autocompletar');
+    if (!id) {
+      document.getElementById('maquina').value = '';
+      document.getElementById('item').value = '';
+      document.getElementById('producto_cliente').value = '';
       return;
     }
 
-    selectLote.addEventListener('change', async function() {
-      const loteId = this.value;
+    const lote = lotesRetenidos.find(l => l.id === id);
+    
+    if (lote) {
+      // Autocompletar campos de solo lectura
+      document.getElementById('maquina').value = lote.maquina || '—';
+      document.getElementById('item').value = `${lote.item || '—'} (EV: ${lote.molde || '—'})`;
+      document.getElementById('producto_cliente').value = `${lote.tipo_producto || '—'} | Cliente: ${lote.cliente || '—'}`;
       
-      if (!loteId) {
-        if (inputMaquina) inputMaquina.value = '';
-        if (inputEv) inputEv.value = '';
-        if (inputItem) inputItem.value = '';
-        return;
-      }
+      // Autocompletar el responsable con el usuario logueado
+      const user = JSON.parse(localStorage.getItem('user'));
+      if (user) document.getElementById('responsable').value = user.nombre || '';
+      
+      // 👇 OBTENER DEFECTOS REGISTRADOS PARA ESTE LOTE (Módulo Defectos)
+      await cargarDefectosDelLote(lote.id);
+    }
+  });
 
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          window.location.href = '../public/login.html';
-          return;
-        }
+  // ==========================================
+  // 3. CARGAR DEFECTOS REGISTRADOS (Módulo Defectos)
+  // ==========================================
+  async function cargarDefectosDelLote(loteId) {
+    const selectDefectos = document.getElementById('defectos');
+    selectDefectos.innerHTML = '<option value="">Cargando defectos del lote...</option>';
 
-        const response = await fetch(`${API_URL}/produccion/${loteId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          localStorage.removeItem('role');
-          window.location.href = '../public/login.html';
-          return;
-        }
-
-        if (!response.ok) throw new Error('Error al obtener datos del lote');
-
-        const lote = await response.json();
-        
-        if (inputMaquina) inputMaquina.value = lote.linea_produccion || '';
-        if (inputEv) inputEv.value = lote.codigo_lote || '';
-        if (inputItem) inputItem.value = lote.item || '';
-
-        log(`Datos del lote ${lote.codigo_lote} cargados.`);
-
-      } catch (error) {
-        logError('Error autocompletando datos del lote:', error);
-      }
-    });
-  }
-
-  /* ==========================================
-     CARGAR LISTA DE DEFECTOS
-  ========================================== */
-
-  async function cargarDefectos() {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        window.location.href = '../public/login.html';
-        return;
-      }
-
-      log('Cargando lista de defectos...');
+      // Consultamos a la API de defectos filtrando por el lote_id
+      const res = await fetch(`${API_URL}/defectos?lote_id=${loteId}`, { headers });
       
-      const response = await fetch(`${API_URL}/defectos`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      if (res.ok) {
+        const defectos = await res.json();
+        
+        selectDefectos.innerHTML = '';
+        
+        if (defectos.length === 0) {
+          selectDefectos.innerHTML = '<option value="">No se encontraron defectos registrados (Error de trazabilidad)</option>';
+          return;
         }
-      });
 
-      if (response.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('role');
-        window.location.href = '../public/login.html';
-        return;
+        // Mostramos los defectos reales que se registraron en el módulo de Defectos
+        defectos.forEach(d => {
+          const opt = document.createElement('option');
+          opt.value = d.tipo_defecto;
+          // Formato: Cuello Torcido (Crítico - 150 pzas)
+          opt.textContent = `${d.tipo_defecto} (${d.clasificacion} - ${d.cantidad_piezas || 0} pzas)`;
+          // Marcamos como seleccionado por defecto
+          opt.selected = true; 
+          selectDefectos.appendChild(opt);
+        });
+      } else {
+        throw new Error("No se pudieron cargar los defectos");
       }
-
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
-      const defectos = await response.json();
-      const selectDefectos = document.getElementById('defectos_ids');
-
-      if (!selectDefectos) {
-        logError('❌ Selector de defectos no encontrado');
-        return;
-      }
-
-      selectDefectos.innerHTML = '';
-
-      if (!defectos || defectos.length === 0) {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = 'No hay defectos registrados';
-        option.disabled = true;
-        selectDefectos.appendChild(option);
-        log('No hay defectos registrados.');
-        return;
-      }
-
-      defectos.forEach(def => {
-        const option = document.createElement('option');
-        option.value = def.id;
-        const nombreDefecto = def.nombre || def.descripcion || 'Defecto';
-        option.textContent = nombreDefecto;
-        selectDefectos.appendChild(option);
-      });
-
-      logSuccess(`${defectos.length} defectos cargados.`);
-
-    } catch (error) {
-      logError('Error cargando defectos:', error);
-      const selectDefectos = document.getElementById('defectos_ids');
-      if (selectDefectos) {
-        selectDefectos.innerHTML = `<option value="">❌ Error: ${error.message}</option>`;
-      }
+    } catch (e) {
+      console.error("Error al cargar defectos:", e);
+      selectDefectos.innerHTML = '<option value="">Error al cargar defectos</option>';
     }
   }
 
-  /* ==========================================
-     GUARDAR AUDITORÍA
-  ========================================== */
+  // ==========================================
+  // 4. CÁLCULOS AUTOMÁTICOS
+  // ==========================================
+  const inputInspeccionadas = document.getElementById('paletas_inspeccionadas');
+  const inputRechazadas = document.getElementById('paletas_rechazadas');
+  const inputAprobadas = document.getElementById('paletas_aprobadas');
 
-  const btnRegistrar = document.getElementById('btn-registrar');
+  function calcularAprobadas() {
+    const inspeccionadas = parseInt(inputInspeccionadas.value) || 0;
+    const rechazadas = parseInt(inputRechazadas.value) || 0;
+    
+    // Aprobadas = Total Inspeccionadas - Rechazadas (Si es negativo, lo forzamos a 0)
+    const aprobadas = Math.max(0, inspeccionadas - rechazadas);
+    inputAprobadas.value = aprobadas;
+  }
 
-  if (btnRegistrar) {
-    btnRegistrar.addEventListener('click', async function(e) {
-      e.preventDefault();
-      
-      const loteId = document.getElementById('lote_id').value;
-      const fecha = document.getElementById('fecha_auditoria').value;
-      const inspeccionadas = document.getElementById('paletas_inspeccionadas').value;
-      const aprobadas = document.getElementById('paletas_aprobadas').value;
-      const rechazadas = document.getElementById('paletas_rechazadas').value;
-      const observaciones = document.getElementById('observaciones').value || null;
+  inputInspeccionadas.addEventListener('input', calcularAprobadas);
+  inputRechazadas.addEventListener('input', calcularAprobadas);
 
-      const selectDefectos = document.getElementById('defectos_ids');
-      const defectosSeleccionados = selectDefectos ? 
-        Array.from(selectDefectos.selectedOptions).map(opt => parseInt(opt.value)) : [];
+  // ==========================================
+  // 5. GUARDAR LA AUDITORÍA
+  // ==========================================
+  document.getElementById('btn-guardar').addEventListener('click', async (e) => {
+    e.preventDefault();
 
-      if (!loteId || !fecha || !inspeccionadas || !aprobadas || !rechazadas) {
-        alert('Completa todos los campos obligatorios: Lote, Fecha, Paletas Inspeccionadas, Aprobadas y Rechazadas.');
-        return;
-      }
+    const loteId = document.getElementById('lote_id').value;
+    const paletasInspeccionadas = parseInt(inputInspeccionadas.value) || 0;
+    const paletasRechazadas = parseInt(inputRechazadas.value) || 0;
+    const paletasAprobadas = parseInt(inputAprobadas.value) || 0;
+    const movimiento = document.getElementById('movimiento').value;
+    const observaciones = document.getElementById('observaciones').value.trim();
 
-      const body = {
-        produccion_id: parseInt(loteId),
-        fecha_auditoria: fecha,
-        paletas_inspeccionadas: parseInt(inspeccionadas),
-        paletas_aprobadas: parseInt(aprobadas),
-        paletas_rechazadas: parseInt(rechazadas),
+    // Obtener los defectos seleccionados
+    const selectDefectos = document.getElementById('defectos');
+    const defectosSeleccionados = Array.from(selectDefectos.selectedOptions).map(opt => opt.value).join(', ');
+
+    // Validaciones básicas
+    if (!loteId) return alert("Debe seleccionar un lote.");
+    if (paletasInspeccionadas <= 0) return alert("Las paletas inspeccionadas deben ser mayores a 0.");
+    if (paletasRechazadas > paletasInspeccionadas) return alert("Las paletas rechazadas no pueden superar las inspeccionadas.");
+    if (!movimiento) return alert("Debe seleccionar una acción (Disposición).");
+
+    const btn = e.target;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite;"></i> Guardando...';
+
+    try {
+      // 1. Registrar la auditoría de producto
+      const payload = {
+        lote_id: parseInt(loteId),
+        fecha_auditoria: new Date().toISOString().split('T')[0], // Fecha actual
+        maquina: document.getElementById('maquina').value,
+        item: document.getElementById('item').value.split(' (EV:')[0], // Extraemos solo el Item
+        ev: document.getElementById('item').value.split('(EV: ')[1]?.replace(')', '') || '',
+        paletas_inspeccionadas: paletasInspeccionadas,
+        paletas_aprobadas: paletasAprobadas,
+        paletas_rechazadas: paletasRechazadas,
+        defectos_encontrados: defectosSeleccionados || "Ninguno especificado",
         observaciones: observaciones,
-        defectos_ids: defectosSeleccionados
+        movimiento: movimiento // Dependiendo de tu backend, esto actualiza el estatus
       };
 
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          window.location.href = '../public/login.html';
-          return;
-        }
+      const resAuditoria = await fetch(`${API_URL}/auditorias/producto`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(payload)
+      });
 
-        const response = await fetch(`${API_URL}/auditoria-producto`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(body)
-        });
-
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          localStorage.removeItem('role');
-          window.location.href = '../public/login.html';
-          return;
-        }
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || 'Error guardando la auditoría');
-        }
-
-        const toast = document.getElementById('toast-auditoria');
-        if (toast) {
-          toast.classList.add('show');
-          setTimeout(() => {
-            toast.classList.remove('show');
-          }, 3000);
-        }
-
-        logSuccess('Auditoría guardada correctamente');
-        await cargarLotesPendientes();
-        
-        const btnLimpiar = document.getElementById('btn-limpiar');
-        if (btnLimpiar) btnLimpiar.click();
-
-      } catch (error) {
-        logError('Error guardando auditoría:', error);
-        alert(error.message || 'No se pudo guardar la auditoría');
+      if (!resAuditoria.ok) {
+        const err = await resAuditoria.json();
+        throw new Error(err.detail || "Error al guardar la auditoría");
       }
-    });
-  }
 
-  /* ==========================================
-     LIMPIAR FORMULARIO
-  ========================================== */
+      // 2. Actualizar el estatus del lote en Producción
+      // Si el movimiento es "Desecho", cambia a 999. Si es "Aprobado por Desviación", cambia a 200. 
+      // Si va a reselección, se queda en 300 (o pasa a 950 dependiendo tu flujo).
+      let nuevoEstatus = "300"; // Por defecto sigue retenido
+      if (movimiento.includes("Reseleccion")) nuevoEstatus = "950";
+      if (movimiento.includes("Desecho")) nuevoEstatus = "999";
+      if (movimiento.includes("Aprobado")) nuevoEstatus = "200";
 
-  const btnLimpiar = document.getElementById('btn-limpiar');
+      // Actualizamos el lote
+      await fetch(`${API_URL}/produccion/${loteId}`, {
+        method: 'PUT',
+        headers: headers,
+        body: JSON.stringify({ 
+          estatus: nuevoEstatus,
+          observaciones: `Auditoría: ${movimiento}. ${observaciones}`
+        })
+      });
 
-  if (btnLimpiar) {
-    btnLimpiar.addEventListener('click', function() {
-      const loteSelect = document.getElementById('lote_id');
-      if (loteSelect) loteSelect.value = '';
-      
-      const maquina = document.getElementById('maquina');
-      if (maquina) maquina.value = '';
-      
-      const ev = document.getElementById('ev');
-      if (ev) ev.value = '';
-      
-      const item = document.getElementById('item');
-      if (item) item.value = '';
-      
-      const fecha = document.getElementById('fecha_auditoria');
-      if (fecha) fecha.value = '';
-      
-      const inspeccionadas = document.getElementById('paletas_inspeccionadas');
-      if (inspeccionadas) inspeccionadas.value = '';
-      
-      const aprobadas = document.getElementById('paletas_aprobadas');
-      if (aprobadas) aprobadas.value = '';
-      
-      const rechazadas = document.getElementById('paletas_rechazadas');
-      if (rechazadas) rechazadas.value = '';
-      
-      const observaciones = document.getElementById('observaciones');
-      if (observaciones) observaciones.value = '';
-      
-      const selectDefectos = document.getElementById('defectos_ids');
-      if (selectDefectos) {
-        Array.from(selectDefectos.options).forEach(opt => opt.selected = false);
-      }
-    });
-  }
+      // 3. Mostrar éxito y limpiar
+      const toast = document.getElementById('toast-msg');
+      toast.style.display = 'flex';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
 
-  /* ==========================================
-     INICIALIZACIÓN
-  ========================================== */
+      limpiarFormulario();
+      await cargarLotesRetenidos(); // Recargar la lista de lotes
 
-  function init() {
-    log('🚀 Iniciando módulo de Auditoría de Producto...');
-    
-    const fechaInput = document.getElementById('fecha_auditoria');
-    if (fechaInput) {
-      fechaInput.value = new Date().toISOString().split('T')[0];
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Error al guardar: " + error.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-device-floppy"></i> Registrar Auditoría';
     }
+  });
 
-    cargarLotesPendientes();
-    cargarDefectos();
-    autocompletarDatosLote();
-
-    log('✅ Auditoría de Producto iniciada correctamente.');
+  // ==========================================
+  // 6. LIMPIAR FORMULARIO
+  // ==========================================
+  function limpiarFormulario() {
+    document.getElementById('lote_id').value = '';
+    document.getElementById('maquina').value = '';
+    document.getElementById('item').value = '';
+    document.getElementById('producto_cliente').value = '';
+    inputInspeccionadas.value = '';
+    inputRechazadas.value = '';
+    inputAprobadas.value = '';
+    document.getElementById('movimiento').value = '';
+    document.getElementById('defectos').innerHTML = '';
+    document.getElementById('observaciones').value = '';
+    document.getElementById('responsable').value = '';
   }
 
-  // ==========================================
-  // INICIO - Verificar sesión
-  // ==========================================
+  document.getElementById('btn-limpiar').addEventListener('click', limpiarFormulario);
 
-  log('🔐 Verificando sesión...');
-  verificarSesion();
+  // ==========================================
+  // 7. INICIALIZACIÓN
+  // ==========================================
+  cargarLotesRetenidos();
 
-})();
+});

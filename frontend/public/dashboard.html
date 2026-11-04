@@ -1,343 +1,292 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Venvidrio | Dashboard</title>
-
-    <!-- Tabler Icons -->
-    <link rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
-
-    <!-- CSS -->
-    <link rel="stylesheet"
-    href="../assets/css/shared.css">
-
-    <link rel="stylesheet"
-    href="../assets/css/dashboard.css">
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Venvidrio | Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <link rel="stylesheet" href="../assets/css/shared.css?v=3">
+  <link rel="stylesheet" href="../assets/css/dashboard.css?v=3">
 </head>
-
 <body>
 
 <!-- ================= NAVBAR ================= -->
 <nav class="navbar">
-
-    <div class="nav-brand">
-        VENV<span>IDRIO</span>
-    </div>
-
-    <ul class="nav-links">
-        <li>
-            <a class="active" href="../public/dashboard.html">
-                <i class="ti ti-layout-dashboard"></i>
-                Panel Principal
-            </a>
-        </li>
-        <li>
-            <a href="../pages/produccion.html">
-                <i class="ti ti-building-factory-2"></i>
-                Producción
-            </a>
-        </li>
-        <li>
-            <a href="../pages/defectos.html">
-                <i class="ti ti-alert-triangle"></i>
-                Defectos
-            </a>
-        </li>
-        <li>
-            <a href="../pages/etiquetas.html">
-                <i class="ti ti-qrcode"></i>
-                Etiquetas y QR
-            </a>
-        </li>
-        <li>
-            <a href="../pages/auditoria.html">
-                <i class="ti ti-clipboard-check"></i>
-                Auditoría
-            </a>
-        </li>
-    </ul>
-
-   <!-- ===== ÁREA DE USUARIO CON DROPDOWN ===== -->
-<div class="nav-user" id="navUserContainer">
-  <div class="nav-avatar-circle" id="navAvatar">US</div>
-  <span class="nav-username" id="navUsername">Cargando...</span>
-
-  <div class="user-dropdown" id="userDropdown">
-    <div class="dropdown-header">
-      <div class="dropdown-avatar-circle" id="dropdownAvatar">US</div>
-      <div>
-        <div class="dropdown-name" id="dropdownName">Cargando...</div>
-        <div class="dropdown-email" id="dropdownEmail">cargando@email.com</div>
-      </div>
-    </div>
-    <div class="dropdown-divider"></div>
-    <a class="dropdown-item dropdown-danger" id="dropdownLogout">
-      <i class="ti ti-logout"></i> Cerrar Sesión
-    </a>
+  <div class="nav-brand">
+    <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
   </div>
-</div>
 
+  <ul class="nav-links" id="navLinks">
+    <li><a href="../public/dashboard.html" class="active"><i class="ti ti-layout-dashboard"></i> Panel Principal</a></li>
+    <li><a href="../pages/produccion.html"><i class="ti ti-building-factory-2"></i> Producción</a></li>
+    <li><a href="../pages/defectos.html"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
+    <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
+    <li><a href="../pages/auditoria_interna.html"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a></li>
+    <li><a href="../pages/auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
+    <li id="navUsuariosLink" style="display:none;">
+      <a href="../pages/usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
+    </li>
+  </ul>
+
+  <div class="nav-user" id="navUserContainer">
+    <div class="nav-avatar-circle" id="navAvatar">US</div>
+    <span class="nav-username" id="navUsername">Cargando...</span>
+    <div class="user-dropdown" id="userDropdown">
+      <div class="dropdown-header">
+        <div class="dropdown-avatar-circle" id="dropdownAvatar">US</div>
+        <div>
+          <div class="dropdown-name" id="dropdownName">Cargando...</div>
+          <div class="dropdown-email" id="dropdownEmail">cargando@email.com</div>
+        </div>
+      </div>
+      <div class="dropdown-divider"></div>
+      <a class="dropdown-item" id="dropdownPerfil" style="cursor:pointer;">
+        <i class="ti ti-user-circle"></i> Mi Perfil
+      </a>
+      <div class="dropdown-divider"></div>
+      <a class="dropdown-item dropdown-danger" id="dropdownLogout"><i class="ti ti-logout"></i> Cerrar Sesión</a>
+    </div>
+  </div>
 </nav>
 
-<!-- ================= CONTENIDO ================= -->
 <main class="page">
 
-    <!-- ================= FILTROS DE TIEMPO ================= -->
-    <div class="filtros-container">
-        <div class="filtros-grupo">
-            <button class="filtro-tiempo active" data-dias="7">7 días</button>
-            <button class="filtro-tiempo" data-dias="30">30 días</button>
-            <button class="filtro-tiempo" data-dias="90">90 días</button>
-            <button class="filtro-tiempo" data-dias="all">Todo</button>
-        </div>
-        <div class="ultima-actualizacion">
-            <i class="ti ti-clock"></i>
-            Última actualización: <span id="ultima-actualizacion">--:--:--</span>
-            <button class="btn-refresh" title="Recargar datos (Ctrl+R)">
-                <i class="ti ti-refresh"></i>
-            </button>
-            <button class="btn btn-sm btn-danger" id="btn-exportar-pdf" title="Exportar Dashboard a PDF (Ctrl+E)">
-                <i class="ti ti-file-pdf"></i> Exportar PDF
-            </button>
-        </div>
+  <div class="filtros-container">
+    <div class="filtros-grupo">
+      <button class="filtro-tiempo active" data-dias="7">7 días</button>
+      <button class="filtro-tiempo" data-dias="30">30 días</button>
+      <button class="filtro-tiempo" data-dias="90">90 días</button>
+      <button class="filtro-tiempo" data-dias="all">Todo</button>
+    </div>
+    <div class="ultima-actualizacion">
+      <i class="ti ti-clock"></i>
+      Última actualización: <span id="ultima-actualizacion">--:--:--</span>
+      <button class="btn-refresh" title="Recargar datos (Ctrl+R)" id="btn-refresh">
+        <i class="ti ti-refresh"></i>
+      </button>
+      <button class="btn btn-sm btn-primary" id="btn-exportar-word" title="Exportar Dashboard a Word">
+        <i class="ti ti-file-type-doc"></i> Exportar Word
+      </button>
+    </div>
+  </div>
+
+  <!-- 👇 AHORA SON 6 TARJETAS (kpi-grid-6) -->
+  <section class="kpi-grid kpi-grid-6">
+    <div class="kpi-card anim-card produccion" title="Total de unidades producidas">
+      <p class="kpi-label">Producción Total</p>
+      <div class="kpi-value" id="dash-unidades"><span class="skeleton"></span></div>
+      <div class="kpi-meta">Unidades producidas</div>
     </div>
 
-    <!-- ================= KPI ================= -->
-    <section class="kpi-grid">
-        <div class="kpi-card anim-card produccion" title="Total de unidades producidas en todos los lotes">
-            <p class="kpi-label">Producción Total</p>
-            <div class="kpi-value" id="dash-unidades">
-                <span class="skeleton"></span>
-            </div>
-            <div class="kpi-meta">Unidades producidas</div>
-        </div>
+    <div class="kpi-card anim-card lotes" title="Cantidad de lotes registrados">
+      <p class="kpi-label">Lotes Registrados</p>
+      <div class="kpi-value" id="dash-lotes"><span class="skeleton"></span></div>
+      <div class="kpi-meta">Producción actual</div>
+    </div>
 
-        <div class="kpi-card anim-card lotes" title="Cantidad de lotes registrados en el sistema">
-            <p class="kpi-label">Lotes registrados</p>
-            <div class="kpi-value" id="dash-lotes">
-                <span class="skeleton"></span>
-            </div>
-            <div class="kpi-meta">Producción actual</div>
-        </div>
+    <div class="kpi-card anim-card pendientes" title="Lotes esperando por evaluación de calidad">
+      <p class="kpi-label">Pendientes por Evaluar</p>
+      <div class="kpi-value warning" id="dash-pendientes"><span class="skeleton"></span></div>
+      <div class="kpi-meta">Requieren inspección</div>
+    </div>
 
-        <div class="kpi-card anim-card defectos" title="Total de defectos encontrados en la producción">
-            <p class="kpi-label">Defectos</p>
-            <div class="kpi-value" id="dash-defectos">
-                <span class="skeleton"></span>
-            </div>
-            <div class="kpi-meta">Registros encontrados</div>
-        </div>
+    <div class="kpi-card anim-card defectos" title="Total de defectos catalogados">
+      <p class="kpi-label">Defectos</p>
+      <div class="kpi-value" id="dash-defectos"><span class="skeleton"></span></div>
+      <div class="kpi-meta">Registros encontrados</div>
+    </div>
 
-        <div class="kpi-card anim-card eficiencia" title="Eficiencia general = (Unidades - Defectos) / Unidades * 100">
-            <p class="kpi-label">Eficiencia</p>
-            <div class="kpi-value" id="dash-eficiencia">
-                <span class="skeleton"></span>
-            </div>
-            <div class="kpi-meta">Rendimiento general</div>
-        </div>
-    </section>
+    <div class="kpi-card anim-card rechazo" title="Porcentaje de paletas retenidas">
+      <p class="kpi-label">Tasa de Rechazo</p>
+      <div class="kpi-value danger" id="dash-rechazo"><span class="skeleton"></span></div>
+      <div class="kpi-meta">Paletas retenidas</div>
+    </div>
 
-    <!-- ================= GRID PRINCIPAL ================= -->
-    <section class="dashboard-layout">
-        <!-- Producción -->
-        <div class="card anim-card" style="grid-column: 1 / 2;">
-            <div class="card-header">
-                <div class="card-title">
-                    <i class="ti ti-chart-bar"></i>
-                    Producción en Tiempo Real
-                </div>
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <div class="filtros-grafico">
-                        <button class="btn-sm active filtro-grafico" data-filtro="ambos">Ambos</button>
-                        <button class="btn-sm filtro-grafico" data-filtro="unidades">Unidades</button>
-                        <button class="btn-sm filtro-grafico" data-filtro="lotes">Lotes</button>
-                    </div>
-                    <span class="badge badge-success">
-                        <i class="ti ti-circle-dot" style="font-size:10px;"></i>
-                        Actualizado
-                    </span>
-                </div>
-            </div>
-            <div class="card-body" style="padding:1rem 1.5rem 1.5rem;">
-                <canvas id="productionChart" style="max-height:280px;width:100%;"></canvas>
-            </div>
-        </div>
+    <div class="kpi-card anim-card eficiencia" title="Eficiencia general">
+      <p class="kpi-label">Eficiencia</p>
+      <div class="kpi-value" id="dash-eficiencia"><span class="skeleton"></span></div>
+      <div class="kpi-meta">Rendimiento general</div>
+    </div>
+  </section>
 
-        <!-- Defectos -->
-        <div class="card anim-card" style="grid-column: 2 / 3;">
-            <div class="card-header">
-                <div class="card-title">
-                    <i class="ti ti-chart-pie"></i>
-                    Defectos por Tipo
-                </div>
-                <span class="badge badge-danger" id="total-defectos-badge">Total: 0</span>
-            </div>
-            <div class="card-body" style="padding:1rem 1.5rem 1.5rem;display:flex;justify-content:center;">
-                <canvas id="defectosChart" style="max-height:200px;max-width:200px;width:100%;"></canvas>
-            </div>
+  <section class="dashboard-layout dashboard-layout-2col">
+    <div class="card anim-card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-chart-bar"></i> Producción en Tiempo Real</div>
+        <div class="flex gap-2 align-center">
+          <div class="filtros-grafico">
+            <button class="btn-sm active filtro-grafico" data-filtro="ambos">Ambos</button>
+            <button class="btn-sm filtro-grafico" data-filtro="unidades">Unidades</button>
+            <button class="btn-sm filtro-grafico" data-filtro="lotes">Lotes</button>
+          </div>
+          <span class="badge badge-success" title="Los datos se actualizan automáticamente">
+            <i class="ti ti-circle-dot" style="font-size:10px;"></i> Actualizado
+          </span>
         </div>
-    </section>
+      </div>
+      <div class="card-body" style="padding:1rem 1.5rem 1.5rem;">
+        <canvas id="productionChart" style="max-height:280px;width:100%;cursor:pointer;"></canvas>
+      </div>
+    </div>
 
-    <!-- ================= GRID SECUNDARIO ================= -->
-    <section class="dashboard-layout" style="margin-top:1.5rem;">
-        <!-- Producción por Línea -->
-        <div class="card anim-card" style="grid-column: 1 / 2;">
-            <div class="card-header">
-                <div class="card-title">
-                    <i class="ti ti-chart-bar"></i>
-                    Producción por Línea
-                </div>
-                <span class="badge badge-info">
-                    <i class="ti ti-building-factory-2" style="font-size:10px;"></i>
-                    Comparativa
-                </span>
-            </div>
-            <div class="card-body" style="padding:1rem 1.5rem 1.5rem;">
-                <canvas id="lineasChart" style="max-height:200px;width:100%;"></canvas>
-            </div>
+    <div class="card anim-card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-chart-pie"></i> Defectos por Clasificación</div>
+        <span class="badge badge-danger" id="total-defectos-badge">Total: 0</span>
+      </div>
+      <div class="card-body" style="padding:1rem 1.5rem 1.5rem;display:flex;justify-content:center;align-items:center;">
+        <div class="pie-chart-wrapper">
+          <canvas id="defectosChart" style="cursor:pointer;"></canvas>
         </div>
+      </div>
+    </div>
+  </section>
 
-        <!-- Eficiencia Mensual -->
-        <div class="card anim-card" style="grid-column: 2 / 3;">
-            <div class="card-header">
-                <div class="card-title">
-                    <i class="ti ti-chart-line"></i>
-                    Eficiencia Mensual
-                </div>
-                <span class="badge badge-success">
-                    <i class="ti ti-trending-up" style="font-size:10px;"></i>
-                    Tendencia
-                </span>
-            </div>
-            <div class="card-body" style="padding:1rem 1.5rem 1.5rem;">
-                <canvas id="eficienciaChart" style="max-height:200px;width:100%;"></canvas>
-            </div>
+  <section class="dashboard-layout dashboard-layout-2col" style="margin-top:1.5rem;">
+    <div class="card anim-card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-circle-check"></i> APTO vs RETENIDO</div>
+        <span class="badge badge-info"><i class="ti ti-checkbox" style="font-size:10px;"></i> Estado de lotes</span>
+      </div>
+      <div class="card-body" style="padding:1rem 1.5rem 1.5rem;display:flex;justify-content:center;align-items:center;">
+        <div class="pie-chart-wrapper">
+          <canvas id="aptoChart" style="cursor:pointer;"></canvas>
         </div>
-    </section>
+      </div>
+    </div>
 
-    <!-- ================= AUDITORÍAS Y TOP DEFECTOS ================= -->
-    <section class="dashboard-layout" style="margin-top:1.5rem;">
-        <!-- Auditorías Pendientes -->
-        <div class="card anim-card" style="grid-column: 1 / 2;">
-            <div class="card-header">
-                <div class="card-title">
-                    <i class="ti ti-clipboard-check"></i>
-                    Auditorías Pendientes
-                </div>
-                <span class="badge badge-warning">
-                    <i class="ti ti-clock" style="font-size:10px;"></i>
-                    En tiempo real
-                </span>
-            </div>
-            <div class="card-body" id="auditorias-pendientes" style="padding:1rem 1.5rem;">
-                <div class="loading-placeholder">
-                    <i class="ti ti-loader-2 loading-spinner"></i>
-                    Cargando auditorías...
-                </div>
-            </div>
-        </div>
+    <div class="card anim-card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-building-factory-2"></i> Producción por Línea</div>
+        <span class="badge badge-info"><i class="ti ti-chart-bar" style="font-size:10px;"></i> Comparativa</span>
+      </div>
+      <div class="card-body" style="padding:1rem 1.5rem 1.5rem;">
+        <canvas id="lineasChart" style="max-height:200px;width:100%;"></canvas>
+      </div>
+    </div>
+  </section>
 
-        <!-- Top 5 Defectos -->
-        <div class="card anim-card" style="grid-column: 2 / 3;">
-            <div class="card-header">
-                <div class="card-title">
-                    <i class="ti ti-list"></i>
-                    Top 5 Productos con Defectos
-                </div>
-                <span class="badge badge-danger">
-                    <i class="ti ti-alert-triangle" style="font-size:10px;"></i>
-                    Crítico
-                </span>
-            </div>
-            <div class="card-body" id="top-defectos" style="padding:0.5rem 1.5rem 1rem;">
-                <div class="loading-placeholder">
-                    <i class="ti ti-loader-2 loading-spinner"></i>
-                    Cargando datos...
-                </div>
-            </div>
-        </div>
-    </section>
+  <section class="dashboard-layout dashboard-layout-2col" style="margin-top:1.5rem;">
+    <div class="card anim-card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-box-seam"></i> Top Productos Más Producidos</div>
+        <span class="badge badge-info"><i class="ti ti-trophy" style="font-size:10px;"></i> Por unidades</span>
+      </div>
+      <div class="card-body" id="top-productos" style="padding:0.5rem 1.5rem 1rem;">
+        <div class="loading-placeholder"><i class="ti ti-loader-2 loading-spinner"></i> Cargando datos...</div>
+      </div>
+    </div>
 
-    <!-- ================= ALERTAS Y TABLA ================= -->
-    <section class="dashboard-layout" style="margin-top:1.5rem;">
-        <!-- Alertas -->
-        <div class="card anim-card" style="grid-column: 1 / 2;">
-            <div class="card-header">
-                <div class="card-title">
-                    <i class="ti ti-bell"></i>
-                    Alertas del Sistema
-                </div>
-                <span class="badge badge-success">
-                    <i class="ti ti-circle-dot" style="font-size:10px;"></i>
-                    En vivo
-                </span>
-            </div>
-            <div class="card-body" style="padding:0.5rem 1.5rem;">
-                <ul class="alert-list" id="dashboard-alerts" style="list-style:none;padding:0;margin:0;">
-                    <li style="padding:10px 0;color:var(--text-muted);text-align:center;">
-                        <i class="ti ti-loader-2 loading-spinner"></i>
-                        Cargando alertas...
-                    </li>
-                </ul>
-            </div>
-        </div>
+    <div class="card anim-card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-alert-triangle"></i> Tipos de Defecto Más Frecuentes</div>
+        <span class="badge badge-danger"><i class="ti ti-flame" style="font-size:10px;"></i> Ranking</span>
+      </div>
+      <div class="card-body" id="top-tipos-defecto" style="padding:0.5rem 1.5rem 1rem;">
+        <div class="loading-placeholder"><i class="ti ti-loader-2 loading-spinner"></i> Cargando datos...</div>
+      </div>
+    </div>
+  </section>
 
-        <!-- Tabla -->
-        <div class="card anim-card" style="grid-column: 2 / 3;">
-            <div class="card-header">
-                <div class="card-title">
-                    <i class="ti ti-table"></i>
-                    Últimos Registros
-                </div>
-                <span class="badge badge-info" id="total-registros-badge">0 registros</span>
-            </div>
-            <div class="card-body table-wrap" style="padding:0;">
-                <table style="width:100%;border-collapse:collapse;">
-                    <thead style="background:var(--off-white);">
-                        <tr>
-                            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text-hint);text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid var(--border);">Fecha</th>
-                            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text-hint);text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid var(--border);">Línea</th>
-                            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text-hint);text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid var(--border);">Producto</th>
-                            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text-hint);text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid var(--border);">Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody id="dashboard-table">
-                        <tr>
-                            <td colspan="4" style="text-align:center;padding:2rem;color:var(--text-muted);">
-                                <i class="ti ti-loader-2 loading-spinner"></i>
-                                Cargando registros...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </section>
+  <section class="dashboard-layout dashboard-layout-2col" style="margin-top:1.5rem;">
+    <div class="card anim-card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-chart-line"></i> Eficiencia Mensual</div>
+        <span class="badge badge-success"><i class="ti ti-trending-up" style="font-size:10px;"></i> Tendencia</span>
+      </div>
+      <div class="card-body" style="padding:1rem 1.5rem 1.5rem;">
+        <canvas id="eficienciaChart" style="max-height:200px;width:100%;"></canvas>
+      </div>
+    </div>
+
+    <div class="card anim-card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-user-x"></i> Top Clientes con Retención</div>
+        <span class="badge badge-danger"><i class="ti ti-alert-triangle" style="font-size:10px;"></i> Ranking</span>
+      </div>
+      <div class="card-body" id="top-clientes-retencion" style="padding:0.5rem 1.5rem 1rem;">
+        <div class="loading-placeholder"><i class="ti ti-loader-2 loading-spinner"></i> Cargando datos...</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="dashboard-layout dashboard-layout-2col" style="margin-top:1.5rem;">
+    <div class="card anim-card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-clipboard-check"></i> Auditorías Pendientes</div>
+        <span class="badge badge-warning"><i class="ti ti-clock" style="font-size:10px;"></i> En tiempo real</span>
+      </div>
+      <div class="card-body" id="auditorias-pendientes" style="padding:1rem 1.5rem;">
+        <div class="loading-placeholder"><i class="ti ti-loader-2 loading-spinner"></i> Cargando auditorías...</div>
+      </div>
+    </div>
+
+    <div class="card anim-card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-bell"></i> Alertas del Sistema</div>
+        <span class="badge badge-success"><i class="ti ti-circle-dot" style="font-size:10px;"></i> En vivo</span>
+      </div>
+      <div class="card-body" style="padding:0.5rem 1.5rem;">
+        <ul class="alert-list" id="dashboard-alerts" style="list-style:none;padding:0;margin:0;">
+          <li style="padding:10px 0;color:var(--text-muted);text-align:center;">
+            <i class="ti ti-loader-2 loading-spinner"></i> Cargando alertas...
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="dashboard-layout" style="margin-top:1.5rem;">
+    <div class="card anim-card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-table"></i> Últimos Registros</div>
+        <span class="badge badge-info" id="total-registros-badge">0 registros</span>
+      </div>
+      <div class="card-body table-wrap" style="padding:0;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead style="background:var(--off-white);">
+            <tr>
+              <th class="th-dash">Fecha</th>
+              <th class="th-dash">Ticket</th>
+              <th class="th-dash">Lote</th>
+              <th class="th-dash">Producto</th>
+              <th class="th-dash">Cliente</th>
+              <th class="th-dash">Unidades</th>
+              <th class="th-dash">Estatus</th>
+            </tr>
+          </thead>
+          <tbody id="dashboard-table">
+            <tr>
+              <td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">
+                <i class="ti ti-loader-2 loading-spinner"></i> Cargando registros...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 
 </main>
 
-<!-- ================= FOOTER ================= -->
 <footer class="footer" style="text-align:center;padding:1.5rem;color:var(--text-muted);border-top:1px solid var(--border);margin-top:1.5rem;">
-    <p style="font-size:12px;">© 2026 Venvidrio - Sistema de Control de Calidad</p>
+  <p style="font-size:12px;">© 2026 Venvidrio — Sistema de Control de Calidad</p>
 </footer>
 
-<!-- ================= TIMER FLOTANTE ================= -->
-<div class="sesion-timer" id="sesionTimer">
-    <i class="ti ti-clock"></i>
-    <span>Sesión expira en:</span>
-    <span class="tiempo-restante" id="timerDisplay">05:00</span>
-    <span class="badge-timer" id="timerBadge">Activo</span>
+<div class="modal-overlay" id="modalInactividad">
+  <div class="modal-content">
+    <i class="ti ti-alert-triangle modal-icon"></i>
+    <h2 class="modal-title">Sesión a punto de expirar</h2>
+    <p class="modal-desc">Hemos detectado que no has interactuado con el sistema durante un tiempo. Por seguridad, tu sesión se cerrará en breve.</p>
+    <button class="btn-primary-modal" id="btnContinuarSesion">Sí, continuar conectado</button>
+  </div>
 </div>
 
 <!-- ================= SCRIPTS ================= -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="../assets/js/dashboard.js" defer></script>
+<script src="../assets/js/shared.js?v=4"></script>
+<script src="../assets/js/login_app.js?v=4"></script>
+<script src="../assets/js/dashboard.js?v=5"></script>
 
 </body>
 </html>

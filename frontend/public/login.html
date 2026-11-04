@@ -48,7 +48,6 @@
 
       <!-- ================= LOGO REAL DE VENVIDRIO ================= -->
       <div class="logo-area" id="logoArea">
-        <!-- IMPORTANTE: Asegúrate de que la ruta coincida con la ubicación de tu imagen -->
         <img src="../assets/img/logo-venvidrio.png" alt="Venvidrio Logo" class="login-logo" />
         <div class="divider"></div>
       </div>
@@ -56,9 +55,10 @@
       <!-- ================= CAMPO USUARIO ================= -->
       <div class="field-group">
         <label class="field-label">Usuario</label>
-        <div class="field-wrapper">
+        <div class="field-wrapper" style="display: flex; align-items: center; padding-right: 12px;">
           <i class="ti ti-user field-icon"></i>
-          <input class="field-input" id="username" type="text" autocomplete="username" placeholder="usuario@venvidrio.com" />
+          <input class="field-input" id="username-prefix" type="text" autocomplete="username" placeholder="usuario" style="flex: 1; border: none; background: transparent;" />
+          <span style="font-family: var(--font-body); font-size: 13px; font-weight: 600; color: var(--text-muted, #666); margin-left: 4px;">@venvidrio.com</span>
         </div>
       </div>
 
@@ -80,13 +80,17 @@
         <span>La tecla Bloq Mayús está activa</span>
       </div>
 
-      <!-- ================= RECORDAR SESIÓN ================= -->
-      <div class="remember-me">
+      <!-- ================= RECORDAR SESIÓN + OLVIDÉ CONTRASEÑA ================= -->
+      <div class="options-row">
         <label class="custom-checkbox">
           <input type="checkbox" id="rememberMe" />
           <span class="checkmark"></span>
           Recordar mi sesión
         </label>
+
+        <a href="recuperar.html" class="forgot-link" id="forgotLink">
+          ¿Olvidaste tu contraseña?
+        </a>
       </div>
 
       <!-- ================= BOTÓN INICIAR SESIÓN ================= -->
@@ -108,6 +112,7 @@
   </div>
 
   <!-- ================= JS ================= -->
+   <script src="../assets/js/shared.js"></script>
   <script src="../assets/js/login_app.js"></script>
 
 </body>

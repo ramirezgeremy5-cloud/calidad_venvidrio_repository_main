@@ -1,193 +1,48 @@
-# app/routes/etiqueta.py
-
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
 from app.database.connection import SessionLocal
-
-from app.models.etiqueta import Etiqueta
-
-from app.schemas.etiqueta import (
-    EtiquetaCreate,
-    EtiquetaResponse
-)
-
-
+from app.models.produccion import Produccion
+from app.schemas.produccion import EtiquetaResponse
 
 router = APIRouter(
-    prefix="/etiquetas",
+    prefix="/produccion",
     tags=["Etiquetas"]
 )
 
-
-
-# =====================================
-# DATABASE
-# =====================================
-
 def get_db():
-
     db = SessionLocal()
-
     try:
         yield db
-
     finally:
         db.close()
 
-
-
-
-
-# =====================================
-# LISTAR
-# =====================================
-
-@router.get(
-    "/",
-    response_model=list[EtiquetaResponse]
-)
-def listar_etiquetas(
-    db: Session = Depends(get_db)
-):
-
-    try:
-
-        etiquetas = db.query(
-            Etiqueta
-        ).order_by(
-            Etiqueta.id.desc()
-        ).all()
-
-
-        return etiquetas
-
-
-    except Exception as e:
-
-        print("ERROR ETIQUETAS:", e)
-
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
-
-
-
-
-
-
-# =====================================
-# CREAR
-# =====================================
-
-@router.post(
-    "/",
-    response_model=EtiquetaResponse
-)
-def crear_etiqueta(
-    etiqueta:EtiquetaCreate,
-    db:Session=Depends(get_db)
-):
-
-
-    nueva = Etiqueta(
-        **etiqueta.model_dump()
-    )
-
-
-    db.add(nueva)
-
-    db.commit()
-
-    db.refresh(nueva)
-
-
-    return nueva
-
-
-
-
-
-
-# =====================================
-# BUSCAR
-# =====================================
-
-@router.get(
-    "/{etiqueta_id}",
-    response_model=EtiquetaResponse
-)
-def obtener_etiqueta(
-    etiqueta_id:int,
-    db:Session=Depends(get_db)
-):
-
-
-    etiqueta = db.query(
-        Etiqueta
-    ).filter(
-        Etiqueta.id == etiqueta_id
-    ).first()
-
-
-
-    if not etiqueta:
-
-        raise HTTPException(
-            status_code=404,
-            detail="Etiqueta no encontrada"
-        )
-
-
-
-    return etiqueta
-
-
-
-
-
-
-# =====================================
-# ELIMINAR
-# =====================================
-
-@router.delete(
-    "/{etiqueta_id}"
-)
-def eliminar_etiqueta(
-    etiqueta_id:int,
-    db:Session=Depends(get_db)
-):
-
-
-    etiqueta = db.query(
-        Etiqueta
-    ).filter(
-        Etiqueta.id == etiqueta_id
-    ).first()
-
-
-
-    if not etiqueta:
-
-        raise HTTPException(
-            status_code=404,
-            detail="Etiqueta no encontrada"
-        )
-
-
-
-    db.delete(etiqueta)
-
-    db.commit()
-
-
-
+@router.get("/lote/{codigo_lote}", response_model=EtiquetaResponse)
+def obtener_lote_para_etiqueta(codigo_lote: str, db: Session = Depends(get_db)):
+    """
+    Busca un lote específico por su código para generar la etiqueta.
+    """
+    codigo_buscar = codigo_lote.strip().upper()
+    
+    lote = db.query(Produccion).filter(Produccion.codigo_lote == codigo_buscar).first()
+    
+    if not lote:
+        raise HTTPException(status_code=404, detail="Lote no encontrado en la base de datos")
+    
     return {
-
-        "mensaje":
-        "Etiqueta eliminada correctamente"
-
+        "planta": lote.planta,
+        "ticket_carga": lote.ticket_carga,
+        "cliente": lote.cliente,
+        "orden": lote.orden,
+        "obs_produccion": lote.observaciones,
+        "maquina": lote.maquina,
+        "turno": lote.turno,
+        "grupo": lote.grupo,
+        "fecha_produccion": str(lote.fecha_produccion) if lote.fecha_produccion else None,
+        "tipo_producto": lote.tipo_producto,
+        "acabado": lote.acabado,
+        "item": lote.item,
+        "bpp": lote.bpp,
+        "capacidad": lote.capacidad,
+        "molde": lote.molde,
+        "codigo_lote": lote.codigo_lote
     }

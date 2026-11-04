@@ -1,180 +1,553 @@
-/* etiquetas.css */
+/* =============================================
+   Venvidrio — Etiquetas y Trazabilidad
+   etiquetas.css — Diseño unificado y previsualización exacta
+   ============================================= */
 
-.anim-card { animation: fade-up 0.5s ease both; }
+/* ================= VARIABLES LOCALES ================= */
+:root {
+  --brand-1: #1a237e;
+  --brand-2: #3949ab;
+  --brand-3: #5c6bc0;
+  --brand-soft: #eef2ff;
+  --brand-line: #dfe4fb;
+  --ink: #1e293b;
+  --ink-soft: #64748b;
+  --line: #e9edf5;
+  --card-bg: #ffffff;
+  --page-bg: #f4f6fb;
+}
 
+/* ================= FONDO GENERAL ================= */
+body {
+  background:
+    radial-gradient(1200px 500px at 10% -10%, rgba(92, 107, 192, 0.10), transparent 60%),
+    radial-gradient(900px 400px at 100% 0%, rgba(26, 35, 126, 0.08), transparent 55%),
+    var(--page-bg);
+  min-height: 100vh;
+}
+
+/* ================= HEADER DE PÁGINA ================= */
+.page-header {
+  text-align: center;
+  margin-bottom: 1.75rem;
+  padding: 0 0.5rem;
+}
+
+.page-header h1 {
+  font-size: clamp(1.4rem, 2.6vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  background: linear-gradient(135deg, var(--brand-1), var(--brand-3));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin: 0 0 6px;
+}
+
+.page-header p {
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+/* ================= LAYOUT ================= */
 .etq-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1.15fr;
   gap: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-/* ---- Label preview ---- */
-.label-preview {
-  min-height: 280px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.label-empty {
-  text-align: center;
-  color: var(--text-muted);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  font-size: 13px;
-}
-
-/* Etiqueta real */
-.label-card {
-  width: 100%;
-  border: 2px solid var(--navy);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  animation: fade-in 0.4s ease, scale-label 0.4s cubic-bezier(0.34,1.56,0.64,1);
-}
-
-@keyframes scale-label {
-  from { transform: scale(0.94); }
-  to   { transform: scale(1); }
-}
-
-.label-header {
-  background: var(--navy);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-}
-
-.label-brand {
-  font-family: var(--font-display);
-  font-size: 20px;
-  letter-spacing: 2px;
-}
-
-.label-brand span { color: #60a5fa; }
-
-.label-subtitle {
-  font-size: 10px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  opacity: 0.7;
-}
-
-.label-body {
-  background: white;
-  padding: 14px 16px;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 12px;
   align-items: start;
 }
 
-.label-info 
-
-.label-product {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--navy);
-  margin-bottom: 10px;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 8px;
+/* ================= TARJETAS ================= */
+.etq-layout .card {
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow:
+    0 10px 30px -18px rgba(26, 35, 126, 0.25),
+    0 1px 2px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+  animation: cardIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.label-row {
-  display: flex;
-  gap: 8px;
-  font-size: 12px;
-  margin-bottom: 5px;
+.etq-layout .card:nth-child(2) {
+  animation-delay: 0.08s;
 }
 
-.label-key {
-  color: var(--text-muted);
-  min-width: 90px;
-  font-weight: 500;
-  text-transform: uppercase;
-  font-size: 10px;
-  letter-spacing: 0.5px;
-  padding-top: 1px;
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.label-val {
-  color: var(--navy);
-  font-weight: 500;
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-
-.label-qr {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.label-qr canvas,
-.label-qr img { border-radius: 4px; }
-
-.label-qr-id {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  color: var(--text-hint);
-  text-align: center;
-  max-width: 100px;
-  word-break: break-all;
-}
-
-.label-footer {
-  background: var(--off-white);
-  border-top: 1px solid var(--border);
-  padding: 8px 16px;
+/* ================= CARD HEADER (gradiente Venvidrio) ================= */
+.etq-layout .card-header {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, var(--brand-1) 0%, var(--brand-2) 55%, var(--brand-3) 100%);
+  color: #fff;
+  border-bottom: none;
 }
 
-.label-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.label-status.aprobado   { color: #065f46; }
-.label-status.condicionado { color: #92400e; }
-.label-status.retenido   { color: #991b1b; }
-
-.label-date {
-  font-size: 10px;
-  color: var(--text-hint);
-  font-family: var(--font-mono);
-}
-
-/* Tabla */
-.toast-success {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #d1fae5;
-  color: #065f46;
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  margin-top: 1rem;
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 0.3s, transform 0.3s;
+.etq-layout .card-header::after {
+  content: '';
+  position: absolute;
+  right: -30px;
+  top: -30px;
+  width: 110px;
+  height: 110px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.22), transparent 70%);
+  border-radius: 50%;
   pointer-events: none;
 }
 
-.toast-success.show { opacity: 1; transform: translateY(0); }
+.etq-layout .card-title {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: #fff;
+}
 
+.etq-layout .card-title i {
+  font-size: 1.15rem;
+}
+
+/* ================= BOTÓN DEL HEADER (Imprimir) ================= */
+#btn-actions {
+  position: relative;
+  z-index: 1;
+  transition: opacity 0.3s ease;
+}
+
+#btn-actions .btn {
+  border-radius: 10px;
+  font-weight: 600;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+#btn-actions .btn-outline {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+}
+
+#btn-actions .btn-outline:hover {
+  background: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.55);
+  transform: translateY(-1px);
+}
+
+#btn-actions .btn:active {
+  transform: scale(0.97);
+}
+
+/* ================= CARD BODY ================= */
+.etq-layout .card-body {
+  padding: 20px;
+}
+
+/* ================= CAJA INFO ================= */
+.etq-info {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  background: var(--brand-soft);
+  border: 1px solid var(--brand-line);
+  border-radius: 12px;
+  padding: 11px 13px;
+  font-size: 12.5px;
+  color: #3f4a6b;
+  line-height: 1.45;
+  margin-bottom: 1.1rem;
+}
+
+.etq-info i {
+  color: var(--brand-2);
+  font-size: 1.05rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ================= CAMPO DE BÚSQUEDA ================= */
+.etq-layout .field {
+  margin-bottom: 1.25rem;
+}
+
+.etq-layout .field label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 7px;
+}
+
+.select-with-button {
+  display: flex;
+  gap: 8px;
+}
+
+.select-with-button input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1.5px solid #dde3ee;
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--ink);
+  background: #fbfcfe;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.select-with-button input:focus {
+  border-color: var(--brand-2);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(57, 73, 171, 0.12);
+}
+
+.select-with-button input::placeholder {
+  color: #a3adc2;
+  letter-spacing: 0.5px;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 7px;
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+/* ================= BOTÓN PRIMARIO ================= */
+.etq-layout .btn-primary {
+  background: linear-gradient(135deg, var(--brand-2), var(--brand-1));
+  border: none;
+  color: #fff;
+  border-radius: 10px;
+  font-weight: 600;
+  padding: 0 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 6px 16px -4px rgba(57, 73, 171, 0.45);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  white-space: nowrap;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.etq-layout .btn-primary:hover {
+  box-shadow: 0 10px 22px -4px rgba(57, 73, 171, 0.55);
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+}
+
+.etq-layout .btn-primary:active {
+  transform: scale(0.97);
+}
+
+.etq-layout .btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ================= ERROR ================= */
+#error-lote {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 10px 13px;
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  animation: shakeError 0.35s ease;
+}
+
+@keyframes shakeError {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-5px); }
+  75%      { transform: translateX(5px); }
+}
+
+/* ================= ZONA DE PREVISUALIZACIÓN ================= */
+.etq-preview-area {
+  background:
+    radial-gradient(circle at 25% 20%, rgba(255, 255, 255, 0.7), transparent 60%),
+    #e2e8f0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2rem 1rem;
+  border-radius: 0 0 18px 18px;
+  min-height: 260px;
+}
+
+/* ================= TICKET (etiqueta física) ================= */
+.ticket-preview {
+  background: #fff;
+  width: 100%;
+  max-width: 380px;
+  min-height: 500px;
+  padding: 20px;
+  border-radius: 10px;
+  /* AQUÍ ESTÁ EL BORDE NEGRO */
+  border: 2px solid #000; 
+  box-shadow:
+    0 18px 40px -16px rgba(15, 23, 42, 0.35),
+    0 0 0 1px rgba(15, 23, 42, 0.06);
+  font-family: 'Courier New', Courier, monospace;
+  color: #111;
+  box-sizing: border-box;
+  position: relative;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.ticket-preview:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 24px 50px -18px rgba(15, 23, 42, 0.4),
+    0 0 0 1px rgba(15, 23, 42, 0.06);
+}
+
+/* Estado vacío */
+.ticket-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 400px;
+  color: #94a3b8;
+  font-family: var(--font-body, system-ui, sans-serif);
+  text-align: center;
+  padding: 2.5rem 1rem;
+}
+
+.ticket-empty p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* ================= TIPOGRAFÍA DEL TICKET ================= */
+.ticket-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.ticket-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding-bottom: 8px;
+}
+
+.ticket-logo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ticket-logo img {
+  height: 32px;
+  object-fit: contain;
+  filter: grayscale(100%);
+}
+
+.ticket-sub {
+  font-size: 8px;
+  line-height: 1.15;
+  margin-top: 2px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.ticket-planta {
+  text-align: right;
+}
+
+.ticket-planta-nombre {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  margin-bottom: 4px;
+}
+
+.ticket-ticket {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.ticket-divider {
+  border-top: 1.5px dashed #cbd5e1;
+  margin: 10px 0;
+}
+
+.tk-label {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #64748b;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+.tk-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: #111;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.ticket-row-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ticket-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.ticket-footer {
+  font-size: 8px;
+  font-weight: 700;
+  text-align: center;
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 1.5px dashed #cbd5e1;
+  letter-spacing: 0.5px;
+  color: #475569;
+}
+
+#barcode {
+  width: 100%;
+  height: auto;
+}
+
+/* ================= RESPONSIVE ================= */
 @media (max-width: 900px) {
-  .etq-layout { grid-template-columns: 1fr; }
+  .etq-layout {
+    grid-template-columns: 1fr;
+    gap: 1.1rem;
+  }
+
+  .ticket-preview {
+    margin: 0 auto;
+  }
+
+  .etq-preview-area {
+    padding: 1.5rem 1rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .page-header h1 {
+    font-size: 1.35rem;
+  }
+
+  .etq-layout .card-header {
+    padding: 14px 16px;
+  }
+
+  .etq-layout .card-body {
+    padding: 16px;
+  }
+
+  .etq-layout .card-title {
+    font-size: 0.88rem;
+  }
+
+  .select-with-button {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .select-with-button input {
+    width: 100%;
+  }
+
+  .etq-layout .btn-primary {
+    width: 100%;
+    padding: 12px 18px;
+  }
+
+  .ticket-preview {
+    padding: 14px 14px 12px;
+    max-width: 100%;
+    border-radius: 8px;
+  }
+
+  .etq-preview-area {
+    padding: 1.25rem 0.75rem;
+    border-radius: 0 0 16px 16px;
+  }
+
+  .ticket-ticket {
+    font-size: 16px;
+  }
+
+  .ticket-planta-nombre {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ticket-row-flex {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .ticket-row-flex > div:last-child {
+    text-align: left;
+  }
+
+  .ticket-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+/* 
+  NOTA: La impresión se maneja desde JS (html2canvas).
+  El borde negro ya está aplicado a .ticket-preview, por lo que 
+  html2canvas capturará la imagen con el marco incluido.
+*/
+
+/* ================= ACCESIBILIDAD ================= */
+@media (prefers-reduced-motion: reduce) {
+  .etq-layout .card,
+  .ticket-preview,
+  #error-lote,
+  #btn-actions .btn,
+  .etq-layout .btn-primary {
+    animation: none !important;
+    transition: none !important;
+  }
 }

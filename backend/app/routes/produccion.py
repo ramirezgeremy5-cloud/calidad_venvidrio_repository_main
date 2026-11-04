@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, date
@@ -6,7 +6,6 @@ from typing import Optional
 
 from app.database.connection import SessionLocal
 from app.models.produccion import Produccion
-# from app.models.cliente import Cliente  <-- Ya no necesitamos tabla maestra
 from app.schemas.produccion import (
     ProduccionCreate,
     ProduccionUpdate,
@@ -18,6 +17,7 @@ router = APIRouter(
     tags=["Producción"]
 )
 
+
 def get_db():
     db = SessionLocal()
     try:
@@ -27,122 +27,319 @@ def get_db():
 
 
 # =========================
-# LISTAR PRODUCCIÓN (SIN JOINS, 100% ESTABLE)
+# GENERADOR DE CÓDIGO DE LOTE
+# Formato: YYYYMMDD + Máquina + XXX
+# Ejemplo: 20260810A1001
 # =========================
-@router.get(
-    "/",
-    response_model=list[ProduccionResponse]
-)
-@router.get(
-    "",
-    response_model=list[ProduccionResponse]
-)
+def _generar_codigo_lote(
+    db: Session,
+    fecha: Optional[date] = None,
+    maquina: Optional[str] = None
+) -> str:
+    """
+    Genera un código de lote con formato YYYYMMDD + Máquina + XXX.
+    - YYYYMMDD  = fecha de producción (ej: 20260810)
+    - Máquina   = código de máquina en mayúsculas (ej: A1)
+    - XXX       = consecutivo de 3 dígitos (001, 002, ...)
+    Ejemplo: 20260810A1001
+    """
+    if fecha is None:
+        fecha = date.today()
+
+    fecha_str = fecha.strftime("%Y%m%d")
+    maquina_limpia = (maquina or "XX").replace(" ", "").upper()
+    prefijo = f"{fecha_str}{maquina_limpia}"
+
+    ultimo = (
+        db.query(Produccion.codigo_lote)
+        .filter(Produccion.codigo_lote.like(f"{prefijo}%"))
+        .order_by(Produccion.codigo_lote.desc())
+        .first()
+    )
+
+    if ultimo and ultimo[0]:
+        try:
+            consecutivo = int(ultimo[0][-3:]) + 1
+        except (ValueError, IndexError):
+            consecutivo = 1
+    else:
+        consecutivo = 1
+
+    return f"{prefijo}{consecutivo:03d}"
+
+
+# =========================
+# LISTAR PRODUCCIÓN (CON FILTROS)
+# =========================
+@router.get("/", response_model=list[ProduccionResponse])
+@router.get("", response_model=list[ProduccionResponse])
 def listar_produccion(
     codigo: Optional[str] = Query(None),
+    ticket: Optional[str] = Query(None),
     producto: Optional[str] = Query(None),
     linea: Optional[str] = Query(None),
+    maquina: Optional[str] = Query(None),
     operador: Optional[str] = Query(None),
-    turno: Optional[str] = Query(None),
+    
+    # 👇 CAMBIO: Ahora es int, ya no acepta "Turno 1" como string
+    turno: Optional[int] = Query(None),
+    
+    planta: Optional[str] = Query(None),
+    molde: Optional[str] = Query(None),
+    cliente: Optional[str] = Query(None),
+    estatus: Optional[str] = Query(None),
+    estado_auditoria: Optional[str] = Query(None),
     fecha_desde: Optional[date] = Query(None),
     fecha_hasta: Optional[date] = Query(None),
     skip: int = Query(0),
-    limit: int = Query(100),
+    limit: int = Query(500),
     db: Session = Depends(get_db)
 ):
+    """Lista producción con filtros opcionales"""
     query = db.query(Produccion)
-    
+
     if codigo:
         query = query.filter(Produccion.codigo_lote.ilike(f"%{codigo}%"))
+    if ticket:
+        query = query.filter(Produccion.ticket_carga.ilike(f"%{ticket}%"))
     if producto:
         query = query.filter(Produccion.tipo_producto.ilike(f"%{producto}%"))
     if linea:
         query = query.filter(Produccion.linea_produccion.ilike(f"%{linea}%"))
+    if maquina:
+        query = query.filter(Produccion.maquina.ilike(f"%{maquina}%"))
     if operador:
         query = query.filter(Produccion.operador.ilike(f"%{operador}%"))
     if turno:
-        query = query.filter(Produccion.turno.ilike(f"%{turno}%"))
+        # Al ser entero, se busca directamente
+        query = query.filter(Produccion.turno == turno)
+    if planta:
+        query = query.filter(Produccion.planta.ilike(f"%{planta}%"))
+    if molde:
+        query = query.filter(Produccion.molde.ilike(f"%{molde}%"))
+    if cliente:
+        query = query.filter(Produccion.cliente.ilike(f"%{cliente}%"))
+    if estatus:
+        query = query.filter(Produccion.estatus == estatus)
+    if estado_auditoria:
+        query = query.filter(Produccion.estado_auditoria == estado_auditoria)
     if fecha_desde:
         query = query.filter(Produccion.fecha_registro >= datetime.combine(fecha_desde, datetime.min.time()))
     if fecha_hasta:
         query = query.filter(Produccion.fecha_registro <= datetime.combine(fecha_hasta, datetime.max.time()))
-    
+
     query = query.order_by(Produccion.fecha_registro.desc())
     return query.offset(skip).limit(limit).all()
 
 
 # =========================
-# OBTENER OPCIONES DE FILTROS (Para los filtros)
+# OBTENER OPCIONES REGISTRADAS (Datalists)
 # =========================
 @router.get("/opciones", response_model=dict)
 def obtener_opciones_filtros(db: Session = Depends(get_db)):
-    productos = db.query(Produccion.tipo_producto).distinct().all()
-    lineas = db.query(Produccion.linea_produccion).distinct().all()
-    operadores = db.query(Produccion.operador).distinct().all()
-    turnos = db.query(Produccion.turno).distinct().all()
-    clientes = db.query(Produccion.cliente).distinct().all()
-    
+    """Devuelve los valores únicos ya registrados para llenar los datalists"""
+    def unicos(columna):
+        rows = db.query(columna).distinct().all()
+        return sorted([r[0] for r in rows if r[0]])
+
     return {
-        "productos": [p[0] for p in productos if p[0]],
-        "lineas": [l[0] for l in lineas if l[0]],
-        "operadores": [o[0] for o in operadores if o[0]],
-        "turnos": [t[0] for t in turnos if t[0]],
-        "clientes": [c[0] for c in clientes if c[0]]
+        "productos": unicos(Produccion.tipo_producto),
+        "lineas": unicos(Produccion.linea_produccion),
+        "maquinas": unicos(Produccion.maquina),
+        "operadores": unicos(Produccion.operador),
+        "clientes": unicos(Produccion.cliente),
+        "items": unicos(Produccion.item),
+        "moldes": unicos(Produccion.molde),
+        "acabados": unicos(Produccion.acabado),
+        "grupos": unicos(Produccion.grupo),
+        "ordenes": unicos(Produccion.orden),
+        # Turnos ya no se envían como string
+        "turnos": [1, 2, 3, 4] 
     }
 
 
 # =========================
-# OBTENER OPCIONES REGISTRADAS (Para los DATALIST del Frontend)
-# =========================
-@router.get("/opciones-registradas", response_model=dict)
-def obtener_opciones_registradas(db: Session = Depends(get_db)):
-    """
-    Devuelve listas únicas de todos los valores que los usuarios 
-    han escrito en los campos de texto. Sirve para llenar los datalists.
-    """
-    productos = db.query(Produccion.tipo_producto).distinct().all()
-    lineas = db.query(Produccion.linea_produccion).distinct().all()
-    operadores = db.query(Produccion.operador).distinct().all()
-    turnos = db.query(Produccion.turno).distinct().all()
-    clientes = db.query(Produccion.cliente).distinct().all()
-    
-    return {
-        "productos": [p[0] for p in productos if p[0]],
-        "lineas": [l[0] for l in lineas if l[0]],
-        "operadores": [o[0] for o in operadores if o[0]],
-        "turnos": [t[0] for t in turnos if t[0]],
-        "clientes": [c[0] for c in clientes if c[0]]
-    }
-
-
-# =========================
-# OBTENER ESTADÍSTICAS DE PRODUCCIÓN
+# ESTADÍSTICAS
 # =========================
 @router.get("/estadisticas", response_model=dict)
 def obtener_estadisticas(db: Session = Depends(get_db)):
     total_lotes = db.query(func.count(Produccion.id)).scalar() or 0
     total_unidades = db.query(func.sum(Produccion.cantidad)).scalar() or 0
-    
+    pendientes = db.query(func.count(Produccion.id)).filter(Produccion.estatus == "100").scalar() or 0
+
     lotes_por_linea = db.query(
         Produccion.linea_produccion,
         func.count(Produccion.id).label('total')
     ).group_by(Produccion.linea_produccion).all()
-    
-    unidades_por_producto = db.query(
-        Produccion.tipo_producto,
-        func.sum(Produccion.cantidad).label('total')
-    ).group_by(Produccion.tipo_producto).all()
-    
+
     return {
         "total_lotes": total_lotes,
         "total_unidades": total_unidades,
+        "pendientes": pendientes,
         "lotes_por_linea": [
             {"linea": l[0] or "Sin especificar", "total": l[1]}
             for l in lotes_por_linea
-        ],
-        "unidades_por_producto": [
-            {"producto": p[0] or "Sin especificar", "total": p[1] or 0}
-            for p in unidades_por_producto
         ]
+    }
+
+
+# =========================
+# PREVISUALIZAR CÓDIGO DE LOTE
+# =========================
+@router.get("/preview-codigo", response_model=dict)
+def preview_codigo_lote(
+    fecha: Optional[date] = Query(None),
+    maquina: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """Devuelve el próximo código de lote que se generaría."""
+    codigo = _generar_codigo_lote(db, fecha, maquina)
+    return {"codigo_lote": codigo}
+
+
+# =========================
+# PRODUCTOS: LISTAR
+# =========================
+@router.get("/productos", response_model=list[dict])
+def listar_productos(db: Session = Depends(get_db)):
+    """
+    Lista todos los productos activos (para el <select> del frontend).
+    Si aún no tienes tabla 'producto', devuelve los únicos de la tabla produccion.
+    """
+    try:
+        from app.models.producto import Producto
+        productos = (
+            db.query(Producto)
+            .filter(Producto.activo == True)
+            .order_by(Producto.nombre)
+            .all()
+        )
+        return [
+            {"id": p.id, "nombre": p.nombre, "capacidad_ml": p.capacidad_ml, "bpp": p.bpp, "bpc": p.bpc}
+            for p in productos
+        ]
+    except ImportError:
+        # Fallback: usar los únicos de la tabla produccion
+        rows = db.query(
+            Produccion.tipo_producto,
+            Produccion.capacidad
+        ).filter(Produccion.tipo_producto.isnot(None)).distinct().all()
+
+        return [
+            {"id": i, "nombre": r[0], "capacidad_ml": r[1]}
+            for i, r in enumerate(rows, 1)
+        ]
+
+
+# =========================
+# PRODUCTOS: CREAR
+# =========================
+@router.post("/productos", response_model=dict)
+def crear_producto(
+    nombre: str = Query(..., min_length=1),
+    capacidad_ml: Optional[int] = Query(None),
+    bpp: Optional[float] = Query(None),
+    bpc: Optional[int] = Query(None),
+    item: Optional[str] = Query(None),
+    acabado: Optional[str] = Query(None),
+    material: Optional[str] = Query(None),
+    tipo_boca: Optional[str] = Query(None),
+    juego_envases: Optional[str] = Query(None),
+    dimensiones: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Crea un producto o devuelve el existente.
+    Si aún no tienes tabla 'producto', simplemente lo ignora
+    (el producto ya quedará guardado en el lote).
+    """
+    nombre = nombre.strip()
+
+    try:
+        from app.models.producto import Producto
+
+        existe = db.query(Producto).filter(Producto.nombre.ilike(nombre)).first()
+        if existe:
+            return {
+                "id": existe.id,
+                "nombre": existe.nombre,
+                "capacidad_ml": existe.capacidad_ml,
+                "bpp": existe.bpp,
+                "bpc": existe.bpc,
+                "nuevo": False
+            }
+
+        nuevo = Producto(
+            nombre=nombre,
+            capacidad_ml=capacidad_ml,
+            bpp=bpp,
+            bpc=bpc,
+            item=item,
+            acabado=acabado,
+            material=material,
+            tipo_boca=tipo_boca,
+            juego_envases=juego_envases,
+            dimensiones=dimensiones
+        )
+        db.add(nuevo)
+        db.commit()
+        db.refresh(nuevo)
+        return {
+            "id": nuevo.id,
+            "nombre": nuevo.nombre,
+            "capacidad_ml": nuevo.capacidad_ml,
+            "bpp": nuevo.bpp,
+            "bpc": nuevo.bpc,
+            "nuevo": True
+        }
+
+    except ImportError:
+        # Fallback: no hay tabla producto, solo devolvemos OK
+        return {"id": None, "nombre": nombre, "capacidad_ml": capacidad_ml, "bpp": bpp, "bpc": bpc, "nuevo": True}
+
+
+# =========================
+# DEBUG: VERIFICAR TIPOS DE CAMPOS
+# =========================
+@router.get("/debug-schema", response_model=dict)
+def debug_schema(db: Session = Depends(get_db)):
+    """
+    Endpoint SOLO PARA DESARROLLO.
+    Muestra los tipos SQLAlchemy y el último registro guardado.
+    """
+    from sqlalchemy import inspect
+
+    inspector = inspect(db.bind)
+    columnas = inspector.get_columns("produccion")
+
+    tipos = {c["name"]: str(c["type"]) for c in columnas}
+
+    ultimo = (
+        db.query(Produccion)
+        .order_by(Produccion.id.desc())
+        .first()
+    )
+
+    ultimo_data = None
+    if ultimo:
+        ultimo_data = {
+            "codigo_lote": ultimo.codigo_lote,
+            "cantidad": ultimo.cantidad,
+            "bpp": ultimo.bpp,
+            "paletas": ultimo.paletas,
+            "cajas_producidas": getattr(ultimo, 'cajas_producidas', None),
+            "gruesas": ultimo.gruesas,
+            "juego_envases": ultimo.juego_envases,
+            "tamano_muestra": ultimo.tamano_muestra,
+            "bot_por_canada": ultimo.bot_por_canada,
+            "bot_por_paleta": ultimo.bot_por_paleta,
+            "gruesas_por_paleta": ultimo.gruesas_por_paleta,
+            "turno": ultimo.turno
+        }
+
+    return {
+        "tipos_columnas": tipos,
+        "ultimo_registro": ultimo_data,
     }
 
 
@@ -158,104 +355,108 @@ def obtener_produccion(produccion_id: int, db: Session = Depends(get_db)):
 
 
 # =========================
-# CREAR PRODUCCIÓN (CON CAMPOS DE TEXTO Y NUEVOS CAMPOS)
+# CREAR PRODUCCIÓN
 # =========================
-@router.post(
-    "/",
-    response_model=ProduccionResponse,
-    status_code=201
-)
-@router.post(
-    "",
-    response_model=ProduccionResponse,
-    status_code=201
-)
-def crear_produccion(
-    datos: ProduccionCreate,
-    db: Session = Depends(get_db)
-):
-    existe = db.query(Produccion).filter(
-        Produccion.codigo_lote == datos.codigo_lote
-    ).first()
+@router.post("/", response_model=ProduccionResponse, status_code=201)
+@router.post("", response_model=ProduccionResponse, status_code=201)
+def crear_produccion(datos: ProduccionCreate, db: Session = Depends(get_db)):
+    """
+    Crea un nuevo lote.
+    El código se genera como YYYYMMDD + Máquina + XXX (ej: 20260810A1001).
+    """
+    # Generar código de lote automáticamente con fecha + máquina
+    fecha_ref = datos.fecha_produccion if datos.fecha_produccion else date.today()
+    if isinstance(fecha_ref, datetime):
+        fecha_ref = fecha_ref.date()
 
-    if existe:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El código de lote ya existe."
-        )
+    codigo_generado = _generar_codigo_lote(db, fecha_ref, datos.maquina)
 
+    # Verificar duplicado de ticket
+    if datos.ticket_carga:
+        existe_ticket = db.query(Produccion).filter(
+            Produccion.ticket_carga == datos.ticket_carga
+        ).first()
+        if existe_ticket:
+            raise HTTPException(
+                status_code=400,
+                detail=f"El ticket {datos.ticket_carga} ya está registrado en el lote {existe_ticket.codigo_lote}."
+            )
+
+    # Preparar datos para guardar
     nueva = Produccion(
-        codigo_lote=datos.codigo_lote,
+        codigo_lote=codigo_generado,
+        ticket_carga=datos.ticket_carga,
+        planta=datos.planta,
+        maquina=datos.maquina,
         linea_produccion=datos.linea_produccion,
-        tipo_producto=datos.tipo_producto,
-        cantidad=datos.cantidad,
+        grupo=datos.grupo,
+        turno=datos.turno, # <-- Ahora se guarda como int
         operador=datos.operador,
-        turno=datos.turno,
-        observaciones=datos.observaciones,
-        fecha_produccion=datos.fecha_produccion,
-        # NUEVOS CAMPOS REGISTRABLES
-        cliente=datos.cliente,        # <-- Ahora es texto libre
+        orden=datos.orden,
+        tipo_producto=datos.tipo_producto,
+        acabado=datos.acabado,
+        material=datos.material,
+        tipo_boca=datos.tipo_boca,
         molde=datos.molde,
         item=datos.item,
-        # NUEVOS CAMPOS NUMÉRICOS
+        bpp=datos.bpp,
+        capacidad=datos.capacidad,
+        unidad_capacidad=getattr(datos, 'unidad_capacidad', 'ml'),
+        cliente=datos.cliente,
+        cantidad=datos.cantidad,
         paletas=datos.paletas,
-        gruesas=datos.gruesas
+        cajas_producidas=getattr(datos, 'cajas_producidas', None),
+        gruesas=datos.gruesas,
+        juego_envases=datos.juego_envases,
+        tamano_muestra=datos.tamano_muestra,
+        bot_por_canada=datos.bot_por_canada,
+        bot_por_paleta=datos.bot_por_paleta,
+        gruesas_por_paleta=datos.gruesas_por_paleta,
+        estatus=datos.estatus,
+        observaciones=datos.observaciones,
+        fecha_produccion=datos.fecha_produccion
     )
 
-    db.add(nueva)
-    db.commit()
-    db.refresh(nueva)
-    return nueva
+    try:
+        db.add(nueva)
+        db.commit()
+        db.refresh(nueva)
+        return nueva
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error al guardar el lote en la base de datos: {str(e)}"
+        )
 
 
 # =========================
-# ACTUALIZAR PRODUCCIÓN (CON CAMPOS DE TEXTO Y NUEVOS CAMPOS)
+# ACTUALIZAR PRODUCCIÓN
 # =========================
 @router.put("/{produccion_id}", response_model=ProduccionResponse)
-def actualizar_produccion(
-    produccion_id: int,
-    datos: ProduccionUpdate,
-    db: Session = Depends(get_db)
-):
-    produccion = db.query(Produccion).filter(
-        Produccion.id == produccion_id
-    ).first()
-
+def actualizar_produccion(produccion_id: int, datos: ProduccionUpdate, db: Session = Depends(get_db)):
+    produccion = db.query(Produccion).filter(Produccion.id == produccion_id).first()
     if not produccion:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Producción no encontrada."
-        )
+        raise HTTPException(status_code=404, detail="Producción no encontrada.")
 
-    existe = db.query(Produccion).filter(
-        Produccion.codigo_lote == datos.codigo_lote,
-        Produccion.id != produccion_id
-    ).first()
+    update_data = datos.dict(exclude_unset=True)
+    update_data.pop('codigo_lote', None)
 
-    if existe:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El código de lote ya existe."
-        )
+    nuevo_ticket = update_data.get('ticket_carga')
+    if nuevo_ticket and nuevo_ticket != produccion.ticket_carga:
+        existe = db.query(Produccion).filter(
+            Produccion.ticket_carga == nuevo_ticket,
+            Produccion.id != produccion_id
+        ).first()
+        if existe:
+            raise HTTPException(
+                status_code=400,
+                detail=f"El ticket {nuevo_ticket} ya está registrado en el lote {existe.codigo_lote}."
+            )
 
-    # Actualizar campos de texto
-    if datos.codigo_lote is not None: produccion.codigo_lote = datos.codigo_lote
-    if datos.linea_produccion is not None: produccion.linea_produccion = datos.linea_produccion
-    if datos.tipo_producto is not None: produccion.tipo_producto = datos.tipo_producto
-    if datos.cantidad is not None: produccion.cantidad = datos.cantidad
-    if datos.operador is not None: produccion.operador = datos.operador
-    if datos.turno is not None: produccion.turno = datos.turno
-    if datos.observaciones is not None: produccion.observaciones = datos.observaciones
-    if datos.fecha_produccion is not None: produccion.fecha_produccion = datos.fecha_produccion
-
-    # NUEVOS CAMPOS REGISTRABLES (Texto)
-    if datos.cliente is not None: produccion.cliente = datos.cliente
-    if datos.molde is not None: produccion.molde = datos.molde
-    if datos.item is not None: produccion.item = datos.item
-
-    # NUEVOS CAMPOS NUMÉRICOS
-    if datos.paletas is not None: produccion.paletas = datos.paletas
-    if datos.gruesas is not None: produccion.gruesas = datos.gruesas
+    for campo, valor in update_data.items():
+        if valor is not None:
+            setattr(produccion, campo, valor)
 
     db.commit()
     db.refresh(produccion)
@@ -267,16 +468,9 @@ def actualizar_produccion(
 # =========================
 @router.delete("/{produccion_id}", status_code=204)
 def eliminar_produccion(produccion_id: int, db: Session = Depends(get_db)):
-    produccion = db.query(Produccion).filter(
-        Produccion.id == produccion_id
-    ).first()
-
+    produccion = db.query(Produccion).filter(Produccion.id == produccion_id).first()
     if not produccion:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Producción no encontrada."
-        )
-
+        raise HTTPException(status_code=404, detail="Producción no encontrada.")
     db.delete(produccion)
     db.commit()
     return None

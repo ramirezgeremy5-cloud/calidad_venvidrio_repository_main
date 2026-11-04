@@ -1,53 +1,180 @@
-/* frontend/assets/css/auditoria_producto.css */
-@import url('shared.css');
+/* ==========================================================
+   VENVIDRIO — AUDITORÍA DE PRODUCTO NO CONFORME
+   Estilos específicos para el módulo de auditoría de producto
+   ========================================================== */
 
-/* Ajustes específicos para la página de auditoría */
-.page {
-  max-width: 1200px;
-  margin: 0 auto;
+/* ================= LAYOUT PRINCIPAL ================= */
+.aud-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* Formulario a la izquierda, glosario a la derecha */
+  gap: 1.5rem;
+  align-items: start;
 }
 
+/* ================= TARJETAS BASE ================= */
 .card {
-  background: white;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: var(--off-white);
+  border-bottom: 1px solid var(--border);
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-body {
   padding: 1.5rem;
+}
+
+/* ================= FORMULARIO ================= */
+.form-section {
   margin-bottom: 1.5rem;
 }
 
-.grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+.form-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1.5px solid var(--border);
 }
 
+.step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--navy);
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Campos de entrada */
 .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   margin-bottom: 1rem;
 }
 
 .field label {
-  display: block;
+  font-size: 12px;
   font-weight: 600;
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-bottom: 4px;
+  color: var(--text-main);
 }
 
-select[multiple] {
-  min-height: 80px;
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: var(--font-body);
+  color: var(--text-main);
+  background: white;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.08);
+}
+
+/* Inputs de solo lectura (auto) */
+.field input[readonly] {
+  background: #f8fafc;
+  color: var(--text-muted);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+.field-hint {
+  font-size: 11px;
+  color: var(--text-hint);
+  margin-top: 2px;
+}
+
+/* ================= SELECTOR DE DEFECTOS ================= */
+#defectos {
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  padding: 8px;
+  font-size: 13px;
+  outline: none;
+  color: var(--text-main);
+}
+
+#defectos:focus {
+  border-color: var(--navy);
+}
+
+#defectos option {
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+}
+
+#defectos option:checked {
+  background: #e8f0fe;
+  color: #1967d2;
+  font-weight: 600;
+}
+
+/* ================= BOTONES DE ACCIÓN ================= */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 1.5rem;
+  border-top: 1.5px solid var(--border);
+  margin-top: 1rem;
 }
 
 .btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
   transition: all 0.2s;
+  border: 1.5px solid transparent;
 }
 
 .btn-primary {
@@ -55,40 +182,118 @@ select[multiple] {
   color: white;
 }
 
-.btn-primary:hover {
-  background: #152e5e;
+.btn-primary:hover:not(:disabled) {
+  background: #0d1b52;
 }
 
 .btn-outline {
   background: transparent;
-  border: 1.5px solid var(--border);
+  border-color: var(--border);
   color: var(--text-muted);
 }
 
 .btn-outline:hover {
   border-color: var(--navy);
   color: var(--navy);
+  background: var(--off-white);
 }
 
-.toast-success {
-  background: #d1fae5;
-  color: #065f46;
-  padding: 12px 16px;
-  border-radius: var(--radius-sm);
-  margin-top: 1rem;
-  display: none;
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ================= PANEL DE AYUDA / GLOSARIO ================= */
+.glosario-card {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+}
+
+.glosario-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
 }
 
-.toast-success.show {
+.glosario-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.glosario-item {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 10px;
   display: flex;
+  align-items: flex-start;
+  gap: 8px;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+.glosario-item strong {
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.glosario-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  color: white;
+  margin-right: 4px;
+}
+
+/* Colores de los badges de estatus */
+.bg-100 { background: #1967d2; }
+.bg-200 { background: #2e7d32; }
+.bg-300 { background: #dc3545; }
+.bg-950 { background: #f57c00; }
+
+/* ================= ANIMACIONES ================= */
+.anim-card {
+  animation: fadeInUp 0.4s ease forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 900px) {
+  .aud-layout {
+    grid-template-columns: 1fr; /* En móvil, el glosario baja debajo del formulario */
+  }
+}
+
+@media (max-width: 600px) {
   .grid-2 {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr; /* Inputs a lo ancho */
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .btn {
+    width: 100%;
+    justify-content: center;
   }
 }

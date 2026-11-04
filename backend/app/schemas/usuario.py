@@ -1,5 +1,5 @@
-from pydantic import BaseModel, ConfigDict, validator, EmailStr, Field
-from datetime import datetime
+from pydantic import BaseModel, ConfigDict, validator, EmailStr, Field, field_validator
+from datetime import datetime, date
 from typing import Optional
 import re
 
@@ -11,7 +11,7 @@ class UsuarioBase(BaseModel):
     """Base de usuario con campos comunes"""
     nombre: str = Field(..., min_length=3, max_length=100, description="Nombre completo del usuario")
     correo: EmailStr = Field(..., description="Correo electrónico del usuario")
-    rol_id: int = Field(default=1, ge=1, le=3, description="1=Usuario, 2=Admin, 3=SuperAdmin")
+    rol_id: int = Field(default=1, ge=1, le=3, description="1=Usuario, 2=Supervisor, 3=Admin")
 
     @validator('nombre')
     def validar_nombre(cls, v):
@@ -29,7 +29,22 @@ class UsuarioBase(BaseModel):
 class UsuarioCreate(UsuarioBase):
     """Esquema para crear un nuevo usuario"""
     password: str = Field(..., min_length=8, description="Contraseña del usuario")
+    cargo_id: Optional[int] = Field(
+        None,
+        ge=1,
+        description="ID del cargo asignado (opcional). Debe existir en la tabla cargos."
+    )
     
+    # Nuevos campos
+    cedula: Optional[str] = Field(None, max_length=20, description="Cédula de identidad (opcional)")
+    
+    # 👇 CAMBIO: Turno ahora acepta solo 1, 2, 3 o A, B, C
+    turno: str = Field(..., min_length=1, max_length=20, description="Turno del usuario (Ej: 1, 2, 3 o A, B, C)")
+    
+    fecha_ingreso: Optional[date] = Field(None, description="Fecha de ingreso (opcional)")
+    fecha_nacimiento: Optional[date] = Field(None, description="Fecha de nacimiento (opcional)")
+    foto_url: Optional[str] = Field(None, max_length=255, description="URL de la foto de perfil (opcional)")
+
     @validator('password')
     def validar_password(cls, v):
         """Validar fortaleza de la contraseña"""
@@ -44,6 +59,25 @@ class UsuarioCreate(UsuarioBase):
         if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", v):
             raise ValueError('Debe tener al menos un carácter especial (!@#$%^&*(),.?":{}|<>)')
         return v
+
+    # 👇 VALIDACIÓN PARA EL TURNO
+    @validator('turno')
+    def validar_turno(cls, v):
+        """Validar que el turno sea solo 1, 2, 3 (o A, B, C)"""
+        # Limpiamos el texto (quitamos espacios y pasamos a mayúscula)
+        v_limpio = v.strip().upper()
+        
+        # Si el usuario envía "Turno 1", lo convertimos automáticamente a "1"
+        if v_limpio.startswith('TURNO '):
+            v_limpio = v_limpio.replace('TURNO ', '')
+            
+        # Lista de turnos permitidos (puedes quitar las letras si solo usas números)
+        permitidos = ['1', '2', '3', '4', 'A', 'B', 'C']
+        
+        if v_limpio not in permitidos:
+            raise ValueError(f'El turno debe ser uno de los siguientes valores: {", ".join(permitidos)}')
+            
+        return v_limpio
 
 # ==========================================
 # LOGIN
@@ -73,13 +107,33 @@ class UsuarioResponse(UsuarioBase):
     ultimo_login: Optional[datetime] = Field(None, description="Último inicio de sesión")
     intentos_fallidos: Optional[int] = Field(0, description="Intentos fallidos de login")
     bloqueado_hasta: Optional[datetime] = Field(None, description="Fecha de bloqueo")
-    
+
+    # Relación con Cargo
+    cargo_id: Optional[int] = Field(None, description="ID del cargo asignado")
+    cargo: Optional[str] = Field(None, description="Nombre del cargo (resuelto)")
+
+    # Nuevos campos de perfil
+    cedula: Optional[str] = Field(None, description="Cédula de identidad")
+    turno: Optional[str] = Field(None, description="Turno del usuario")
+    fecha_ingreso: Optional[date] = Field(None, description="Fecha de ingreso")
+    fecha_nacimiento: Optional[date] = Field(None, description="Fecha de nacimiento")
+    foto_url: Optional[str] = Field(None, description="URL de la foto de perfil")
+
     model_config = ConfigDict(
         from_attributes=True,
         json_encoders={
-            datetime: lambda dt: dt.isoformat() if dt else None
+            datetime: lambda dt: dt.isoformat() if dt else None,
+            date: lambda d: d.isoformat() if d else None
         }
     )
+
+    @field_validator('cargo', mode='before')
+    @classmethod
+    def resolver_cargo(cls, v):
+        """Extrae el string si SQLAlchemy devuelve el objeto"""
+        if v is not None and hasattr(v, 'nombre'):
+            return v.nombre
+        return v
 
 # ==========================================
 # ACTUALIZACIÓN
@@ -91,7 +145,20 @@ class UsuarioUpdate(BaseModel):
     correo: Optional[EmailStr] = None
     rol_id: Optional[int] = Field(None, ge=1, le=3)
     activo: Optional[bool] = None
+
+    cargo_id: Optional[int] = Field(
+        None,
+        ge=0,
+        description="ID del cargo. Use 0 para quitar el cargo, omitir para no tocarlo."
+    )
     
+    # Nuevos campos actualizables
+    cedula: Optional[str] = Field(None, max_length=20)
+    turno: Optional[str] = Field(None, min_length=1, max_length=20)
+    fecha_ingreso: Optional[date] = None
+    fecha_nacimiento: Optional[date] = None
+    foto_url: Optional[str] = Field(None, max_length=255)
+
     @validator('nombre')
     def validar_nombre(cls, v):
         if v is not None:
@@ -102,6 +169,23 @@ class UsuarioUpdate(BaseModel):
             return v.strip()
         return v
 
+    # 👇 MISMA VALIDACIÓN PARA ACTUALIZACIÓN
+    @validator('turno')
+    def validar_turno(cls, v):
+        """Validar que el turno sea solo 1, 2, 3 (o A, B, C)"""
+        if v is not None:
+            v_limpio = v.strip().upper()
+            if v_limpio.startswith('TURNO '):
+                v_limpio = v_limpio.replace('TURNO ', '')
+                
+            permitidos = ['1', '2', '3', '4', 'A', 'B', 'C']
+            
+            if v_limpio not in permitidos:
+                raise ValueError(f'El turno debe ser uno de los siguientes valores: {", ".join(permitidos)}')
+                
+            return v_limpio
+        return v
+
 # ==========================================
 # CAMBIO DE CONTRASEÑA
 # ==========================================
@@ -110,7 +194,7 @@ class CambioPassword(BaseModel):
     """Esquema para cambiar contraseña"""
     password_actual: str = Field(..., min_length=1, description="Contraseña actual")
     password_nueva: str = Field(..., min_length=8, description="Nueva contraseña")
-    
+
     @validator('password_nueva')
     def validar_password_nueva(cls, v):
         """Validar fortaleza de la nueva contraseña"""
@@ -134,13 +218,15 @@ class Token(BaseModel):
     """Esquema de respuesta con token JWT"""
     access_token: str = Field(..., description="Token de acceso JWT")
     token_type: str = Field(default="bearer", description="Tipo de token")
-    usuario: UsuarioResponse = Field(..., description="Datos del usuario autenticado")
+    role: int = Field(..., description="Rol del usuario autenticado")
+    user: UsuarioResponse = Field(..., description="Datos del usuario autenticado")
 
 class TokenData(BaseModel):
     """Datos contenidos en el token JWT"""
     sub: Optional[str] = Field(None, description="ID del usuario")
     correo: Optional[str] = Field(None, description="Correo del usuario")
     rol: Optional[int] = Field(None, description="Rol del usuario")
+    sid: Optional[str] = Field(None, description="Session ID para control de sesión única")
     exp: Optional[int] = Field(None, description="Expiración del token")
 
 # ==========================================
@@ -155,7 +241,7 @@ class RestablecerPassword(BaseModel):
     """Esquema para restablecer contraseña"""
     token: str = Field(..., description="Token de recuperación")
     nueva_password: str = Field(..., min_length=8, description="Nueva contraseña")
-    
+
     @validator('nueva_password')
     def validar_nueva_password(cls, v):
         """Validar fortaleza de la nueva contraseña"""
@@ -181,6 +267,7 @@ class UsuarioFiltros(BaseModel):
     correo: Optional[str] = Field(None, description="Filtrar por correo")
     rol_id: Optional[int] = Field(None, ge=1, le=3, description="Filtrar por rol")
     activo: Optional[bool] = Field(None, description="Filtrar por estado")
+    cargo_id: Optional[int] = Field(None, description="Filtrar por cargo")
     creado_desde: Optional[datetime] = Field(None, description="Fecha de creación desde")
     creado_hasta: Optional[datetime] = Field(None, description="Fecha de creación hasta")
 
@@ -216,25 +303,38 @@ class MensajeResponse(BaseModel):
 
 class Ejemplos:
     """Ejemplos para la documentación"""
-    
+
     usuario_create = {
         "nombre": "Juan Pérez",
+        "cedula": "V-12345678",
         "correo": "juan@empresa.com",
         "password": "Password123!",
-        "rol_id": 1
+        "rol_id": 1,
+        "cargo_id": 3,
+        "turno": "1",
+        "fecha_ingreso": "2024-01-01",
+        "fecha_nacimiento": "1990-05-15",
+        "foto_url": "https://ejemplo.com/foto.jpg"
     }
-    
+
     usuario_login = {
         "correo": "juan@empresa.com",
         "password": "Password123!"
     }
-    
+
     usuario_response = {
         "id": 1,
         "nombre": "Juan Pérez",
+        "cedula": "V-12345678",
         "correo": "juan@empresa.com",
         "rol_id": 1,
         "activo": True,
         "creado_en": "2024-01-01T10:00:00",
-        "ultimo_login": "2024-01-15T14:30:00"
+        "ultimo_login": "2024-01-15T14:30:00",
+        "cargo_id": 3,
+        "cargo": "Inspector de Calidad",
+        "turno": "1",
+        "fecha_ingreso": "2024-01-01",
+        "fecha_nacimiento": "1990-05-15",
+        "foto_url": "https://ejemplo.com/foto.jpg"
     }

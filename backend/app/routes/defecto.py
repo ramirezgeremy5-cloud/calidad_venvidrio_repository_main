@@ -1,29 +1,30 @@
-# app/routes/defecto.py
-
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, desc  # <-- IMPORTANTE: Agregar estas importaciones
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
+from datetime import datetime, date
+from typing import Optional, List
 
 from app.database.connection import SessionLocal
-
 from app.models.defecto import Defecto
-
+from app.models.produccion import Produccion
+from app.models.defecto_tipo import DefectoTipo
 from app.schemas.defecto import (
     DefectoCreate,
+    DefectoUpdate,
     DefectoResponse,
-    DefectoUpdate
+    TipoDefectoCreate,
+    MarcarLoteAptoRequest,
+    MarcarLoteRetenidoRequest,
+    DefectoTipoResponse,
 )
-
 
 router = APIRouter(
     prefix="/defectos",
     tags=["Defectos"]
 )
 
-
-# ==========================================
-# CONEXIÓN DATABASE
-# ==========================================
+# Clasificaciones oficiales de Venvidrio (Según Glosario)
+CLASIFICACIONES_OFICIALES = ["Crítico", "Mayor B+", "Mayor B-", "Menor"]
 
 
 def get_db():
@@ -34,71 +35,298 @@ def get_db():
         db.close()
 
 
-# ==========================================
-# LISTAR TODOS LOS DEFECTOS
-# ==========================================
-
-
+# =========================
+# LISTAR DEFECTOS (CON FILTROS)
+# =========================
 @router.get("/", response_model=list[DefectoResponse])
+@router.get("", response_model=list[DefectoResponse])
 def listar_defectos(
+    lote: Optional[str] = Query(None, description="Filtrar por código de lote"),
+    lote_id: Optional[int] = Query(None, description="Filtrar por ID del lote"),
+    tipo: Optional[str] = Query(None, description="Filtrar por tipo de defecto"),
+    clase: Optional[str] = Query(None, description="Filtrar por clasificación"),
+    inspector: Optional[str] = Query(None, description="Filtrar por inspector"),
+    fecha_desde: Optional[date] = Query(None, description="Filtrar desde fecha"),
+    fecha_hasta: Optional[date] = Query(None, description="Filtrar hasta fecha"),
+    incluir_semillas: bool = Query(False, description="Incluir registros semilla del catálogo"),
+    skip: int = Query(0),
+    limit: int = Query(500),
     db: Session = Depends(get_db)
 ):
-    return db.query(Defecto).order_by(Defecto.id.desc()).all()
+    """Lista defectos con filtros opcionales. Excluye registros semilla por defecto."""
+    query = db.query(Defecto)
+
+    if not incluir_semillas:
+        query = query.filter(Defecto.origen != "seed")
+
+    if lote:
+        query = query.filter(Defecto.codigo_lote.ilike(f"%{lote}%"))
+    if lote_id:
+        query = query.filter(Defecto.lote_id == lote_id)
+    if tipo:
+        query = query.filter(Defecto.tipo_defecto.ilike(f"%{tipo}%"))
+    if clase:
+        query = query.filter(Defecto.clasificacion == clase)
+    if inspector:
+        query = query.filter(Defecto.inspector.ilike(f"%{inspector}%"))
+    if fecha_desde:
+        query = query.filter(Defecto.fecha_registro >= datetime.combine(fecha_desde, datetime.min.time()))
+    if fecha_hasta:
+        query = query.filter(Defecto.fecha_registro <= datetime.combine(fecha_hasta, datetime.max.time()))
+
+    query = query.order_by(Defecto.fecha_registro.desc())
+    return query.offset(skip).limit(limit).all()
 
 
-# ==========================================
-# OBTENER DEFECTO POR ID
-# ==========================================
+# =========================
+# OPCIONES REGISTRADAS (para Datalists)
+# =========================
+@router.get("/opciones", response_model=dict)
+def obtener_opciones_registradas(db: Session = Depends(get_db)):
+    """Devuelve valores únicos ya registrados, ordenados por frecuencia."""
+
+    tipos_maestros = db.query(DefectoTipo.nombre).filter(DefectoTipo.activo == True).all()
+    
+    base = db.query(Defecto).filter(Defecto.origen != "seed")
+    
+    zonas = base.with_entities(
+        Defecto.zona_deteccion,
+        func.count(Defecto.zona_deteccion).label('total')
+    ).filter(Defecto.zona_deteccion.isnot(None)).group_by(Defecto.zona_deteccion).order_by(func.count(Defecto.zona_deteccion).desc()).limit(30).all()
+
+    inspectores = base.with_entities(
+        Defecto.inspector,
+        func.count(Defecto.inspector).label('total')
+    ).group_by(Defecto.inspector).order_by(func.count(Defecto.inspector).desc()).limit(30).all()
+
+    return {
+        "tipos": [t[0] for t in tipos_maestros if t[0]],
+        "zonas": [z[0] for z in zonas if z[0]],
+        "inspectores": [i[0] for i in inspectores if i[0]],
+        "clasificaciones": CLASIFICACIONES_OFICIALES
+    }
 
 
+# =========================
+# TIPOS DE DEFECTO POR CLASIFICACIÓN (TABLA MAESTRA)
+# =========================
+@router.get("/tipos", response_model=list[str])
+def obtener_tipos_por_clasificacion(
+    clasificacion: Optional[str] = Query(None, description="Clasificación para filtrar"),
+    db: Session = Depends(get_db)
+):
+    """
+    Devuelve los nombres de los tipos de defecto desde la tabla maestra `tipos_defecto`.
+    Se usa para el datalist dinámico en el frontend.
+    """
+    query = db.query(DefectoTipo.nombre).filter(DefectoTipo.activo == True)
+
+    if clasificacion:
+        if clasificacion not in CLASIFICACIONES_OFICIALES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Clasificación inválida. Debe ser una de: {', '.join(CLASIFICACIONES_OFICIALES)}"
+            )
+        query = query.filter(DefectoTipo.clasificacion == clasificacion)
+
+    tipos = [t[0] for t in query.order_by(DefectoTipo.nombre).distinct().all() if t[0]]
+    return tipos
+
+
+@router.post("/tipos", response_model=DefectoTipoResponse, status_code=201)
+def registrar_tipo_defecto(
+    datos: TipoDefectoCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    Registra un nuevo tipo de defecto en la tabla maestra `tipos_defecto`.
+    Si ya existe (mismo nombre y clasificación), devuelve el existente.
+    """
+    if datos.clasificacion not in CLASIFICACIONES_OFICIALES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Clasificación inválida. Debe ser una de: {', '.join(CLASIFICACIONES_OFICIALES)}"
+        )
+
+    existente = db.query(DefectoTipo).filter(
+        DefectoTipo.nombre.ilike(datos.tipo_defecto),
+        DefectoTipo.clasificacion == datos.clasificacion
+    ).first()
+
+    if existente:
+        return existente
+
+    nuevo_tipo = DefectoTipo(
+        clasificacion=datos.clasificacion,
+        nombre=datos.tipo_defecto.strip(),
+        activo=True
+    )
+    db.add(nuevo_tipo)
+    db.commit()
+    db.refresh(nuevo_tipo)
+    
+    return nuevo_tipo
+
+
+# =========================
+# ESTADÍSTICAS (Con 4 clasificaciones oficiales)
+# =========================
+@router.get("/estadisticas", response_model=dict)
+def obtener_estadisticas(db: Session = Depends(get_db)):
+    """Devuelve estadísticas desglosadas por las 4 clasificaciones oficiales."""
+    base = db.query(Defecto).filter(Defecto.origen != "seed")
+
+    total = base.with_entities(func.count(Defecto.id)).scalar() or 0
+    criticos = base.with_entities(func.count(Defecto.id)).filter(Defecto.clasificacion == "Crítico").scalar() or 0
+    mayores_bplus = base.with_entities(func.count(Defecto.id)).filter(Defecto.clasificacion == "Mayor B+").scalar() or 0
+    mayores_bminus = base.with_entities(func.count(Defecto.id)).filter(Defecto.clasificacion == "Mayor B-").scalar() or 0
+    menores = base.with_entities(func.count(Defecto.id)).filter(Defecto.clasificacion == "Menor").scalar() or 0
+
+    return {
+        "total": total,
+        "criticos": criticos,
+        "mayores_bplus": mayores_bplus,
+        "mayores_bminus": mayores_bminus,
+        "menores": menores
+    }
+
+
+# =========================
+# OBTENER UN DEFECTO
+# =========================
 @router.get("/{defecto_id}", response_model=DefectoResponse)
-def obtener_defecto(
-    defecto_id: int,
-    db: Session = Depends(get_db)
-):
+def obtener_defecto(defecto_id: int, db: Session = Depends(get_db)):
     defecto = db.query(Defecto).filter(Defecto.id == defecto_id).first()
     if not defecto:
-        raise HTTPException(
-            status_code=404,
-            detail="Defecto no encontrado"
-        )
+        raise HTTPException(status_code=404, detail="Defecto no encontrado.")
     return defecto
 
 
-# ==========================================
-# CREAR DEFECTO
-# ==========================================
-
-
-@router.post("/", response_model=DefectoResponse)
-def crear_defecto(
-    defecto: DefectoCreate,
+# ========================================================
+# CREAR DEFECTOS (MÚLTIPLES)
+# ========================================================
+@router.post("/", response_model=List[DefectoResponse], status_code=201)
+@router.post("", response_model=List[DefectoResponse], status_code=201)
+def crear_defectos(
+    datos: List[DefectoCreate],
     db: Session = Depends(get_db)
 ):
-    nuevo_defecto = Defecto(
-        codigo_lote=defecto.codigo_lote,
-        tipo_producto=defecto.tipo_producto,
-        tipo_defecto=defecto.tipo_defecto,
-        clasificacion=defecto.clasificacion,
-        cantidad_piezas=defecto.cantidad_piezas,
-        zona_deteccion=defecto.zona_deteccion,
-        inspector=defecto.inspector,
-        descripcion=defecto.descripcion,
-        ubicacion_pieza=defecto.ubicacion_pieza
-    )
+    """
+    Registra un conjunto de defectos vinculados a un lote.
+    - Recibe una lista de defectos desde el frontend.
+    - Valida el lote y las clasificaciones.
+    - Actualiza el lote a RETENIDO (300).
+    - Guarda la info de muestra (tamaños, botellas por caja, etc.)
+    """
+    if not datos:
+        raise HTTPException(status_code=400, detail="No se enviaron defectos.")
 
-    db.add(nuevo_defecto)
+    lote_id = datos[0].lote_id
+    if not lote_id:
+        raise HTTPException(status_code=400, detail="El lote_id es obligatorio.")
+
+    # 1. Verificar que el lote existe
+    lote = db.query(Produccion).filter(Produccion.id == lote_id).first()
+    if not lote:
+        raise HTTPException(status_code=404, detail=f"El lote ID {lote_id} no existe.")
+
+    # 2. Validar clasificaciones
+    for d in datos:
+        if d.clasificacion not in CLASIFICACIONES_OFICIALES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Clasificación '{d.clasificacion}' inválida. Debe ser una de: {', '.join(CLASIFICACIONES_OFICIALES)}"
+            )
+
+    # 3. Crear los objetos Defecto
+    nuevos_defectos = []
+    for d in datos:
+        nuevo = Defecto(
+            lote_id=lote_id,
+            codigo_lote=lote.codigo_lote,
+            # Datos del grupo
+            grupo_id=d.grupo_id,
+            # Datos del defecto
+            tipo_defecto=d.tipo_defecto,
+            clasificacion=d.clasificacion,
+            cantidad_piezas=d.cantidad_piezas,
+            zona_deteccion=d.zona_deteccion,
+            inspector=d.inspector,
+            descripcion=d.descripcion,
+            observaciones=d.observaciones,
+            resultado_lote=d.resultado_lote or "RETENIDO",
+            origen="manual",
+            validado=True,
+            # Datos de muestra
+            tamano_muestra=d.tamano_muestra,
+            canastas_inspeccionadas=d.canastas_inspeccionadas,
+            tamano_poblacion=d.tamano_poblacion,
+            botellas_por_caja=d.botellas_por_caja,
+            botellas_por_paleta=d.botellas_por_paleta,
+            gruesas_por_paleta=d.gruesas_por_paleta
+        )
+        nuevos_defectos.append(nuevo)
+
+    try:
+        # 4. Guardar todos los defectos en una transacción
+        db.add_all(nuevos_defectos)
+        
+        # 5. Actualizar el lote
+        lote.estatus = '300'
+        
+        # Tomamos las observaciones del primer defecto (que son las generales)
+        if datos[0].observaciones:
+            lote.observaciones = datos[0].observaciones.strip()
+        elif not lote.observaciones:
+            lote.observaciones = f"Lote con {len(datos)} defecto(s) registrado(s)."
+
+        # Guardar el tamaño de muestra general en el lote (del primer defecto)
+        if datos[0].tamano_muestra is not None:
+            lote.tamano_muestra = str(datos[0].tamano_muestra)
+        if datos[0].canastas_inspeccionadas is not None:
+            lote.paletas = datos[0].canastas_inspeccionadas
+
+        db.commit()
+        
+        # Refrescar los objetos para obtener sus IDs
+        for nd in nuevos_defectos:
+            db.refresh(nd)
+            
+        return nuevos_defectos
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al guardar los defectos: {str(e)}")
+
+
+# ========================================================
+# ELIMINAR DEFECTOS DE UN LOTE (Devolver a Evaluación)
+# ========================================================
+@router.delete("/lote/{lote_id}", status_code=204)
+def eliminar_defectos_por_lote(lote_id: int, db: Session = Depends(get_db)):
+    """
+    Elimina todos los defectos asociados a un lote y devuelve el lote a estatus 100.
+    Útil para corregir errores de registro.
+    """
+    lote = db.query(Produccion).filter(Produccion.id == lote_id).first()
+    if not lote:
+        raise HTTPException(status_code=404, detail="Lote no encontrado.")
+
+    # Eliminar los defectos de la tabla
+    db.query(Defecto).filter(Defecto.lote_id == lote_id).delete()
+    
+    # Devolver el lote a evaluación
+    lote.estatus = "100"
+    lote.estado_auditoria = "pendiente"
+    lote.observaciones = ""
+    
     db.commit()
-    db.refresh(nuevo_defecto)
-
-    return nuevo_defecto
+    return None
 
 
-# ==========================================
+# =========================
 # ACTUALIZAR DEFECTO
-# ==========================================
-
-
+# =========================
 @router.put("/{defecto_id}", response_model=DefectoResponse)
 def actualizar_defecto(
     defecto_id: int,
@@ -107,118 +335,101 @@ def actualizar_defecto(
 ):
     defecto = db.query(Defecto).filter(Defecto.id == defecto_id).first()
     if not defecto:
+        raise HTTPException(status_code=404, detail="Defecto no encontrado.")
+
+    if datos.clasificacion is not None and datos.clasificacion not in CLASIFICACIONES_OFICIALES:
         raise HTTPException(
-            status_code=404,
-            detail="Defecto no encontrado"
+            status_code=400,
+            detail=f"Clasificación inválida. Debe ser una de: {', '.join(CLASIFICACIONES_OFICIALES)}"
         )
 
-    # Actualizar solo los campos que vienen en la petición
-    if datos.codigo_lote is not None:
-        defecto.codigo_lote = datos.codigo_lote
-
-    if datos.tipo_producto is not None:
-        defecto.tipo_producto = datos.tipo_producto
-
-    if datos.tipo_defecto is not None:
-        defecto.tipo_defecto = datos.tipo_defecto
-
-    if datos.clasificacion is not None:
-        defecto.clasificacion = datos.clasificacion
-
-    if datos.cantidad_piezas is not None:
-        defecto.cantidad_piezas = datos.cantidad_piezas
-
-    if datos.zona_deteccion is not None:
-        defecto.zona_deteccion = datos.zona_deteccion
-
-    if datos.inspector is not None:
-        defecto.inspector = datos.inspector
-
-    if datos.descripcion is not None:
-        defecto.descripcion = datos.descripcion
-
-    if datos.ubicacion_pieza is not None:
-        defecto.ubicacion_pieza = datos.ubicacion_pieza
+    for campo, valor in datos.dict(exclude_unset=True).items():
+        if valor is not None:
+            setattr(defecto, campo, valor)
 
     db.commit()
     db.refresh(defecto)
-
     return defecto
 
 
-# ==========================================
-# ELIMINAR DEFECTO
-# ==========================================
-
-
-@router.delete("/{defecto_id}")
-def eliminar_defecto(
-    defecto_id: int,
-    db: Session = Depends(get_db)
-):
+# =========================
+# ELIMINAR UN DEFECTO INDIVIDUAL
+# =========================
+@router.delete("/{defecto_id}", status_code=204)
+def eliminar_defecto(defecto_id: int, db: Session = Depends(get_db)):
     defecto = db.query(Defecto).filter(Defecto.id == defecto_id).first()
     if not defecto:
-        raise HTTPException(
-            status_code=404,
-            detail="Defecto no encontrado"
-        )
-
+        raise HTTPException(status_code=404, detail="Defecto no encontrado.")
     db.delete(defecto)
     db.commit()
+    return None
+
+
+# =========================
+# MARCAR LOTE COMO APTO
+# =========================
+@router.post("/lote/{lote_id}/apto", status_code=200)
+def marcar_lote_apto(
+    lote_id: int,
+    datos: MarcarLoteAptoRequest,
+    db: Session = Depends(get_db)
+):
+    lote = db.query(Produccion).filter(Produccion.id == lote_id).first()
+    if not lote:
+        raise HTTPException(status_code=404, detail="Lote no encontrado.")
+
+    lote.estatus = '200'
+
+    if datos.observaciones:
+        lote.observaciones = datos.observaciones.strip()
+
+    if datos.tamano_muestra is not None:
+        lote.tamano_muestra = str(datos.tamano_muestra)
+        
+    if datos.canastas_inspeccionadas is not None:
+        lote.paletas = datos.canastas_inspeccionadas
+
+    db.commit()
+    db.refresh(lote)
 
     return {
-        "mensaje": "Defecto eliminado correctamente",
-        "id_eliminado": defecto_id
+        "mensaje": f"Lote {lote.codigo_lote} marcado como APTO",
+        "lote_id": lote.id,
+        "codigo_lote": lote.codigo_lote,
+        "estatus": lote.estatus,
+        "observaciones": lote.observaciones
     }
 
 
-# ==========================================
-# ESTADÍSTICAS DE DEFECTOS (para Dashboard)
-# ==========================================
-
-
-@router.get("/estadisticas")
-def estadisticas_defectos(
+# =========================
+# MARCAR LOTE COMO RETENIDO (FALLBACK)
+# =========================
+@router.post("/lote/{lote_id}/retenido", status_code=200)
+def marcar_lote_retenido(
+    lote_id: int,
+    datos: MarcarLoteRetenidoRequest,
     db: Session = Depends(get_db)
 ):
-    """Devuelve estadísticas de defectos para el dashboard"""
+    lote = db.query(Produccion).filter(Produccion.id == lote_id).first()
+    if not lote:
+        raise HTTPException(status_code=404, detail="Lote no encontrado.")
 
-    # Total de defectos
-    total = db.query(func.count(Defecto.id)).scalar() or 0
+    if not datos.observaciones or not datos.observaciones.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Debe proporcionar observaciones para marcar el lote como RETENIDO."
+        )
 
-    # Defectos por clasificación
-    criticos = db.query(func.count(Defecto.id)).filter(
-        Defecto.clasificacion == "Crítico"
-    ).scalar() or 0
+    lote.estatus = '300'
+    lote.observaciones = datos.observaciones.strip()
 
-    mayores = db.query(func.count(Defecto.id)).filter(
-        Defecto.clasificacion == "Mayor"
-    ).scalar() or 0
-
-    menores = db.query(func.count(Defecto.id)).filter(
-        Defecto.clasificacion == "Menor"
-    ).scalar() or 0
-
-    # Top 5 productos con más defectos
-    top_productos = db.query(
-        Defecto.tipo_producto,
-        func.count(Defecto.id).label('total')
-    ).group_by(
-        Defecto.tipo_producto
-    ).order_by(
-        desc('total')
-    ).limit(5).all()
+    db.commit()
+    db.refresh(lote)
 
     return {
-        "total": total,
-        "criticos": criticos,
-        "mayores": mayores,
-        "menores": menores,
-        "top_productos": [
-            {
-                "producto": p[0] or "Sin especificar",
-                "defectos": p[1]
-            }
-            for p in top_productos
-        ]
+        "mensaje": f"Lote {lote.codigo_lote} marcado como RETENIDO",
+        "lote_id": lote.id,
+        "codigo_lote": lote.codigo_lote,
+        "estatus": lote.estatus,
+        "observaciones": lote.observaciones
     }

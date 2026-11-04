@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Producción — Venvidrio CQ</title>
+  <title>Producción — MoonDRAGO</title>
   <link rel="stylesheet" href="../assets/css/shared.css"/>
   <link rel="stylesheet" href="../assets/css/produccion.css"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
@@ -12,40 +12,47 @@
 
 <!-- NAVBAR -->
 <nav class="navbar">
-  <div class="nav-brand">VENV<span>IDRIO</span></div>
-  <ul class="nav-links">
-    <li>
-      <a href="../public/dashboard.html">
-        <i class="ti ti-layout-dashboard"></i>
-        Panel Principal
-      </a>
-    </li>
+  <div class="nav-brand">
+    <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
+  </div>
+
+  <!-- Enlaces del menú -->
+  <ul class="nav-links" id="navLinks">
+    <li><a href="../public/dashboard.html"><i class="ti ti-layout-dashboard"></i> Panel Principal</a></li>
     <li><a href="../pages/produccion.html" class="active"><i class="ti ti-building-factory-2"></i> Producción</a></li>
     <li><a href="../pages/defectos.html"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
     <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
-    <li><a href="../pages/auditoria.html"><i class="ti ti-clipboard-check"></i> Auditoría</a></li>
-    <li><a href="../pages/auditoria_producto.html" class="active"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
+    <li><a href="../pages/auditoria_interna.html"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a></li>
+    <li><a href="../pages/auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
+    <li id="navUsuariosLink" style="display:none;">
+      <a href="../pages/usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
+    </li>
   </ul>
 
-  <!-- ===== ÁREA DE USUARIO CON DROPDOWN ===== -->
-<div class="nav-user" id="navUserContainer">
-  <div class="nav-avatar-circle" id="navAvatar">US</div>
-  <span class="nav-username" id="navUsername">Cargando...</span>
-
-  <div class="user-dropdown" id="userDropdown">
-    <div class="dropdown-header">
-      <div class="dropdown-avatar-circle" id="dropdownAvatar">US</div>
-      <div>
-        <div class="dropdown-name" id="dropdownName">Cargando...</div>
-        <div class="dropdown-email" id="dropdownEmail">cargando@email.com</div>
+  <div class="nav-user" id="navUserContainer">
+    <div class="nav-avatar-circle" id="navAvatar">US</div>
+    <span class="nav-username" id="navUsername">Cargando...</span>
+    <div class="user-dropdown" id="userDropdown">
+      <div class="dropdown-header">
+        <div class="dropdown-avatar-circle" id="dropdownAvatar">US</div>
+        <div>
+          <div class="dropdown-name" id="dropdownName">Cargando...</div>
+          <div class="dropdown-email" id="dropdownEmail">cargando@email.com</div>
+        </div>
       </div>
+      <div class="dropdown-divider"></div>
+      
+      <!-- BOTÓN "MI PERFIL" -->
+      <a class="dropdown-item" id="dropdownPerfil" style="cursor:pointer;">
+        <i class="ti ti-user-circle"></i> Mi Perfil
+      </a>
+      <div class="dropdown-divider"></div>
+      
+      <a class="dropdown-item dropdown-danger" id="dropdownLogout">
+        <i class="ti ti-logout"></i> Cerrar Sesión
+      </a>
     </div>
-    <div class="dropdown-divider"></div>
-    <a class="dropdown-item dropdown-danger" id="dropdownLogout">
-      <i class="ti ti-logout"></i> Cerrar Sesión
-    </a>
   </div>
-</div>
 </nav>
 
 <!-- CONTENIDO -->
@@ -53,13 +60,13 @@
 
   <div class="page-header">
     <h1>Registro de la Producción</h1>
-    <p>Complete la información del lote producido</p>
+    <p>Complete los pasos en orden. Los campos con <strong style="color:#1976d2;">(auto)</strong> se calculan o autocompletan automáticamente.</p>
   </div>
 
-  <div class="ultima-actualizacion" style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-hint);margin-bottom:1rem;">
+  <div class="ultima-actualizacion">
     <i class="ti ti-clock"></i>
     Última actualización: <span id="ultima-actualizacion">--:--:--</span>
-    <button class="btn-refresh" onclick="window.recargarProduccion()" title="Recargar datos (Ctrl+R)" style="background:none;border:none;cursor:pointer;color:var(--text-hint);padding:2px 6px;border-radius:4px;transition:all var(--transition);font-size:14px;">
+    <button type="button" class="btn-refresh" onclick="window.recargarProduccion()" title="Recargar datos (Ctrl+R)">
       <i class="ti ti-refresh"></i>
     </button>
   </div>
@@ -82,7 +89,7 @@
       <div class="stat-sub" id="estado-lineas">Cargando líneas...</div>
     </div>
     <div class="stat-card" style="animation-delay:0.2s">
-      <div class="stat-label">Rechazos</div>
+      <div class="stat-label">Pendientes por Auditar</div>
       <div class="stat-value danger" id="cnt-rechazos"><span class="skeleton"></span></div>
       <div class="stat-sub" id="pct-rechazos">0% del total</div>
     </div>
@@ -97,99 +104,410 @@
         <span class="badge badge-info">Nuevo</span>
       </div>
       <div class="card-body">
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:1rem;">
-          <i class="ti ti-info-circle" style="color:var(--navy);"></i>
-          Complete los campos. Si escribe un valor nuevo, quedará registrado para futuras selecciones.
-        </p>
 
-        <div class="grid-2">
-          
-          <!-- LÍNEA -->
-          <div class="field">
-            <label for="linea">Línea de Producción *</label>
-            <input type="text" id="linea" list="lista-lineas" placeholder="Escriba o seleccione línea..." style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
-            <datalist id="lista-lineas">
-              <!-- Las opciones se cargarán dinámicamente desde el Backend -->
-            </datalist>
-          </div>
+        <!-- PASO 1: CONTEXTO DE LA PRODUCCIÓN -->
+        <div class="form-section">
+          <h3 class="form-section-title">
+            <span class="step-number">1</span>
+            Contexto de la Producción
+          </h3>
+          <p class="form-section-desc">Defina dónde y cuándo se está fabricando este lote.</p>
+          <div class="grid-2">
 
-          <!-- TIPO DE MOLDE -->
-          <div class="field">
-            <label for="producto">Tipo de Molde *</label>
-            <input type="text" id="producto" list="lista-moldes" placeholder="Escriba o seleccione molde..." style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
-            <datalist id="lista-moldes">
-              <!-- Las opciones se cargarán dinámicamente desde el Backend -->
-            </datalist>
-          </div>
+            <div class="field">
+              <label for="planta">Planta *</label>
+              <select id="planta">
+                <option value="">Seleccionar</option>
+                <option value="Valera">Planta Valera</option>
+                <option value="Los Guayos">Planta Los Guayos</option>
+              </select>
+              <small class="field-hint">Planta donde se fabrica el lote</small>
+            </div>
 
-          <!-- CÓDIGO DE LOTE -->
-          <div class="field">
-            <label for="lote-id">Código de Lote</label>
-            <input type="text" id="lote-id" placeholder="PROD-2026-0001" disabled style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:#f5f5f5;cursor:not-allowed;color:var(--text-muted);" />
-            <small style="font-size:10px;color:var(--text-hint);">Se genera automáticamente</small>
-          </div>
+            <div class="field">
+              <label for="fecha-prod">Fecha de Producción *</label>
+              <input type="date" id="fecha-prod" />
+              <small class="field-hint">Fecha del día de fabricación</small>
+            </div>
 
-          <!-- FECHA -->
-          <div class="field">
-            <label for="fecha-prod">Fecha</label>
-            <input type="date" id="fecha-prod" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
-          </div>
+            <div class="field">
+              <label for="turno">Turno (SHIFT) *</label>
+              <!-- 👇 CAMBIO: Solo números del 1 al 4 -->
+              <select id="turno">
+                <option value="">Seleccionar</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+              </select>
+              <small class="field-hint">Turno de trabajo</small>
+            </div>
 
-          <!-- TURNO -->
-          <div class="field">
-            <label for="turno">Turno *</label>
-            <input type="text" id="turno" list="lista-turnos" placeholder="Escriba o seleccione turno..." style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
-            <datalist id="lista-turnos">
-              <!-- Las opciones se cargarán dinámicamente desde el Backend -->
-            </datalist>
           </div>
-
-          <!-- OPERADOR -->
-          <div class="field">
-            <label for="operador">Operador *</label>
-            <input type="text" id="operador" list="lista-operadores" placeholder="Escriba o seleccione operador..." style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
-            <datalist id="lista-operadores">
-              <!-- Las opciones se cargarán dinámicamente desde el Backend -->
-            </datalist>
-          </div>
-
-          <!-- CANTIDAD -->
-          <div class="field">
-            <label for="cantidad">Cantidad (unidades) *</label>
-            <input type="number" id="cantidad" placeholder="0" min="1" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
-          </div>
-
-          <!-- PALETAS -->
-          <div class="field">
-            <label for="paletas">Paletas</label>
-            <input type="number" id="paletas" placeholder="0" min="0" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
-          </div>
-
-          <!-- GRUESAS -->
-          <div class="field">
-            <label for="gruesas">Gruesas</label>
-            <input type="number" id="gruesas" placeholder="0" step="0.1" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
-          </div>
-
-          <!-- CLIENTE -->
-          <div class="field">
-            <label for="cliente">Cliente Destino *</label>
-            <input type="text" id="cliente" list="lista-clientes" placeholder="Escriba o seleccione cliente..." style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
-            <datalist id="lista-clientes">
-              <!-- Las opciones se cargarán dinámicamente desde el Backend -->
-            </datalist>
-          </div>
-          
         </div>
 
-        <div class="field">
-          <label for="obs-prod">Observaciones</label>
-          <textarea id="obs-prod" placeholder="Notas adicionales del lote (opcional)..." rows="3" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;resize:vertical;min-height:60px;"></textarea>
+        <!-- PASO 2: SELECCIÓN DEL PRODUCTO -->
+        <div class="form-section">
+          <h3 class="form-section-title">
+            <span class="step-number">2</span>
+            Selección del Producto
+          </h3>
+          <p class="form-section-desc">
+            Seleccione un producto del catálogo o registre uno nuevo.
+            Los campos técnicos se autocompletan y bloquean para productos existentes.
+          </p>
+          <div class="grid-2">
+
+            <!-- PRODUCTO -->
+            <div class="field" style="grid-column:1/-1;">
+              <label for="producto-select">Producto / Ítem *</label>
+              <div class="select-with-button">
+                <select id="producto-select">
+                  <option value="">-- Seleccione un producto --</option>
+                </select>
+                <button type="button" class="btn-new" id="btn-nuevo-producto" title="Registrar producto nuevo">
+                  <i class="ti ti-plus"></i> Nuevo
+                </button>
+              </div>
+
+              <div class="input-nuevo-wrapper" id="producto-nuevo-wrapper" style="display:none;">
+                <input type="text" id="producto-nuevo" class="input-nuevo"
+                  placeholder="Escriba el nombre del nuevo producto / prototipo..." />
+                <button type="button" class="btn-clear-input" id="btn-cancelar-producto" title="Cancelar">
+                  <i class="ti ti-x"></i>
+                </button>
+              </div>
+
+              <small class="field-hint" id="producto-hint">
+                Seleccione un producto del catálogo o cree uno nuevo
+              </small>
+
+              <div class="aviso-nuevo-producto" id="aviso-nuevo-producto" style="display:none;">
+                <i class="ti ti-info-circle"></i>
+                <span><strong>Producto nuevo:</strong> los campos técnicos, dimensiones, material y boca se desbloquean para entrada manual. Al guardar, puede añadir esta ficha al catálogo maestro.</span>
+              </div>
+            </div>
+
+            <!-- FICHA TÉCNICA -->
+            <div class="field field-auto">
+              <label for="item">Item</label>
+              <input type="text" id="item" placeholder="Se carga del producto" readonly />
+              <small class="field-hint">Código del item (ej: V-0002753)</small>
+            </div>
+
+            <div class="field field-auto">
+              <label for="acabado">Acabado (Finished)</label>
+              <input type="text" id="acabado" placeholder="Se carga del producto" readonly />
+              <small class="field-hint">Tipo de acabado del envase</small>
+            </div>
+
+            <div class="field field-auto">
+              <label for="material">Material</label>
+              <input type="text" id="material" list="lista-materiales" placeholder="Se carga del producto" readonly />
+              <datalist id="lista-materiales">
+                <option value="Vidrio transparente"></option>
+                <option value="Vidrio ámbar"></option>
+                <option value="Vidrio verde"></option>
+                <option value="Vidrio azul"></option>
+                <option value="Vidrio opal"></option>
+              </datalist>
+              <small class="field-hint">Material del envase</small>
+            </div>
+
+            <div class="field field-auto">
+              <label for="tipo_boca">Tipo de Boca / Rosca</label>
+              <input type="text" id="tipo_boca" list="lista-bocas" placeholder="Se carga del producto" readonly />
+              <datalist id="lista-bocas">
+                <option value="Rosca 28mm"></option>
+                <option value="Rosca 38mm"></option>
+                <option value="Rosca 43mm"></option>
+                <option value="Corona 26mm"></option>
+                <option value="Corona 29mm"></option>
+                <option value="Tapa a presión"></option>
+                <option value="Twist-off"></option>
+              </datalist>
+              <small class="field-hint">Tipo de boca o rosca del envase</small>
+            </div>
+
+            <div class="field field-auto" id="field-capacidad">
+              <label for="capacidad">CAP (Volumen Nominal)</label>
+              <div class="capacidad-grupo">
+                <input type="number" id="capacidad" placeholder="Ej: 222" step="0.001" min="0"
+                  inputmode="decimal" readonly />
+                <select id="capacidad_unidad" title="Unidad del volumen">
+                  <option value="ml" selected>ml</option>
+                  <option value="l">L</option>
+                </select>
+              </div>
+              <small class="field-hint" id="capacidad-hint">
+                Escriba el volumen exacto (222, 222.5, 375...) y elija la unidad. No está limitado a valores fijos.
+              </small>
+            </div>
+
+            <div class="field">
+              <label for="bpp">BPP (Botellas por Paleta)</label>
+              <input type="number" id="bpp" placeholder="Ej: 240" step="0.001" />
+              <small class="field-hint">Botellas totales por paleta (entrada manual)</small>
+            </div>
+
+            <div class="field" id="field-bpc">
+              <label for="bpc">Bot. por Caja / Canasta</label>
+              <input type="number" id="bpc" min="1" placeholder="Ej: 24" />
+              <small class="field-hint">Botellas que entran en una caja o canasta</small>
+            </div>
+
+            <div class="field field-auto" style="grid-column:1/-1;">
+              <label for="juego_envases">Juego de Envases (Cav. Nº)</label>
+              <input type="text" id="juego_envases" placeholder="Se carga del producto (ej: 12 x 4)" readonly />
+              <small class="field-hint">Nº Secciones × Nº Gotas — configuración de la máquina formadora IS</small>
+            </div>
+
+            <!-- DIMENSIONES FÍSICAS -->
+            <div class="field" id="field-dimensiones" style="grid-column:1/-1; display:none;">
+              <label>Dimensiones Físicas del Envase <span class="label-optional">(solo producto nuevo)</span></label>
+
+              <div class="geometria-toggle" role="tablist">
+                <button type="button" class="geo-btn active" data-geo="cilindrico" role="tab">
+                  <i class="ti ti-circle"></i> Cilíndrico
+                </button>
+                <button type="button" class="geo-btn" data-geo="rectangular" role="tab">
+                  <i class="ti ti-square"></i> Rectangular / Cuadrado
+                </button>
+              </div>
+
+              <div class="dim-panel" id="dim-cilindrico">
+                <div class="input-pair">
+                  <div class="dim-input">
+                    <label for="dim_diametro" class="dim-sublabel">Diámetro (Ø)</label>
+                    <input type="text" id="dim_diametro" placeholder="Ej: 6.0 cm" inputmode="decimal" />
+                  </div>
+                  <span class="pair-separator">×</span>
+                  <div class="dim-input">
+                    <label for="dim_altura_cil" class="dim-sublabel">Altura (H)</label>
+                    <input type="text" id="dim_altura_cil" placeholder="Ej: 20.1 cm" inputmode="decimal" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="dim-panel" id="dim-rectangular" style="display:none;">
+                <div class="input-pair input-pair-3">
+                  <div class="dim-input">
+                    <label for="dim_largo" class="dim-sublabel">Largo (L)</label>
+                    <input type="text" id="dim_largo" placeholder="Ej: 7.5 cm" inputmode="decimal" />
+                  </div>
+                  <span class="pair-separator">×</span>
+                  <div class="dim-input">
+                    <label for="dim_ancho" class="dim-sublabel">Ancho (A)</label>
+                    <input type="text" id="dim_ancho" placeholder="Ej: 5.0 cm" inputmode="decimal" />
+                  </div>
+                  <span class="pair-separator">×</span>
+                  <div class="dim-input">
+                    <label for="dim_alto" class="dim-sublabel">Alto (H)</label>
+                    <input type="text" id="dim_alto" placeholder="Ej: 20.0 cm" inputmode="decimal" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="dim-preview" id="dim-preview" style="display:none;">
+                <i class="ti ti-ruler-measure"></i>
+                <span>Se guardará como: <strong id="dim-preview-text">—</strong></span>
+              </div>
+            </div>
+
+            <!-- MOLDE -->
+            <div class="field">
+              <label for="molde">Molde (MOLD) *</label>
+              <input type="text" id="molde" list="lista-moldes" placeholder="Ej: EV01838" />
+              <datalist id="lista-moldes"></datalist>
+              <small class="field-hint">Código del herramental en producción</small>
+            </div>
+
+            <!-- CLIENTE -->
+            <div class="field">
+              <label for="cliente-select">Cliente Destino *</label>
+              <div class="select-with-button">
+                <select id="cliente-select">
+                  <option value="">-- Seleccione un cliente --</option>
+                </select>
+                <button type="button" class="btn-new" id="btn-nuevo-cliente" title="Registrar cliente nuevo">
+                  <i class="ti ti-plus"></i> Nuevo
+                </button>
+              </div>
+              <div class="input-nuevo-wrapper" id="cliente-nuevo-wrapper" style="display:none;">
+                <input type="text" id="cliente-nuevo" class="input-nuevo" placeholder="Escriba el nombre del nuevo cliente..." />
+                <button type="button" class="btn-clear-input" id="btn-cancelar-cliente" title="Cancelar">
+                  <i class="ti ti-x"></i>
+                </button>
+              </div>
+              <small class="field-hint">Seleccione uno existente o cree uno nuevo</small>
+            </div>
+
+          </div>
         </div>
 
-        <div class="flex gap-2" style="margin-top:0.5rem">
-          <button class="btn btn-primary" id="btn-registrar"><i class="ti ti-device-floppy"></i> Guardar Lote</button>
-          <button class="btn btn-outline" id="btn-limpiar"><i class="ti ti-eraser"></i> Limpiar</button>
+        <!-- PASO 3: GENERACIÓN DE TRAZABILIDAD -->
+        <div class="form-section">
+          <h3 class="form-section-title">
+            <span class="step-number">3</span>
+            Generación de Trazabilidad
+          </h3>
+          <p class="form-section-desc">Identifique el lote y asigne los datos de la línea de producción.</p>
+          <div class="grid-2">
+
+            <div class="field">
+              <label for="maquina">Máquina (MACH) *</label>
+              <select id="maquina">
+                <option value="">Seleccionar máquina...</option>
+                <option value="A1">A1</option>
+                <option value="A2">A2</option>
+                <option value="A3">A3</option>
+                <option value="A4">A4</option>
+                <option value="B1">B1</option>
+                <option value="B2">B2</option>
+                <option value="B3">B3</option>
+                <option value="B4">B4</option>
+                <option value="C1">C1</option>
+                <option value="C2">C2</option>
+                <option value="C3">C3</option>
+                <option value="C4">C4</option>
+              </select>
+              <small class="field-hint">Máquina que fabrica el lote (protege el código de lote)</small>
+            </div>
+
+            <div class="field">
+              <label for="lote-id">Código de Lote (auto)</label>
+              <input type="text" id="lote-id" placeholder="20261013A1" readonly class="input-lote-auto" />
+              <small class="field-hint">Formato: YYYYMMDD + Máquina (autogenerado)</small>
+            </div>
+
+            <div class="field">
+              <label for="ticket_carga">Nº Ticket</label>
+              <input type="text" id="ticket_carga" placeholder="Ej: 05-003104461" />
+              <small class="field-hint">Ticket de carga del lote (opcional)</small>
+            </div>
+
+            <div class="field field-auto" id="field-linea">
+              <label for="linea">Línea de Producción</label>
+              <input type="text" id="linea" list="lista-lineas" placeholder="Se completa al elegir la máquina" />
+              <datalist id="lista-lineas"></datalist>
+              <small class="field-hint">Línea donde se fabrica (autocompletada según la máquina)</small>
+            </div>
+
+            <div class="field">
+              <label for="grupo">Grupo (GROUP)</label>
+              <input type="text" id="grupo" list="lista-grupos" placeholder="Ej: A, B, C" />
+              <datalist id="lista-grupos"></datalist>
+              <small class="field-hint">Grupo de trabajo</small>
+            </div>
+
+            <div class="field">
+              <label for="operador">Operador *</label>
+              <input type="text" id="operador" list="lista-operadores" placeholder="Escriba o seleccione operador..." />
+              <datalist id="lista-operadores"></datalist>
+              <small class="field-hint">Operador responsable de la máquina</small>
+            </div>
+
+            <div class="field" style="grid-column:1/-1;">
+              <label for="orden">Orden (ORDER)</label>
+              <input type="text" id="orden" list="lista-ordenes" placeholder="Ej: S/O, PO-123" />
+              <datalist id="lista-ordenes"></datalist>
+              <small class="field-hint">Orden de producción o pedido</small>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- PASO 4: REGISTRO DE CANTIDADES Y RESPONSABLE -->
+        <div class="form-section">
+          <h3 class="form-section-title">
+            <span class="step-number">4</span>
+            Registro de Cantidades y Responsable
+          </h3>
+          <p class="form-section-desc">Registre la cantidad producida. Los cálculos se generan automáticamente.</p>
+
+          <div class="grid-2">
+
+            <div class="field" style="grid-column:1/-1;">
+              <label for="cantidad">Cantidad Total Producida (unidades) *</label>
+              <input type="number" id="cantidad" placeholder="Ej: 2000" min="1"
+                style="font-size: 16px; font-weight: 600; padding: 10px 14px;" />
+              <small class="field-hint">Total de botellas producidas en el turno</small>
+            </div>
+
+            <div class="field field-auto">
+              <label for="paletas">Paletas Producidas</label>
+              <input type="number" id="paletas" placeholder="0" readonly />
+              <small class="field-hint">= Cantidad / BPP</small>
+            </div>
+
+            <div class="field field-auto">
+              <label for="cajas_producidas">Cajas / Canastas Producidas</label>
+              <input type="number" id="cajas_producidas" placeholder="0" readonly />
+              <small class="field-hint">= Cantidad / Bot. por Caja</small>
+            </div>
+
+            <div class="field field-auto">
+              <label for="gruesas">Gruesas Totales</label>
+              <input type="number" id="gruesas" placeholder="0" readonly />
+              <small class="field-hint">= Cantidad / 12</small>
+            </div>
+
+            <div class="field field-auto">
+              <label for="gruesas_paleta">Gruesas por Paleta</label>
+              <input type="number" id="gruesas_paleta" placeholder="0" step="0.01" readonly />
+              <small class="field-hint">= BPP / 12</small>
+            </div>
+
+          </div>
+
+          <div id="guardar-en-catalogo-wrapper" class="checkbox-catalogo" style="display:none;">
+            <label class="checkbox-catalogo-label">
+              <input type="checkbox" id="guardar-en-catalogo" checked />
+              <span>
+                <strong>Guardar esta ficha técnica en el catálogo maestro</strong>
+                <small>El producto quedará registrado (incluyendo material, boca, capacidad, dimensiones y BPP) para futuros lotes.</small>
+              </span>
+            </label>
+          </div>
+
+          <h4 class="form-subsection-title">Estatus y Observaciones</h4>
+          <div class="grid-2">
+
+            <div class="field">
+              <label>Estatus Inicial</label>
+              <div class="estatus-fijo">
+                <span class="estatus-fijo-badge">100</span>
+                <span class="estatus-fijo-texto">Ticket Generado</span>
+              </div>
+              <small class="field-hint">Se asigna automáticamente. La evaluación de calidad (APTO/RETENIDO) se realiza en Defectos.</small>
+              <input type="hidden" id="estatus" value="100" />
+            </div>
+
+            <div class="field" style="grid-column:1/-1;">
+              <label for="obs-prod">Observaciones</label>
+              <textarea id="obs-prod" placeholder="Notas adicionales del lote (opcional)..." rows="3"></textarea>
+            </div>
+
+          </div>
+
+          <div class="aviso-tamano-muestra">
+            <i class="ti ti-info-circle"></i>
+            <div>
+              <strong>Tamaño de Muestra</strong>
+              <p>El tamaño de muestra, los ensayos de calidad y los defectos se registran en el módulo de <a href="../pages/defectos.html">Defectos</a>.</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ACCIONES -->
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" id="btn-registrar">
+            <i class="ti ti-device-floppy"></i> Guardar Lote
+          </button>
+          <button type="button" class="btn btn-outline" id="btn-limpiar">
+            <i class="ti ti-eraser"></i> Limpiar
+          </button>
         </div>
 
         <div class="toast-success" id="toast-prod">
@@ -200,81 +518,115 @@
 
   </div>
 
-  <!-- TABLA DE LOTES CON FILTROS -->
+  <!-- TABLA DE LOTES -->
   <div class="card anim-card" style="animation-delay:0.35s; margin-top:1.5rem">
-    <div class="card-header">
+    <div class="card-header" style="flex-wrap:wrap;gap:10px;">
       <div class="card-title"><i class="ti ti-list-details"></i> Historial de Producción</div>
-      <div class="flex gap-2" style="flex-wrap:wrap;">
-        <input type="text" id="buscar-lote" placeholder="Buscar lote..." style="padding:6px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;outline:none;width:200px" />
-        <button class="btn btn-outline btn-sm" id="btn-exportar-csv"><i class="ti ti-file-spreadsheet"></i> CSV</button>
-        <button class="btn btn-success btn-sm" id="btn-exportar-excel"><i class="ti ti-file-spreadsheet"></i> Excel</button>
-        <button class="btn btn-danger btn-sm" id="btn-exportar-pdf"><i class="ti ti-file-pdf"></i> PDF</button>
+      <div class="flex gap-2" style="flex-wrap:wrap;align-items:center;">
+        <input type="text" id="buscar-lote" placeholder="Buscar lote..." class="input-buscar" />
+
+        <div class="selector-mes-container">
+          <i class="ti ti-calendar" style="color:var(--navy);font-size:15px;"></i>
+          <input type="month" id="selector-mes" class="input-mes" />
+          <button type="button" class="btn btn-primary btn-sm" id="btn-aplicar-mes">
+            <i class="ti ti-search"></i> Ver Mes
+          </button>
+        </div>
       </div>
     </div>
 
-    <div class="filtros-bar" style="padding:1rem 1.5rem;background:var(--off-white);border-bottom:1px solid var(--border)">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px,1fr));gap:10px;align-items:end">
+    <div class="filtros-bar">
+      <div class="filtros-grid">
         <div class="field" style="margin:0">
-          <label for="filtro-codigo" style="font-size:11px;font-weight:600;color:var(--text-hint)">Código</label>
-          <input type="text" id="filtro-codigo" placeholder="Buscar código..." style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white" />
+          <label for="filtro-codigo" class="filtro-label">Código</label>
+          <input type="text" id="filtro-codigo" placeholder="Buscar código..." class="input-filtro" />
         </div>
         <div class="field" style="margin:0">
-          <label for="filtro-producto" style="font-size:11px;font-weight:600;color:var(--text-hint)">Molde</label>
-          <input type="text" id="filtro-producto" list="filtro-lista-moldes" placeholder="Buscar molde..." style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white" />
+          <label for="filtro-ticket" class="filtro-label">Ticket</label>
+          <input type="text" id="filtro-ticket" placeholder="Buscar ticket..." class="input-filtro" />
+        </div>
+        <div class="field" style="margin:0">
+          <label for="filtro-molde" class="filtro-label">Molde</label>
+          <input type="text" id="filtro-molde" list="filtro-lista-moldes" placeholder="Buscar molde..." class="input-filtro" />
           <datalist id="filtro-lista-moldes"></datalist>
         </div>
         <div class="field" style="margin:0">
-          <label for="filtro-linea" style="font-size:11px;font-weight:600;color:var(--text-hint)">Línea</label>
-          <input type="text" id="filtro-linea" list="filtro-lista-lineas" placeholder="Buscar línea..." style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white" />
-          <datalist id="filtro-lista-lineas"></datalist>
+          <label for="filtro-maquina" class="filtro-label">Máquina</label>
+          <input type="text" id="filtro-maquina" list="filtro-lista-maquinas" placeholder="Buscar máquina..." class="input-filtro" />
+          <datalist id="filtro-lista-maquinas"></datalist>
         </div>
         <div class="field" style="margin:0">
-          <label for="filtro-operador" style="font-size:11px;font-weight:600;color:var(--text-hint)">Operador</label>
-          <input type="text" id="filtro-operador" list="filtro-lista-operadores" placeholder="Buscar operador..." style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white" />
+          <label for="filtro-operador" class="filtro-label">Operador</label>
+          <input type="text" id="filtro-operador" list="filtro-lista-operadores" placeholder="Buscar operador..." class="input-filtro" />
           <datalist id="filtro-lista-operadores"></datalist>
         </div>
+        
         <div class="field" style="margin:0">
-          <label for="filtro-turno" style="font-size:11px;font-weight:600;color:var(--text-hint)">Turno</label>
-          <input type="text" id="filtro-turno" list="filtro-lista-turnos" placeholder="Buscar turno..." style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white" />
-          <datalist id="filtro-lista-turnos"></datalist>
+          <label for="filtro-turno" class="filtro-label">Turno</label>
+          <!-- 👇 CAMBIO: Solo números del 1 al 4 -->
+          <select id="filtro-turno" class="input-filtro">
+            <option value="">Todos</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </div>
+
+        <div class="field" style="margin:0">
+          <label for="filtro-estatus" class="filtro-label">Estatus</label>
+          <select id="filtro-estatus" class="input-filtro">
+            <option value="">Todos</option>
+            <option value="100">100 (Ticket Generado)</option>
+            <option value="200">200 (Apto)</option>
+            <option value="300">300 (Retenido)</option>
+            <option value="600">600 (Despachado)</option>
+            <option value="910">910 (Decorado)</option>
+            <option value="950">950 (Reseleccionado)</option>
+            <option value="999">999 (Sobrante)</option>
+          </select>
         </div>
         <div class="field" style="margin:0">
-          <label for="filtro-fecha-desde" style="font-size:11px;font-weight:600;color:var(--text-hint)">Desde</label>
-          <input type="date" id="filtro-fecha-desde" style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white" />
+          <label for="filtro-fecha-desde" class="filtro-label">Desde</label>
+          <input type="date" id="filtro-fecha-desde" class="input-filtro" />
         </div>
         <div class="field" style="margin:0">
-          <label for="filtro-fecha-hasta" style="font-size:11px;font-weight:600;color:var(--text-hint)">Hasta</label>
-          <input type="date" id="filtro-fecha-hasta" style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white" />
+          <label for="filtro-fecha-hasta" class="filtro-label">Hasta</label>
+          <input type="date" id="filtro-fecha-hasta" class="input-filtro" />
         </div>
-        <div style="display:flex;gap:6px;align-items:end">
-          <button class="btn btn-primary btn-sm" id="btn-aplicar-filtros" style="padding:6px 16px;font-size:12px">
+        <div class="filtros-botones">
+          <button type="button" class="btn btn-primary btn-sm" id="btn-aplicar-filtros">
             <i class="ti ti-search"></i> Filtrar
           </button>
-          <button class="btn btn-outline btn-sm" id="btn-limpiar-filtros" style="padding:6px 12px;font-size:12px">
+          <button type="button" class="btn btn-outline btn-sm" id="btn-limpiar-filtros">
             <i class="ti ti-x"></i>
           </button>
         </div>
       </div>
-      <div style="margin-top:6px;font-size:11px;color:var(--text-hint)">
+      <div class="filtro-resultados">
         <span id="filtro-resultados">📋 Mostrando todos los lotes</span>
       </div>
     </div>
 
+    <!-- Contenedor con Scroll Táctil para móvil -->
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
             <th>Código</th>
+            <th>Ticket</th>
+            <th>Planta</th>
             <th>Molde</th>
+            <th>Máquina</th>
             <th>Línea</th>
             <th>Operador</th>
+            <th>Capacidad</th>
             <th>Unidades</th>
             <th>Turno</th>
-            <th>Paletas</th>
-            <th>Gruesas</th>
+            <th>Estatus</th>
             <th>Cliente</th>
             <th>Fecha</th>
-            <th style="text-align:center;min-width:120px;">Acciones</th>
+            <th style="text-align:center;min-width:80px;">Acciones</th>
           </tr>
         </thead>
         <tbody id="tabla-lotes">
@@ -286,11 +638,187 @@
 
 </main>
 
-<footer class="footer" style="text-align:center;padding:1.5rem;color:var(--text-muted);border-top:1px solid var(--border);margin-top:1.5rem;">
-  <p style="font-size:12px;">© 2026 Venvidrio - Sistema de Control de Calidad</p>
+<!-- MODAL: VISUALIZADOR DE LOTE -->
+<div class="modal-overlay-detalle" id="modal-ver-lote" style="display:none;">
+  <div class="modal-container-detalle modal-large">
+
+    <div class="modal-header">
+      <div class="modal-title">
+        <i class="ti ti-file-search"></i>
+        Detalle del Lote
+        <strong id="modal-lote-codigo">—</strong>
+      </div>
+      <button type="button" class="modal-close" id="btn-cerrar-modal-lote" title="Cerrar">
+        <i class="ti ti-x"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="detail-section">
+        <h4 class="detail-section-title"><i class="ti ti-building-factory-2"></i> Contexto</h4>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="detail-label">Planta</span>
+            <span class="detail-value" id="detail-planta">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Fecha de Producción</span>
+            <span class="detail-value" id="detail-fecha">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Turno</span>
+            <span class="detail-value" id="detail-turno">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4 class="detail-section-title"><i class="ti ti-package"></i> Ficha Técnica del Producto</h4>
+        <div class="detail-grid">
+          <div class="detail-item detail-item-full">
+            <span class="detail-label">Producto</span>
+            <span class="detail-value" id="detail-producto">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Item</span>
+            <span class="detail-value" id="detail-item">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Acabado</span>
+            <span class="detail-value" id="detail-acabado">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Material</span>
+            <span class="detail-value" id="detail-material">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Tipo de Boca</span>
+            <span class="detail-value" id="detail-tipo-boca">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Capacidad (CAP)</span>
+            <span class="detail-value detail-value-highlight" id="detail-capacidad">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Juego de Envases</span>
+            <span class="detail-value" id="detail-juego-envases">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Bot. por Caja / Canasta</span>
+            <span class="detail-value" id="detail-bpc">—</span>
+          </div>
+          <div class="detail-item detail-item-full">
+            <span class="detail-label">Dimensiones / Tamaño de Muestra</span>
+            <span class="detail-value" id="detail-dimensiones">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4 class="detail-section-title"><i class="ti ti-adjustments"></i> Trazabilidad</h4>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="detail-label">Máquina</span>
+            <span class="detail-value" id="detail-maquina">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Línea</span>
+            <span class="detail-value" id="detail-linea">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Molde</span>
+            <span class="detail-value" id="detail-molde">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Grupo</span>
+            <span class="detail-value" id="detail-grupo">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Operador</span>
+            <span class="detail-value" id="detail-operador">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Orden</span>
+            <span class="detail-value" id="detail-orden">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Nº Ticket</span>
+            <span class="detail-value" id="detail-ticket">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4 class="detail-section-title"><i class="ti ti-calculator"></i> Cantidades</h4>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="detail-label">Unidades</span>
+            <span class="detail-value detail-value-highlight" id="detail-cantidad">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">BPP</span>
+            <span class="detail-value" id="detail-bpp">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Paletas</span>
+            <span class="detail-value" id="detail-paletas">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Cajas / Canastas</span>
+            <span class="detail-value" id="detail-cajas">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Gruesas</span>
+            <span class="detail-value" id="detail-gruesas">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Gruesas / Paleta</span>
+            <span class="detail-value" id="detail-gruesas-paleta">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4 class="detail-section-title"><i class="ti ti-clipboard-check"></i> Estado</h4>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="detail-label">Cliente</span>
+            <span class="detail-value" id="detail-cliente">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Estatus</span>
+            <span class="detail-value" id="detail-estatus">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Auditoría</span>
+            <span class="detail-value" id="detail-estado-auditoria">—</span>
+          </div>
+          <div class="detail-item detail-item-full">
+            <span class="detail-label">Observaciones</span>
+            <span class="detail-value" id="detail-observaciones">—</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline" id="btn-cerrar-modal-lote-footer">
+        <i class="ti ti-x"></i> Cerrar
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<footer class="footer">
+  <p>© 2026 MoonDRAGO — Sistema de Control de Calidad para Venvidrio</p>
 </footer>
 
-<!-- JavaScript separado -->
+<!-- Scripts -->
+<script src="../assets/js/shared.js"></script>
+<script src="../assets/js/login_app.js"></script>
 <script src="../assets/js/produccion.js" defer></script>
 
 </body>

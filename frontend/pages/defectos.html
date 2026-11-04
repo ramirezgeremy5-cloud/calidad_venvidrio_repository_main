@@ -1,49 +1,39 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Venvidrio | Defectos</title>
-
-
-<link rel="stylesheet"
-href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
-
-
-<link rel="stylesheet"
-href="../assets/css/shared.css">
-
-<link rel="stylesheet"
-href="../assets/css/defectos.css">
-
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light">
+  <title>Venvidrio | Defectos</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <link rel="stylesheet" href="../assets/css/shared.css">
+  <link rel="stylesheet" href="../assets/css/defectos.css">
 </head>
-
 
 <body>
 
-
-
 <!-- ================= NAVBAR ================= -->
 <nav class="navbar">
-  <div class="nav-brand">VENV<span>IDRIO</span></div>
-  <ul class="nav-links">
+  <div class="nav-brand">
+    <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
+  </div>
+
+  <ul class="nav-links" id="navLinks">
     <li><a href="../public/dashboard.html"><i class="ti ti-layout-dashboard"></i> Panel Principal</a></li>
     <li><a href="../pages/produccion.html"><i class="ti ti-building-factory-2"></i> Producción</a></li>
     <li><a href="../pages/defectos.html" class="active"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
     <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
-    <li><a href="../pages/auditoria.html"><i class="ti ti-clipboard-check"></i> Auditoría</a></li>
+    <li><a href="../pages/auditoria_interna.html"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a></li>
     <li><a href="../pages/auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
+    <li id="navUsuariosLink" style="display:none;">
+      <a href="../pages/usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
+    </li>
   </ul>
 
-  <!-- ===== ÁREA DE USUARIO CON DROPDOWN ===== -->
   <div class="nav-user" id="navUserContainer">
     <div class="nav-avatar-circle" id="navAvatar">US</div>
     <span class="nav-username" id="navUsername">Cargando...</span>
-
     <div class="user-dropdown" id="userDropdown">
       <div class="dropdown-header">
         <div class="dropdown-avatar-circle" id="dropdownAvatar">US</div>
@@ -53,6 +43,10 @@ href="../assets/css/defectos.css">
         </div>
       </div>
       <div class="dropdown-divider"></div>
+      <a class="dropdown-item" id="dropdownPerfil" style="cursor:pointer;">
+        <i class="ti ti-user-circle"></i> Mi Perfil
+      </a>
+      <div class="dropdown-divider"></div>
       <a class="dropdown-item dropdown-danger" id="dropdownLogout">
         <i class="ti ti-logout"></i> Cerrar Sesión
       </a>
@@ -60,689 +54,498 @@ href="../assets/css/defectos.css">
   </div>
 </nav>
 
-
-
-
+<!-- CONTENIDO -->
 <main class="page">
 
-
-
-
-
-<div class="page-header">
-
-<h1>
-Registro de Defectos
-</h1>
-
-
-<p>
-Clasificación, trazabilidad y análisis de no conformidades en vidrio
-</p>
-
-
-</div>
-
-
-
-
-
-
-<!-- ================= STATS ================= -->
-
-
-<div class="stats-grid">
-
-
-
-<div class="stat-card">
-
-<div class="stat-label">
-Defectos Registrados
-</div>
-
-
-<div class="stat-value danger"
-id="total-defectos">
-0
-</div>
-
-
-<div class="stat-sub">
-Total sistema
-</div>
-
-
-</div>
-
-
-
-
-
-<div class="stat-card">
-
-<div class="stat-label">
-Críticos
-</div>
-
-
-<div class="stat-value danger"
-id="defectos-criticos">
-0
-</div>
-
-
-<div class="stat-sub">
-Acción inmediata
-</div>
-
-
-</div>
-
-
-
-
-
-<div class="stat-card">
-
-<div class="stat-label">
-Mayores
-</div>
-
-
-<div class="stat-value warning"
-id="defectos-mayores">
-0
-</div>
-
-
-<div class="stat-sub">
-En revisión
-</div>
-
-
-</div>
-
-
-
-
-
-<div class="stat-card">
-
-<div class="stat-label">
-Menores
-</div>
-
-
-<div class="stat-value"
-id="defectos-menores">
-
-0
-
-</div>
-
-
-<div class="stat-sub">
-Monitoreo
-</div>
-
-
-</div>
-
-
-
-</div>
-
-
-
-
-
-
-
-
-
-<div class="def-layout">
-
-
-
-
-
-
-
-<!-- ================= FORMULARIO ================= -->
-
-
-<div class="card anim-card">
-
-
-<div class="card-header">
-
-
-<div class="card-title">
-
-<i class="ti ti-bug"></i>
-
-Registrar Defecto
-
-</div>
-
-
-</div>
-
-
-
-
-
-<div class="card-body">
-
-
-<div class="grid-2">
-
-
-
-<div class="field">
-
-<label>
-Lote afectado
-</label>
-
-
-<input 
-id="d-lote"
-type="text"
-placeholder="VV-2026-001">
-
-
-</div>
-
-
-
-
-
-<div class="field">
-
-<label>
-Tipo defecto
-</label>
-
-
-<select id="d-tipo">
-
-
-<option value="">
-Seleccionar
-</option>
-
-
-<option>
-Burbuja / Inclusión
-</option>
-
-
-<option>
-Rayadura Superficial
-</option>
-
-
-<option>
-Fractura / Grieta
-</option>
-
-
-<option>
-Deformación Geométrica
-</option>
-
-
-<option>
-Mancha / Contaminación
-</option>
-
-
-<option>
-Delaminación
-</option>
-
-
-<option>
-Ondulación
-</option>
-
-
-</select>
-
-
-</div>
-
-
-
-
-
-
-
-<div class="field">
-
-<label>
-Clasificación
-</label>
-
-
-<select id="d-clase">
-
-
-<option value="">
-Seleccionar
-</option>
-
-
-<option value="Crítico">
-Crítico
-</option>
-
-
-<option value="Mayor">
-Mayor
-</option>
-
-
-<option value="Menor">
-Menor
-</option>
-
-
-</select>
-
-
-</div>
-
-
-
-
-
-
-
-<div class="field">
-
-
-<label>
-Cantidad piezas
-</label>
-
-
-<input 
-id="d-qty"
-type="number"
-min="1">
-
-
-</div>
-
-
-
-
-
-
-
-<div class="field">
-
-
-<label>
-Zona detección
-</label>
-
-
-<select id="d-zona">
-
-
-<option value="">
-Seleccionar
-</option>
-
-
-<option>
-Entrada horno
-</option>
-
-
-<option>
-Salida horno
-</option>
-
-
-<option>
-Mesa de corte
-</option>
-
-
-<option>
-Inspección final
-</option>
-
-
-<option>
-Empaque
-</option>
-
-
-</select>
-
-
-</div>
-
-
-
-
-
-
-<div class="field">
-
-
-<label>
-Inspector
-</label>
-
-
-<input
-id="d-inspector"
-type="text">
-
-
-</div>
-
-
-
-
-</div>
-
-
-
-
-
-
-
-<div class="field">
-
-
-<label>
-Descripción
-</label>
-
-
-<textarea
-id="d-desc">
-</textarea>
-
-
-</div>
-
-
-
-
-
-
-<div class="flex gap-2">
-
-
-<button 
-class="btn btn-primary"
-id="btn-def">
-
-<i class="ti ti-device-floppy"></i>
-
-Registrar
-
-
-</button>
-
-
-
-
-
-<button
-class="btn btn-outline"
-id="btn-def-clear">
-
-
-<i class="ti ti-eraser"></i>
-
-Limpiar
-
-
-</button>
-
-
-</div>
-
-
-
-
-
-<div class="toast-success"
-id="toast-def">
-
-<i class="ti ti-circle-check"></i>
-
-Defecto registrado
-
-</div>
-
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-
-
-
-
-
-
-<!-- ================= DERECHA ================= -->
-
-
-<div class="def-right">
-
-
-
-<div class="card">
-
-
-<div class="card-header">
-
-<div class="card-title">
-
-<i class="ti ti-chart-donut"></i>
-
-Distribución
-
-</div>
-
-
-</div>
-
-
-
-<div class="card-body">
-
-
-<div 
-id="dist-bars"
-class="dist-bars">
-
-</div>
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-<div class="card"
-style="margin-top:1rem">
-
-
-<div class="card-header">
-
-
-<div class="card-title">
-
-<i class="ti ti-flame"></i>
-
-Top defectos
-
-</div>
-
-
-</div>
-
-
-
-<div class="card-body"
-id="top-defectos">
-
-
-</div>
-
-
-</div>
-
-
-
-</div>
-
-
-
-
-
-</div>
-
-
-
-
-
-
-
-
-
-<!-- ================= TABLA ================= -->
-
-
-<div class="card"
-style="margin-top:1.5rem">
-
-
-<div class="card-header">
-
-
-<div class="card-title">
-
-<i class="ti ti-list-details"></i>
-
-Historial
-
-</div>
-
-
-</div>
-
-
-
-
-
-<div class="table-wrap">
-
-
-<table>
-
-
-<thead>
-
-
-<tr>
-
-<th>
-Lote
-</th>
-
-
-<th>
-Tipo
-</th>
-
-
-<th>
-Clasificación
-</th>
-
-
-<th>
-Piezas
-</th>
-
-
-<th>
-Zona
-</th>
-
-
-<th>
-Inspector
-</th>
-
-
-<th>
-Fecha
-</th>
-
-
-</tr>
-
-
-</thead>
-
-
-
-<tbody id="tabla-def">
-
-
-</tbody>
-
-
-
-</table>
-
-
-
-</div>
-
-
-</div>
-
-
-
-
-
+  <div class="page-header">
+    <h1>Evaluación de Defectos</h1>
+    <p>Determine la conformidad de los lotes y cataloga los defectos encontrados</p>
+  </div>
+
+  <!-- ================= MÉTRICAS ================= -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total Defectos</div>
+      <div class="stat-value danger" id="total-defectos"><span class="skeleton"></span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Críticos</div>
+      <div class="stat-value danger" id="defectos-criticos"><span class="skeleton"></span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Lotes Apto</div>
+      <div class="stat-value" id="lotes-apto" style="color:#2e7d32;"><span class="skeleton"></span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Lotes Retenidos</div>
+      <div class="stat-value warning" id="lotes-retenidos"><span class="skeleton"></span></div>
+    </div>
+  </div>
+
+  <div class="def-layout">
+
+    <!-- ================= FORMULARIO DE EVALUACIÓN ================= -->
+    <div class="card anim-card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="ti ti-clipboard-check"></i> Evaluación de Lote
+        </div>
+        <span class="badge badge-info" id="badge-evaluacion">Pendiente</span>
+      </div>
+
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:1rem;">
+          <i class="ti ti-info-circle" style="color:var(--navy);"></i>
+          Seleccione un lote y determine su conformidad.
+        </p>
+
+        <div class="grid-2">
+
+          <!-- SELECTOR DE LOTE -->
+          <div class="field" style="grid-column: 1 / -1;">
+            <label for="d-lote">Lote a Evaluar *</label>
+            <select id="d-lote">
+              <option value="">-- Seleccione un lote pendiente --</option>
+            </select>
+            <small class="field-hint">Solo se muestran lotes con estatus 100 (pendientes de evaluar)</small>
+          </div>
+
+          <!-- INFO DEL LOTE SELECCIONADO -->
+          <div id="lote-info-panel" style="grid-column: 1 / -1; display:none;">
+            <div class="lote-info-box">
+              <div class="lote-info-row"><span class="lote-info-label">Ticket:</span><span id="lote-info-ticket">—</span></div>
+              <div class="lote-info-row"><span class="lote-info-label">Producto:</span><span id="lote-info-producto">—</span></div>
+              <div class="lote-info-row"><span class="lote-info-label">Cliente:</span><span id="lote-info-cliente">—</span></div>
+              <div class="lote-info-row"><span class="lote-info-label">Cantidad:</span><span id="lote-info-cantidad">—</span></div>
+              <div class="lote-info-row"><span class="lote-info-label">Operador Producción:</span><span id="lote-info-operador">—</span></div>
+              <div class="lote-info-row" style="align-items:flex-start;">
+                <span class="lote-info-label">Obs. Producción:</span>
+                <span id="lote-info-obs-produccion" style="font-style:italic;color:var(--text-muted);">—</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ================= TAMAÑO DE MUESTRA Y DATOS DEL LOTE ================= -->
+          <div id="muestra-panel" class="muestra-box" style="grid-column: 1 / -1; display:none;">
+            <div class="muestra-header">
+              <i class="ti ti-ruler-measure"></i>
+              <span>Datos del Lote y Tamaño de Muestra</span>
+            </div>
+
+            <div class="muestra-grid">
+              <!-- Datos del Lote (solo lectura, se llenan con JS) -->
+              <div class="muestra-readonly-box">
+                <div class="muestra-readonly-row">
+                  <span>Tamaño de Muestra:</span>
+                  <span id="d-tam-muestra-display">—</span>
+                </div>
+                <div class="muestra-readonly-row">
+                  <span>Tamaño de la Población:</span>
+                  <span id="d-tam-poblacion-display">—</span>
+                </div>
+                <div class="muestra-readonly-row">
+                  <span>Bot. por Camadas/Caja:</span>
+                  <span id="d-botellas-caja-display">—</span>
+                </div>
+                <div class="muestra-readonly-row">
+                  <span>Bot. por Paleta:</span>
+                  <span id="d-botellas-paleta-display">—</span>
+                </div>
+                <div class="muestra-readonly-row">
+                  <span>Gruesas por Paleta:</span>
+                  <span id="d-gruesas-paleta-display">—</span>
+                </div>
+              </div>
+
+              <!-- Input para Canastas -->
+              <div class="muestra-input-box">
+                <div class="field" style="margin:0;">
+                  <label for="d-canastas">Canastas a Revisar *</label>
+                  <input type="number" id="d-canastas" min="1" step="1" placeholder="Ej: 3" value="1">
+                  <small class="field-hint">Indique cuántas canastas se van a inspeccionar.</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Inputs ocultos para que el JS siga funcionando igual -->
+            <input type="hidden" id="d-paletas">
+            <input type="hidden" id="d-botellas-paleta">
+            <input type="hidden" id="d-botellas-caja">
+            <input type="hidden" id="d-tam-poblacion">
+            <input type="hidden" id="d-gruesas-paleta">
+            <input type="hidden" id="d-tam-muestra">
+          </div>
+
+          <!-- DECISIÓN: APTO / RETENIDO -->
+          <div class="field" style="grid-column: 1 / -1;">
+            <label>Resultado de la Evaluación *</label>
+            <div class="evaluacion-toggle">
+              <button type="button" class="eval-btn eval-apto active" id="btn-apto" data-valor="no">
+                <i class="ti ti-circle-check"></i>
+                <span>APTO</span>
+                <small>Sin defectos</small>
+              </button>
+              <button type="button" class="eval-btn eval-retenido" id="btn-retenido" data-valor="si">
+                <i class="ti ti-alert-triangle"></i>
+                <span>RETENIDO</span>
+                <small>Con defectos</small>
+              </button>
+            </div>
+          </div>
+
+          <!-- INSPECTOR Y OBSERVACIONES -->
+          <div class="field" style="grid-column: 1 / -1;">
+            <label for="d-inspector">Operador / Inspector Responsable *</label>
+            <input type="text" id="d-inspector" list="lista-inspectores" readonly style="background-color: #f8f9fa; cursor: not-allowed;">
+          </div>
+
+          <div class="field" style="grid-column: 1 / -1;">
+            <label for="d-observaciones">Observaciones Generales</label>
+            <textarea id="d-observaciones" placeholder="Notas generales del lote..." rows="2"></textarea>
+          </div>
+
+          <!-- CAMPOS DE CATALOGACIÓN (Solo si "Retenido") -->
+          <div id="campos-defecto" style="display:none;grid-column: 1 / -1;">
+            <div class="aviso-defecto">
+              <i class="ti ti-alert-triangle"></i>
+              <span><strong>Registro de piezas afectadas:</strong> Indique la <strong>cantidad de piezas</strong> que comparten los defectos, agréguelos desde el catálogo o escríbalos manualmente, y pulse <strong>"Agregar grupo a la evaluación"</strong>. Puede repetir el proceso para otros grupos.</span>
+            </div>
+
+            <!-- GRUPO ACTUAL: cantidad de piezas que comparten los defectos -->
+            <div class="grupo-actual-box">
+              <div class="field" style="margin:0;">
+                <label for="d-piezas-grupo">
+                  Cantidad de piezas que comparten estos defectos *
+                </label>
+                <input type="number" id="d-piezas-grupo" min="1" placeholder="Ej: 10" value="1">
+                <small class="field-hint">
+                  <i class="ti ti-info-circle"></i>
+                  Estas piezas <strong>todas</strong> tendrán <strong>todos</strong> los defectos que agregues abajo.
+                </small>
+              </div>
+            </div>
+
+            <!-- 1. SELECTOR DE CLASIFICACIÓN (CHIPS) -->
+            <div class="field" style="margin-bottom: 12px; margin-top:12px;">
+              <label>1. Clasificación del defecto a agregar *</label>
+              <div id="chips-clasificacion" class="chips-clasificacion">
+                <button type="button" class="chip-clase chip-critico" data-clase="Crítico">
+                  <span class="chip-dot" style="background:#dc3545"></span> Crítico
+                </button>
+                <button type="button" class="chip-clase chip-mayor-bplus" data-clase="Mayor B+">
+                  <span class="chip-dot" style="background:#e65100"></span> Mayor B+
+                </button>
+                <button type="button" class="chip-clase chip-mayor-bminus" data-clase="Mayor B-">
+                  <span class="chip-dot" style="background:#f57f17"></span> Mayor B-
+                </button>
+                <button type="button" class="chip-clase chip-menor" data-clase="Menor">
+                  <span class="chip-dot" style="background:#1565c0"></span> Menor
+                </button>
+              </div>
+              <small class="field-hint">
+                <i class="ti ti-info-circle"></i>
+                Puede cambiar de clasificación y seguir agregando defectos al mismo grupo.
+              </small>
+            </div>
+
+            <!-- 2. CATÁLOGO DE TIPOS + ESCRITURA MANUAL -->
+            <div class="field" style="margin-bottom: 12px;">
+              <label>2. Tipo de defecto <span id="catalogo-clase-activa" class="badge-clase-activa" style="display:none;"></span></label>
+
+              <!-- 2.A Input para escribir o buscar -->
+              <div class="tipo-input-wrap">
+                <input
+                  type="text"
+                  id="d-tipo-manual"
+                  class="tipo-input"
+                  list="lista-tipos-defecto"
+                  placeholder="Escriba o busque un tipo de defecto..."
+                  autocomplete="off"
+                  disabled
+                >
+                <datalist id="lista-tipos-defecto"></datalist>
+                <button
+                  type="button"
+                  id="btn-agregar-tipo-manual"
+                  class="btn btn-primary btn-sm tipo-add-btn"
+                  title="Agregar este tipo al grupo"
+                  disabled
+                >
+                  <i class="ti ti-plus"></i>
+                </button>
+              </div>
+              <small class="field-hint">
+                <i class="ti ti-info-circle"></i>
+                Puede <strong>elegir un tipo existente</strong> del catálogo o <strong>escribir uno nuevo</strong> y pulsar <kbd>Enter</kbd> o el botón <strong>+</strong>.
+              </small>
+
+              <!-- 2.B Catálogo clickeable (filtrado por clasificación activa) -->
+              <div id="panel-tipos-clasificacion" class="panel-tipos" style="display:none; margin-top:8px;">
+                <input type="text" id="buscar-tipos-clasificacion" placeholder="Filtrar catálogo..." class="buscador-tipos">
+                <div id="lista-tipos-agrupada" class="lista-tipos-agrupada">
+                  <!-- Se llena con JS -->
+                </div>
+              </div>
+              <div id="catalogo-placeholder" class="catalogo-placeholder">
+                <i class="ti ti-hand-click"></i>
+                <span>Seleccione primero una clasificación arriba para ver los tipos disponibles.</span>
+              </div>
+            </div>
+
+            <!-- 3. ZONA Y DESCRIPCIÓN (aplican al defecto que se agregue) -->
+            <div class="grid-2" style="margin-top: 8px;">
+              <div class="field">
+                <label for="d-zona">Zona de Detección</label>
+                <input type="text" id="d-zona" list="lista-zonas" placeholder="Ej: Formación, Zona Fría...">
+                <datalist id="lista-zonas"></datalist>
+              </div>
+
+              <div class="field">
+                <label for="d-desc">Descripción / Notas del Defecto</label>
+                <textarea id="d-desc" placeholder="Notas específicas del defecto..." rows="1"></textarea>
+              </div>
+            </div>
+
+            <!-- 4. BANDEJA DE DEFECTOS DEL GRUPO ACTUAL -->
+            <div class="bandeja-grupo">
+              <div class="bandeja-header">
+                <div class="bandeja-titulo">
+                  <i class="ti ti-stack"></i>
+                  <span>Defectos en el grupo actual</span>
+                  <span id="contador-grupo" class="badge badge-info" style="margin-left:6px;">0</span>
+                </div>
+                <button type="button" class="btn btn-outline btn-sm" id="btn-vaciar-grupo" style="font-size:11px;padding:4px 10px;">
+                  <i class="ti ti-x"></i> Vaciar grupo
+                </button>
+              </div>
+
+              <div id="lista-grupo-actual" class="lista-grupo-actual">
+                <!-- Se llena con JS -->
+              </div>
+
+              <div class="bandeja-footer">
+                <button type="button" class="btn btn-primary btn-sm" id="btn-agregar-grupo">
+                  <i class="ti ti-plus"></i> Agregar grupo a la evaluación
+                </button>
+              </div>
+            </div>
+
+            <!-- 5. GRUPOS YA AGREGADOS A LA EVALUACIÓN -->
+            <div class="grupos-agregados">
+              <div class="grupos-header">
+                <div class="grupos-titulo">
+                  <i class="ti ti-packages"></i>
+                  <span>Grupos de piezas agregados a la evaluación</span>
+                  <span id="contador-grupos" class="badge badge-danger" style="margin-left:6px;">0</span>
+                </div>
+                <button type="button" class="btn btn-outline btn-sm" id="btn-limpiar-evaluacion" style="font-size:11px;padding:4px 10px;">
+                  <i class="ti ti-trash"></i> Vaciar evaluación
+                </button>
+              </div>
+
+              <div id="lista-grupos-agregados" class="lista-grupos-agregados">
+                <!-- Se llena con JS -->
+              </div>
+
+              <small class="field-hint" style="margin-top:8px;display:block;">
+                <i class="ti ti-info-circle"></i>
+                Cada grupo tiene su propia cantidad de piezas y sus propios defectos. Al guardar, todos los grupos se registran en el backend.
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn-primary" id="btn-def">
+            <i class="ti ti-device-floppy"></i> Guardar Evaluación
+          </button>
+          <button class="btn btn-outline" id="btn-def-clear">
+            <i class="ti ti-eraser"></i> Limpiar
+          </button>
+        </div>
+
+        <div class="toast-success" id="toast-def">
+          <i class="ti ti-circle-check"></i> Evaluación registrada correctamente
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= DISTRIBUCIÓN Y TOP ================= -->
+    <div class="def-right">
+      <div class="card">
+        <div class="card-header"><div class="card-title"><i class="ti ti-chart-donut"></i> Distribución</div></div>
+        <div class="card-body"><div id="dist-bars" class="dist-bars"></div></div>
+      </div>
+
+      <div class="card" style="margin-top:1rem">
+        <div class="card-header"><div class="card-title"><i class="ti ti-flame"></i> Top Defectos</div></div>
+        <div class="card-body" id="top-defectos"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= LOTES PENDIENTES DE EVALUAR ================= -->
+  <div class="card" style="margin-top:1.5rem">
+    <div class="card-header">
+      <div class="card-title"><i class="ti ti-clock-hour3"></i> Lotes Pendientes de Evaluar</div>
+      <div class="flex gap-2" style="flex-wrap:wrap;">
+        <input type="text" id="buscar-lote-pendiente" placeholder="Buscar lote o ticket..." class="input-buscar" style="width:220px;">
+        <button class="btn btn-outline btn-sm" id="btn-refrescar-pendientes"><i class="ti ti-refresh"></i> Actualizar</button>
+      </div>
+    </div>
+    <div class="filtro-resultados" style="padding:0.5rem 1.25rem;">
+      <span id="pendientes-resultados">📋 Mostrando lotes con estatus 100 (Ticket Generado)</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Ticket</th><th>Lote</th><th>Producto</th><th>Cliente</th><th>Cantidad</th><th>Línea</th><th>Turno</th><th>Fecha Producción</th><th style="text-align:center;min-width:90px;">Acción</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-pendientes"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= SÁBANA: DIVIDIDA POR CLIENTE Y MES ================= -->
+  <div class="card" style="margin-top:1.5rem">
+    <div class="card-header">
+      <div class="card-title"><i class="ti ti-table-options"></i> Sábana de Lotes</div>
+      <div class="flex gap-2" style="flex-wrap:wrap;">
+        <button class="btn btn-outline btn-sm" id="btn-sabana-excel"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+        <button class="btn btn-outline btn-sm" id="btn-sabana-pdf"><i class="ti ti-file-type-pdf"></i> PDF</button>
+        <button class="btn btn-outline btn-sm" id="btn-sabana-word"><i class="ti ti-file-type-doc"></i> Word</button>
+      </div>
+    </div>
+
+    <div class="filtros-bar">
+      <div class="filtros-grid">
+        <div class="field" style="margin:0">
+          <label for="sabana-mes" class="filtro-label">Mes</label>
+          <select id="sabana-mes" class="input-filtro"><option value="">Todos los meses</option></select>
+        </div>
+        <div class="field" style="margin:0">
+          <label for="sabana-cliente" class="filtro-label">Cliente</label>
+          <select id="sabana-cliente" class="input-filtro"><option value="">Todos los clientes</option></select>
+        </div>
+        <div class="field" style="margin:0">
+          <label for="sabana-buscar" class="filtro-label">Buscar</label>
+          <input type="text" id="sabana-buscar" class="input-filtro" placeholder="Lote, ticket o producto..." />
+        </div>
+        <div class="filtros-botones">
+          <button class="btn btn-outline btn-sm" id="btn-limpiar-sabana"><i class="ti ti-x"></i> Quitar filtros</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN APTO -->
+    <div class="sabana-seccion" id="sabana-apto">
+      <div class="sabana-seccion-header sabana-apto-header">
+        <i class="ti ti-circle-check"></i><span>Lotes APTO</span><span class="sabana-count" id="count-apto">0</span>
+      </div>
+      <div class="table-wrap">
+        <table class="tabla-angosta">
+          <thead>
+            <tr>
+              <th>Ticket</th><th>Código</th><th>Producto</th><th>Cliente</th><th>Cantidad</th><th>Turno / Grupo</th><th>Fecha</th><th style="text-align:center;min-width:60px;">Ver</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-apto"></tbody>
+        </table>
+      </div>
+      <div class="sabana-vacio" id="vacio-apto" style="display:none;"><i class="ti ti-inbox"></i><span>No hay lotes APTO</span></div>
+    </div>
+
+    <!-- SECCIÓN RETENIDO -->
+    <div class="sabana-seccion" id="sabana-retenido">
+      <div class="sabana-seccion-header sabana-retenido-header">
+        <i class="ti ti-alert-triangle"></i><span>Lotes RETENIDOS</span><span class="sabana-count" id="count-retenido">0</span>
+      </div>
+      <div class="table-wrap">
+        <table class="tabla-angosta">
+          <thead>
+            <tr>
+              <th>Ticket</th><th>Código</th><th>Producto</th><th>Cliente</th><th>Defectos</th><th>Clasificación</th><th>Pzas. Ret.</th><th style="text-align:center;min-width:100px;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-retenido"></tbody>
+        </table>
+      </div>
+      <div class="sabana-vacio" id="vacio-retenido" style="display:none;"><i class="ti ti-inbox"></i><span>No hay lotes RETENIDOS</span></div>
+    </div>
+  </div>
 </main>
 
+<!-- ================= MODAL: VER/EDITAR LOTE ================= -->
+<div class="modal-overlay" id="modal-ver-lote" style="display:none;">
+  <div class="modal-container">
+    <div class="modal-header">
+      <div class="modal-title"><i class="ti ti-file-search"></i> Detalle del Lote: <span id="modal-lote-codigo" style="color:var(--navy);font-weight:700;"></span></div>
+      <button type="button" class="modal-close" id="btn-cerrar-modal-lote"><i class="ti ti-x"></i></button>
+    </div>
 
+    <div class="modal-body">
+      <div class="modal-section">
+        <div class="modal-section-title"><i class="ti ti-building-factory-2"></i> Contexto de Producción</div>
+        <div class="modal-detail-grid">
+          <div class="modal-detail-item"><span class="modal-detail-label">Planta</span><span class="modal-detail-value" id="detail-planta">—</span></div>
+          <div class="modal-detail-item"><span class="modal-detail-label">Fecha de Producción</span><span class="modal-detail-value" id="detail-fecha">—</span></div>
+          <div class="modal-detail-item"><span class="modal-detail-label">Turno</span><span class="modal-detail-value" id="detail-turno">—</span></div>
+        </div>
+      </div>
 
+      <div class="modal-section">
+        <div class="modal-section-title"><i class="ti ti-package"></i> Producto y Cliente</div>
+        <div class="modal-detail-grid">
+          <div class="modal-detail-item" style="grid-column: 1 / -1;"><span class="modal-detail-label">Producto</span><span class="modal-detail-value" id="detail-producto">—</span></div>
+          <div class="modal-detail-item"><span class="modal-detail-label">Cliente</span><span class="modal-detail-value" id="detail-cliente">—</span></div>
+          <div class="modal-detail-item"><span class="modal-detail-label">Cantidad Producida</span><span class="modal-detail-value" id="detail-cantidad">—</span></div>
+          <div class="modal-detail-item"><span class="modal-detail-label">Estatus del Lote</span><span class="modal-detail-value detail-value-highlight" id="detail-estatus">—</span></div>
+        </div>
+      </div>
 
+      <div class="modal-section">
+        <div class="modal-section-title"><i class="ti ti-ruler-measure"></i> Resultados de la Inspección</div>
+        <div class="modal-detail-grid">
+          <div class="modal-detail-item"><span class="modal-detail-label">Canastas Revisadas</span><span class="modal-detail-value" id="detail-canastas">—</span></div>
+          <div class="modal-detail-item"><span class="modal-detail-label">Tamaño de Muestra (n)</span><span class="modal-detail-value detail-value-highlight" id="detail-muestra">—</span></div>
+          <div class="modal-detail-item"><span class="modal-detail-label">Inspector</span><span class="modal-detail-value" id="detail-inspector">—</span></div>
+          <div class="modal-detail-item"><span class="modal-detail-label">Piezas Retenidas</span><span class="modal-detail-value" id="detail-retenidas" style="color:var(--danger); font-weight:700;">—</span></div>
+          <div class="modal-detail-item" style="grid-column: 1 / -1;"><span class="modal-detail-label">Observaciones</span><span class="modal-detail-value" id="detail-observaciones">—</span></div>
+        </div>
+      </div>
 
+      <div class="modal-section" id="modal-seccion-defectos" style="display:none;">
+        <div class="modal-section-title"><i class="ti ti-alert-triangle"></i> Defectos Encontrados</div>
+        <div class="table-wrap" style="margin-top:10px; border:1px solid var(--border); border-radius:var(--radius-sm);">
+          <table style="font-size:12px; width:100%;">
+            <thead style="background:var(--off-white);">
+              <tr>
+                <th style="width:100px;">Piezas</th>
+                <th>Defectos en este grupo</th>
+              </tr>
+            </thead>
+            <tbody id="modal-defectos"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
-<script src="../assets/js/defectos.js"></script>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline" id="btn-cerrar-modal-lote-footer"><i class="ti ti-x"></i> Cerrar</button>
+    </div>
+  </div>
+</div>
 
+<footer class="footer">
+  <p>© 2026 MoonDRAGO — Sistema de Control de Calidad para Venvidrio</p>
+</footer>
+
+<!-- Scripts -->
+<script src="../assets/js/shared.js"></script>
+<script src="../assets/js/login_app.js"></script>
+<script src="../assets/js/defectos.js" defer></script>
 
 </body>
-
-
 </html>

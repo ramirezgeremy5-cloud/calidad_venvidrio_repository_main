@@ -1,173 +1,131 @@
 /* ==========================================
-   VENVIDRIO - PRODUCCIÓN
-   produccion.js - Versión Definitiva (Registrables y Autenticación)
-   ========================================= */
+   VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
+   produccion.js - Versión sincronizada con BD
+   ========================================== */
 
 (function () {
   'use strict';
 
-  const API_URL = "http://127.0.0.1:8000";
+  // ==========================================
+  // CONFIGURACIÓN DINÁMICA DE API (PC y Móvil)
+  // ==========================================
+  const hostname = window.location.hostname;
+  const API_URL = (hostname === 'localhost' || hostname === '127.0.0.1') 
+    ? 'http://127.0.0.1:8000' 
+    : 'http://' + hostname + ':8000';
+
+  const VALOR_NUEVO = "__NUEVO__";
+  const BOTELLAS_POR_GRUESA = 12;
 
   let lotes = [];
   let intervaloCarga = null;
   let filtrosActivos = {};
-  let temporizadorInactividad = null;
-  let TIEMPO_INACTIVIDAD = 5 * 60 * 1000; // 5 minutos
-  let tiempoRestante = TIEMPO_INACTIVIDAD / 1000;
-  let intervaloContador = null;
-  let sesionActiva = true;
+  
+  let modoNuevoProducto = false;
+  let modoNuevoCliente = false;
+  let productosCache = {};
+
+  let geometriaActual = 'cilindrico';
+
+  const MAQUINA_LINEA_MAP = {
+    'A1': 'Línea A', 'A2': 'Línea A', 'A3': 'Línea A', 'A4': 'Línea A',
+    'B1': 'Línea B', 'B2': 'Línea B', 'B3': 'Línea B', 'B4': 'Línea B',
+    'C1': 'Línea C', 'C2': 'Línea C', 'C3': 'Línea C', 'C4': 'Línea C'
+  };
+
+  const ESTATUS_CLASES = {
+    "100": "estatus-100", "200": "estatus-200", "300": "estatus-300",
+    "600": "estatus-600", "910": "estatus-910", "950": "estatus-950", "999": "estatus-999"
+  };
+
+  const ESTATUS_LABELS = {
+    "100": "100 (Ticket Generado)", "200": "200 (Apto)", "300": "300 (Retenido)",
+    "600": "600 (Despachado)", "910": "910 (Decorado)",
+    "950": "950 (Reseleccionado)", "999": "999 (Sobrante)"
+  };
+
+  const PLANTA_CLASES = {
+    "Valera": "planta-valera",
+    "Los Guayos": "planta-guayos"
+  };
 
   // ==========================================
-  // CONTROL DE SESIÓN - USUARIO
+  // UTILIDADES DE RED
   // ==========================================
+  function tokenHeader() {
+    return { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
+  }
 
+  function jsonHeader() {
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    };
+  }
+
+  // ==========================================
+  // CONTROL DE SESIÓN Y USUARIO
+  // ==========================================
   function cargarUsuarioNav() {
     const userData = localStorage.getItem('user');
     if (userData) {
       try {
         const user = JSON.parse(userData);
-        const avatar = document.getElementById('navAvatar');
-        const username = document.getElementById('navUsername');
-        const dropdownAvatar = document.getElementById('dropdownAvatar');
-        const dropdownName = document.getElementById('dropdownName');
-        const dropdownEmail = document.getElementById('dropdownEmail');
+        let avatarHtml = '';
+        if (user.foto_url) {
+          avatarHtml = `<img src="${API_URL}${user.foto_url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
+        } else {
+          avatarHtml = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
+        }
 
-        const iniciales = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
-        if (avatar) avatar.textContent = iniciales;
-        if (username) username.textContent = user.nombre || 'Usuario';
-        if (dropdownAvatar) dropdownAvatar.textContent = iniciales;
-        if (dropdownName) dropdownName.textContent = user.nombre || 'Usuario';
-        if (dropdownEmail) dropdownEmail.textContent = user.correo || 'usuario@email.com';
-      } catch (e) {
-        console.error('Error cargando usuario:', e);
-      }
+        const navAvatar = document.getElementById('navAvatar');
+        if (navAvatar) navAvatar.innerHTML = avatarHtml;
+        const dropdownAvatar = document.getElementById('dropdownAvatar');
+        if (dropdownAvatar) dropdownAvatar.innerHTML = avatarHtml;
+
+        ['navUsername', 'dropdownName'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = user.nombre || 'Usuario';
+        });
+        const emailEl = document.getElementById('dropdownEmail');
+        if (emailEl) emailEl.textContent = user.correo || 'usuario@email.com';
+
+        // AUTOCOMPLETAR EL OPERADOR CON EL USUARIO LOGUEADO
+        const operadorInput = document.getElementById('operador');
+        if (operadorInput && !operadorInput.value) {
+          operadorInput.value = user.nombre || '';
+        }
+
+      } catch (e) { console.error('Error cargando usuario:', e); }
     }
+  }
+
+  function mostrarEnlaceUsuarios() {
+    const rol = parseInt(localStorage.getItem('role'));
+    const link = document.getElementById('navUsuariosLink');
+    if (link && rol === 3) link.style.display = 'flex';
   }
 
   function verificarSesion() {
     const token = localStorage.getItem('token');
-    if (!token) {
-      window.location.href = '../public/login.html';
-      return;
-    }
+    if (!token) { window.location.href = '../public/login.html'; return; }
 
-    fetch(`${API_URL}/auth/verify`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Token inválido');
-      }
-      return response.json();
-    })
-    .then(() => {
-      cargarUsuarioNav();
-      iniciarControlInactividad();
-      init();
-    })
-    .catch(() => {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('role');
-      window.location.href = '../public/login.html';
-    });
-  }
-
-  function iniciarControlInactividad() {
-    const eventos = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart', 'touchmove'];
-    eventos.forEach(evento => {
-      document.addEventListener(evento, function() {
-        if (sesionActiva) {
-          reiniciarTemporizador();
+    fetch(`${API_URL}/auth/verify`, { headers: tokenHeader() })
+      .then(r => { if (!r.ok) throw new Error('Token inválido - Status: ' + r.status); return r.json(); })
+      .then(() => {
+        cargarUsuarioNav();
+        mostrarEnlaceUsuarios();
+        try { init(); } catch (e) { console.error('❌ Error en init():', e); }
+      })
+      .catch((error) => {
+        console.error('❌ Error en verificarSesion:', error);
+        if (error.message && (error.message.includes('Token') || error.message.includes('401'))) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          localStorage.removeItem('role');
+          window.location.href = '../public/login.html';
         }
       });
-    });
-
-    reiniciarTemporizador();
-    iniciarContador();
-  }
-
-  function iniciarContador() {
-    if (intervaloContador) {
-      clearInterval(intervaloContador);
-    }
-
-    tiempoRestante = TIEMPO_INACTIVIDAD / 1000;
-
-    intervaloContador = setInterval(function() {
-      tiempoRestante--;
-      actualizarTimerDisplay();
-
-      if (tiempoRestante <= 0) {
-        clearInterval(intervaloContador);
-        intervaloContador = null;
-      }
-    }, 1000);
-  }
-
-  function actualizarTimerDisplay() {
-    const timerDisplay = document.getElementById('timerDisplay');
-    const timerBadge = document.getElementById('timerBadge');
-    
-    if (timerDisplay) {
-      const minutos = Math.floor(tiempoRestante / 60);
-      const segundos = Math.floor(tiempoRestante % 60);
-      timerDisplay.textContent = String(minutos).padStart(2, '0') + ':' + String(segundos).padStart(2, '0');
-    }
-
-    if (timerBadge) {
-      if (tiempoRestante > 120) {
-        timerBadge.className = 'badge-timer';
-        timerBadge.textContent = 'Activo';
-      } else if (tiempoRestante > 60) {
-        timerBadge.className = 'badge-timer warning';
-        timerBadge.textContent = '⚠️ Cerca de expirar';
-      } else {
-        timerBadge.className = 'badge-timer danger';
-        timerBadge.textContent = '🔴 Expirando';
-      }
-    }
-  }
-
-  function reiniciarTemporizador() {
-    if (!sesionActiva) return;
-
-    if (temporizadorInactividad) {
-      clearTimeout(temporizadorInactividad);
-    }
-
-    tiempoRestante = TIEMPO_INACTIVIDAD / 1000;
-    actualizarTimerDisplay();
-
-    temporizadorInactividad = setTimeout(function() {
-      cerrarSesion('⏳ Tu sesión ha expirado por inactividad.');
-    }, TIEMPO_INACTIVIDAD);
-  }
-
-  function cerrarSesion(mensaje) {
-    sesionActiva = false;
-
-    if (temporizadorInactividad) {
-      clearTimeout(temporizadorInactividad);
-      temporizadorInactividad = null;
-    }
-
-    if (intervaloContador) {
-      clearInterval(intervaloContador);
-      intervaloContador = null;
-    }
-
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('role');
-
-    if (mensaje) {
-      alert(mensaje);
-    }
-
-    window.location.href = '../public/login.html';
   }
 
   function initUserControls() {
@@ -176,156 +134,563 @@
     const logoutBtn = document.getElementById('dropdownLogout');
 
     if (container) {
-      container.addEventListener('click', function(e) {
+      container.addEventListener('click', function (e) {
         e.stopPropagation();
         dropdown.classList.toggle('show');
       });
     }
-
-    document.addEventListener('click', function() {
-      dropdown.classList.remove('show');
+    document.addEventListener('click', () => dropdown.classList.remove('show'));
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') dropdown.classList.remove('show');
     });
-
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-        dropdown.classList.remove('show');
-      }
-      if (e.ctrlKey && e.shiftKey && (e.key === 'L' || e.key === 'l')) {
-        e.preventDefault();
-        cerrarSesion('👋 Sesión cerrada manualmente.');
-      }
-    });
-
     if (logoutBtn) {
-      logoutBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
+      logoutBtn.addEventListener('click', function (e) {
+        e.preventDefault(); e.stopPropagation();
         if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
-          cerrarSesion('👋 Sesión cerrada exitosamente.');
+          localStorage.clear();
+          window.location.href = '../public/login.html';
         }
       });
     }
   }
 
   // ==========================================
-  // UTILIDADES Y LOGS
+  // LOGS Y UTILIDADES
   // ==========================================
+  function log(msg, d = null) { console.log(`[${new Date().toLocaleTimeString()}]  ${msg}`, d || ''); }
+  function logError(msg, e = null) { console.error(`[${new Date().toLocaleTimeString()}] ❌ ${msg}`, e || ''); }
+  function logSuccess(msg, d = null) { console.log(`[${new Date().toLocaleTimeString()}] ✅ ${msg}`, d || ''); }
 
-  function log(message, data = null) {
-    const timestamp = new Date().toLocaleTimeString();
-    if (data) {
-      console.log(`[${timestamp}] 🏭 ${message}`, data);
-    } else {
-      console.log(`[${timestamp}] 🏭 ${message}`);
-    }
+  function parseNumero(valor) {
+    if (valor === null || valor === undefined || valor === '') return null;
+    const n = parseFloat(valor);
+    return isNaN(n) ? null : n;
   }
 
-  function logError(message, error = null) {
-    const timestamp = new Date().toLocaleTimeString();
-    if (error) {
-      console.error(`[${timestamp}] ❌ ${message}`, error);
-    } else {
-      console.error(`[${timestamp}] ❌ ${message}`);
-    }
-  }
-
-  function logSuccess(message, data = null) {
-    const timestamp = new Date().toLocaleTimeString();
-    if (data) {
-      console.log(`[${timestamp}] ✅ ${message}`, data);
-    } else {
-      console.log(`[${timestamp}] ✅ ${message}`);
-    }
+  function formatearNumero(n, decimales = 2) {
+    if (n === null || n === undefined || isNaN(n)) return '';
+    return Number(n.toFixed(decimales)).toString();
   }
 
   // ==========================================
-  // SKELETON LOADING
+  // CAPACIDAD (valor libre + unidad ml / L)
   // ==========================================
+  function unidadActual() {
+    return document.getElementById('capacidad_unidad')?.value === 'l' ? 'l' : 'ml';
+  }
 
-  function mostrarSkeleton() {
-    const elementos = ['cnt-lotes', 'cnt-unidades', 'cnt-eficiencia', 'cnt-rechazos'];
-    elementos.forEach(id => {
+  function capacidadMlActual() {
+    const valor = parseNumero(document.getElementById('capacidad')?.value);
+    if (valor === null) return null;
+    return unidadActual() === 'l'
+      ? parseFloat((valor * 1000).toFixed(2))
+      : parseFloat(valor.toFixed(2));
+  }
+
+  function escribirCapacidadEnMl(ml) {
+    const cap = document.getElementById('capacidad');
+    const unidad = document.getElementById('capacidad_unidad');
+    const valor = parseNumero(ml);
+    if (!cap) return;
+    if (valor === null) {
+      cap.value = '';
+      if (unidad) unidad.value = 'ml';
+      return;
+    }
+    if (unidad && unidad.value === 'l') {
+      cap.value = formatearNumero(valor / 1000, 3);
+    } else {
+      cap.value = formatearNumero(valor, 3);
+    }
+  }
+
+  function etiquetaCapacidad(ml, unidad) {
+    const valor = parseNumero(ml);
+    if (valor === null) return '';
+    return unidad === 'l'
+      ? `${formatearNumero(valor / 1000, 3).replace('.', ',')} L`
+      : `${formatearNumero(valor, 3)} ml`;
+  }
+
+  function configurarCapacidad() {
+    const unidad = document.getElementById('capacidad_unidad');
+    const cap = document.getElementById('capacidad');
+    if (!unidad || !cap) return;
+
+    unidad.addEventListener('change', () => {
+      const valor = parseNumero(cap.value);
+      if (valor === null) return;
+      cap.value = unidad.value === 'l'
+        ? formatearNumero(valor / 1000, 3)
+        : formatearNumero(valor * 1000, 3);
+      log(`🍾 Unidad cambiada a ${unidad.value}: ${cap.value}`);
+    });
+
+    log('✅ Capacidad de valor libre configurada');
+  }
+
+  // ==========================================
+  // GEOMETRÍA DE DIMENSIONES
+  // ==========================================
+  function cambiarGeometria(tipo) {
+    geometriaActual = tipo;
+    document.querySelectorAll('.geo-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.geo === tipo);
+    });
+    const panelCil = document.getElementById('dim-cilindrico');
+    const panelRect = document.getElementById('dim-rectangular');
+    if (panelCil) panelCil.style.display = tipo === 'cilindrico' ? 'block' : 'none';
+    if (panelRect) panelRect.style.display = tipo === 'rectangular' ? 'block' : 'none';
+    actualizarPreviewDimensiones();
+  }
+
+  function obtenerDimensiones() {
+    if (geometriaActual === 'cilindrico') {
+      const d = document.getElementById('dim_diametro')?.value?.trim() || '';
+      const h = document.getElementById('dim_altura_cil')?.value?.trim() || '';
+      if (!d && !h) return null;
+      const dFmt = d ? (/cm|mm|pulg/i.test(d) ? d : `${d} cm`) : '';
+      const hFmt = h ? (/cm|mm|pulg/i.test(h) ? h : `${h} cm`) : '';
+      return `Ø ${dFmt} × H ${hFmt}`.trim();
+    } else {
+      const l = document.getElementById('dim_largo')?.value?.trim() || '';
+      const a = document.getElementById('dim_ancho')?.value?.trim() || '';
+      const h = document.getElementById('dim_alto')?.value?.trim() || '';
+      if (!l && !a && !h) return null;
+      const lFmt = l ? (/cm|mm|pulg/i.test(l) ? l : `${l} cm`) : '';
+      const aFmt = a ? (/cm|mm|pulg/i.test(a) ? a : `${a} cm`) : '';
+      const hFmt = h ? (/cm|mm|pulg/i.test(h) ? h : `${h} cm`) : '';
+      return `L ${lFmt} × A ${aFmt} × H ${hFmt}`.trim();
+    }
+  }
+
+  function actualizarPreviewDimensiones() {
+    const preview = document.getElementById('dim-preview');
+    const previewText = document.getElementById('dim-preview-text');
+    if (!preview || !previewText) return;
+    const dim = obtenerDimensiones();
+    if (dim) {
+      previewText.textContent = dim;
+      preview.style.display = 'flex';
+    } else {
+      preview.style.display = 'none';
+    }
+  }
+
+  function configurarEventosDimensiones() {
+    document.querySelectorAll('.geo-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        cambiarGeometria(btn.dataset.geo);
+      });
+    });
+    ['dim_diametro', 'dim_altura_cil', 'dim_largo', 'dim_ancho', 'dim_alto'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', actualizarPreviewDimensiones);
+    });
+    cambiarGeometria('cilindrico');
+    log('✅ Eventos de dimensiones configurados');
+  }
+
+  function aplicarDimensionesDesdeString(dimensiones) {
+    if (!dimensiones || typeof dimensiones !== 'string') return;
+    const str = dimensiones.trim();
+    if (!str) return;
+
+    const esRectangular = /^L\s/i.test(str) || /^L\d/i.test(str);
+
+    if (esRectangular) {
+      cambiarGeometria('rectangular');
+      const lMatch = str.match(/L\s*([\d.,]+\s*(?:cm|mm|pulg)?)/i);
+      const aMatch = str.match(/A\s*([\d.,]+\s*(?:cm|mm|pulg)?)/i);
+      const hMatch = str.match(/H\s*([\d.,]+\s*(?:cm|mm|pulg)?)/i);
+      const lEl = document.getElementById('dim_largo');
+      const aEl = document.getElementById('dim_ancho');
+      const hEl = document.getElementById('dim_alto');
+      if (lEl && lMatch) lEl.value = lMatch[1].trim();
+      if (aEl && aMatch) aEl.value = aMatch[1].trim();
+      if (hEl && hMatch) hEl.value = hMatch[1].trim();
+    } else {
+      cambiarGeometria('cilindrico');
+      const dMatch = str.match(/[ØDø]\s*([\d.,]+\s*(?:cm|mm|pulg)?)/i);
+      const hMatch = str.match(/H\s*([\d.,]+\s*(?:cm|mm|pulg)?)/i);
+      const dEl = document.getElementById('dim_diametro');
+      const hEl = document.getElementById('dim_altura_cil');
+      if (dEl && dMatch) dEl.value = dMatch[1].trim();
+      if (hEl && hMatch) hEl.value = hMatch[1].trim();
+    }
+    actualizarPreviewDimensiones();
+    log(`📐 Dimensiones autocompletadas desde producto: ${str}`);
+  }
+
+  // ==========================================
+  // MODO EDICIÓN LIBRE (Producto Nuevo)
+  // ==========================================
+  function activarModoEdicionLibre(activo) {
+    const camposTecnicos = ['item', 'acabado', 'material', 'tipo_boca', 'juego_envases', 'capacidad'];
+
+    camposTecnicos.forEach(id => {
       const el = document.getElementById(id);
-      if (el) {
-        el.innerHTML = `<span class="skeleton"></span>`;
+      if (!el) return;
+      const fieldWrapper = el.closest('.field-auto');
+      
+      if (fieldWrapper) {
+        fieldWrapper.classList.toggle('editando', activo);
+        fieldWrapper.style.background = activo ? 'transparent' : '';
       }
+
+      if (activo) {
+        el.removeAttribute('readonly');
+        el.style.background = '#ffffff'; 
+        if (el.getAttribute('placeholder') === 'Se carga del producto') {
+          el.setAttribute('placeholder', ''); 
+        }
+      } else {
+        el.setAttribute('readonly', 'readonly');
+        el.style.background = ''; 
+        el.setAttribute('placeholder', 'Se carga del producto'); 
+      }
+    });
+
+    const fieldDim = document.getElementById('field-dimensiones');
+    if (fieldDim) fieldDim.style.display = activo ? 'block' : 'none';
+    const aviso = document.getElementById('aviso-nuevo-producto');
+    if (aviso) aviso.style.display = activo ? 'flex' : 'none';
+    const chkWrap = document.getElementById('guardar-en-catalogo-wrapper');
+    if (chkWrap) chkWrap.style.display = activo ? 'block' : 'none';
+
+    log(`Modo edición libre: ${activo ? 'ACTIVADO' : 'DESACTIVADO'}`);
+  }
+
+  function limpiarFichaTecnica() {
+    ['item', 'acabado', 'material', 'tipo_boca', 'juego_envases', 'capacidad'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    const unidad = document.getElementById('capacidad_unidad');
+    if (unidad) unidad.value = 'ml';
+    ['dim_diametro', 'dim_altura_cil', 'dim_largo', 'dim_ancho', 'dim_alto'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    cambiarGeometria('cilindrico');
+    actualizarPreviewDimensiones();
+  }
+
+  function autocompletarFichaTecnica(producto) {
+    if (!producto) return;
+    const item = document.getElementById('item');
+    const acabado = document.getElementById('acabado');
+    const material = document.getElementById('material');
+    const tipoBoca = document.getElementById('tipo_boca');
+    const juego = document.getElementById('juego_envases');
+    const unidad = document.getElementById('capacidad_unidad');
+    const bppEl = document.getElementById('bpp');
+
+    if (item) item.value = producto.item || '';
+    if (acabado) acabado.value = producto.acabado || '';
+    if (material) material.value = producto.material || '';
+    if (tipoBoca) tipoBoca.value = producto.tipo_boca || '';
+    if (juego) juego.value = producto.juego_envases || '';
+
+    if (bppEl) bppEl.value = (producto.bpp !== null && producto.bpp !== undefined) ? producto.bpp : '';
+    
+    if (unidad) unidad.value = 'ml';
+    escribirCapacidadEnMl(producto.capacidad_ml ?? null);
+
+    if (producto.dimensiones) {
+      aplicarDimensionesDesdeString(producto.dimensiones);
+    }
+    recalcularTodo();
+    log(`📋 Ficha técnica autocompletada: ${producto.nombre || ''}`);
+  }
+
+  // ==========================================
+  // TOGGLE NUEVO PRODUCTO / CLIENTE
+  // ==========================================
+  function toggleNuevoProducto(forzarActivo) {
+    modoNuevoProducto = (forzarActivo === true) ? true : !modoNuevoProducto;
+    const wrapper = document.getElementById('producto-nuevo-wrapper');
+    const input = document.getElementById('producto-nuevo');
+    const searchInput = document.getElementById('producto-select');
+    const btn = document.getElementById('btn-nuevo-producto');
+    const hint = document.getElementById('producto-hint');
+
+    if (modoNuevoProducto) {
+      if (wrapper) wrapper.style.display = 'block';
+      if (input) { input.value = ''; input.focus(); }
+      if (searchInput) searchInput.disabled = true;
+      if (btn) { btn.classList.add('active'); btn.innerHTML = '<i class="ti ti-x"></i> Cancelar'; }
+      if (hint) hint.textContent = 'Escriba el nombre del nuevo producto. Los campos técnicos se desbloquean abajo.';
+      activarModoEdicionLibre(true);
+      document.getElementById('capacidad')?.focus();
+    } else {
+      if (wrapper) wrapper.style.display = 'none';
+      if (input) input.value = '';
+      if (searchInput) { searchInput.disabled = false; searchInput.value = ''; }
+      if (btn) { btn.classList.remove('active'); btn.innerHTML = '<i class="ti ti-plus"></i> Nuevo'; }
+      if (hint) hint.textContent = 'Escriba para buscar un producto del catálogo o cree uno nuevo';
+      activarModoEdicionLibre(false);
+      limpiarFichaTecnica();
+    }
+  }
+
+  function toggleNuevoCliente(forzarActivo) {
+    modoNuevoCliente = (forzarActivo === true) ? true : !modoNuevoCliente;
+    const wrapper = document.getElementById('cliente-nuevo-wrapper');
+    const input = document.getElementById('cliente-nuevo');
+    const searchInput = document.getElementById('cliente-select');
+    const btn = document.getElementById('btn-nuevo-cliente');
+
+    if (modoNuevoCliente) {
+      if (wrapper) wrapper.style.display = 'block';
+      if (input) { input.value = ''; input.focus(); }
+      if (searchInput) searchInput.disabled = true;
+      if (btn) { btn.classList.add('active'); btn.innerHTML = '<i class="ti ti-x"></i> Cancelar'; }
+    } else {
+      if (wrapper) wrapper.style.display = 'none';
+      if (input) input.value = '';
+      if (searchInput) { searchInput.disabled = false; searchInput.value = ''; }
+      if (btn) { btn.classList.remove('active'); btn.innerHTML = '<i class="ti ti-plus"></i> Nuevo'; }
+    }
+  }
+
+  function obtenerProducto() {
+    if (modoNuevoProducto) {
+      return (document.getElementById('producto-nuevo')?.value?.trim() || '').toUpperCase();
+    }
+    return (document.getElementById('producto-select')?.value?.trim() || '').toUpperCase();
+  }
+
+  function obtenerCliente() {
+    if (modoNuevoCliente) {
+      return (document.getElementById('cliente-nuevo')?.value?.trim() || '').toUpperCase();
+    }
+    return (document.getElementById('cliente-select')?.value?.trim() || '').toUpperCase();
+  }
+
+  // ==========================================
+  // LISTENERS SELECTORES (con manejo de __NUEVO__)
+  // ==========================================
+  function configurarListenersSelectores() {
+    const prodInput = document.getElementById('producto-select');
+    if (prodInput) {
+      prodInput.addEventListener('change', (e) => {
+        const val = e.target.value.trim();
+
+        if (val === VALOR_NUEVO) {
+          if (!modoNuevoProducto) toggleNuevoProducto(true);
+          return;
+        }
+
+        if (modoNuevoProducto) toggleNuevoProducto(false);
+
+        if (!val) { limpiarFichaTecnica(); return; }
+
+        const upperVal = val.toUpperCase();
+        const productoEncontrado = Object.entries(productosCache).find(
+          ([nombre]) => nombre.toUpperCase() === upperVal
+        );
+
+        if (productoEncontrado) {
+          prodInput.value = productoEncontrado[0];
+          autocompletarFichaTecnica(productoEncontrado[1]);
+        } else {
+          logError(`Producto no encontrado en caché: ${val}`);
+          limpiarFichaTecnica();
+        }
+      });
+    }
+
+    const cliInput = document.getElementById('cliente-select');
+    if (cliInput) {
+      cliInput.addEventListener('change', (e) => {
+        const val = e.target.value.trim();
+
+        if (val === VALOR_NUEVO) {
+          if (!modoNuevoCliente) toggleNuevoCliente(true);
+          return;
+        }
+
+        if (modoNuevoCliente) toggleNuevoCliente(false);
+        if (val) cliInput.value = val.toUpperCase();
+      });
+    }
+
+    document.getElementById('btn-cancelar-producto')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (modoNuevoProducto) toggleNuevoProducto(false);
+    });
+    document.getElementById('btn-cancelar-cliente')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (modoNuevoCliente) toggleNuevoCliente(false);
+    });
+    document.getElementById('btn-nuevo-producto')?.addEventListener('click', (e) => {
+      e.preventDefault(); toggleNuevoProducto();
+    });
+    document.getElementById('btn-nuevo-cliente')?.addEventListener('click', (e) => {
+      e.preventDefault(); toggleNuevoCliente();
+    });
+    log('✅ Listeners de selectores configurados');
+  }
+
+  // ==========================================
+  // GENERAR CÓDIGO DE LOTE
+  // ==========================================
+  function generarCodigoLoteLocal() {
+    const fechaInput = document.getElementById('fecha-prod');
+    const maquinaInput = document.getElementById('maquina');
+    const loteInput = document.getElementById('lote-id');
+
+    if (!fechaInput || !maquinaInput || !loteInput) return;
+    const fecha = fechaInput.value;
+    const maquina = (maquinaInput.value || '').trim();
+
+    if (!fecha || !maquina) { loteInput.value = ''; return; }
+
+    const fechaLimpia = fecha.replace(/-/g, '');
+    const maquinaLimpia = maquina.replace(/\s+/g, '').toUpperCase();
+    loteInput.value = `${fechaLimpia}${maquinaLimpia}`;
+  }
+
+  function configurarGeneracionCodigo() {
+    document.getElementById('fecha-prod')?.addEventListener('change', generarCodigoLoteLocal);
+    document.getElementById('maquina')?.addEventListener('change', () => {
+      generarCodigoLoteLocal();
+      autocompletarLineaPorMaquina();
+    });
+    generarCodigoLoteLocal();
+    log('✅ Generación de código de lote configurada');
+  }
+
+  function autocompletarLineaPorMaquina() {
+    const maquina = document.getElementById('maquina')?.value || '';
+    const lineaEl = document.getElementById('linea');
+    if (lineaEl && maquina && MAQUINA_LINEA_MAP[maquina]) {
+      lineaEl.value = MAQUINA_LINEA_MAP[maquina];
+    }
+  }
+
+  // ==========================================
+  // AUTO-CÁLCULOS
+  // ==========================================
+  function recalcularTodo() {
+    const cantidad = parseNumero(document.getElementById('cantidad')?.value);
+    const bpp = parseNumero(document.getElementById('bpp')?.value);
+    const bpc = parseNumero(document.getElementById('bpc')?.value);
+
+    const paletasEl = document.getElementById('paletas');
+    const cajasEl = document.getElementById('cajas_producidas');
+    const gruesasEl = document.getElementById('gruesas');
+    const gruesasPaletaEl = document.getElementById('gruesas_paleta');
+
+    if (cantidad && bpp && bpp > 0 && paletasEl) {
+      paletasEl.value = formatearNumero(cantidad / bpp, 2);
+    } else if (paletasEl) {
+      paletasEl.value = '';
+    }
+
+    if (cantidad && bpc && bpc > 0 && cajasEl) {
+      cajasEl.value = formatearNumero(cantidad / bpc, 2);
+    } else if (cajasEl) {
+      cajasEl.value = '';
+    }
+
+    if (cantidad && gruesasEl) {
+      gruesasEl.value = formatearNumero(cantidad / BOTELLAS_POR_GRUESA, 2);
+    } else if (gruesasEl) {
+      gruesasEl.value = '';
+    }
+
+    if (bpp && bpp > 0 && gruesasPaletaEl) {
+      gruesasPaletaEl.value = formatearNumero(bpp / BOTELLAS_POR_GRUESA, 2);
+    } else if (gruesasPaletaEl) {
+      gruesasPaletaEl.value = '';
+    }
+  }
+
+  function configurarAutoCalculos() {
+    ['cantidad', 'bpp', 'bpc'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', recalcularTodo);
+    });
+    log('✅ Auto-cálculos configurados');
+  }
+
+  // ==========================================
+  // SKELETON / TIMESTAMP
+  // ==========================================
+  function mostrarSkeleton() {
+    ['cnt-lotes', 'cnt-unidades', 'cnt-eficiencia', 'cnt-rechazos'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = `<span class="skeleton"></span>`;
     });
   }
 
-  // ==========================================
-  // ACTUALIZAR TIMESTAMP
-  // ==========================================
-
   function actualizarTimestamp() {
-    const now = new Date();
     const el = document.getElementById('ultima-actualizacion');
-    if (el) {
-      el.textContent = now.toLocaleTimeString();
-    }
+    if (el) el.textContent = new Date().toLocaleTimeString();
   }
 
   // ==========================================
-  // CARGAR PRODUCCIÓN DESDE API
+  // CARGAR PRODUCCIÓN
   // ==========================================
-
   async function cargarProduccion(filtros = {}) {
     try {
       log('Cargando producción desde API...');
-
       const params = new URLSearchParams();
-      if (filtros.codigo) params.append('codigo', filtros.codigo);
-      if (filtros.producto) params.append('producto', filtros.producto);
-      if (filtros.linea) params.append('linea', filtros.linea);
-      if (filtros.operador) params.append('operador', filtros.operador);
-      if (filtros.turno) params.append('turno', filtros.turno);
-      if (filtros.fecha_desde) params.append('fecha_desde', filtros.fecha_desde);
-      if (filtros.fecha_hasta) params.append('fecha_hasta', filtros.fecha_hasta);
+      Object.entries(filtros).forEach(([k, v]) => { if (v) params.append(k, v); });
 
       const cacheBuster = `t=${Date.now()}`;
-      
-      let url;
-      if (params.toString()) {
-        url = `${API_URL}/produccion?${params.toString()}&${cacheBuster}`;
-      } else {
-        url = `${API_URL}/produccion?${cacheBuster}`;
-      }
+      const url = params.toString()
+        ? `${API_URL}/produccion?${params.toString()}&${cacheBuster}`
+        : `${API_URL}/produccion?${cacheBuster}`;
 
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await fetch(url, { headers: tokenHeader() });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          cerrarSesion('⏳ Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
-          return;
-        }
+        if (response.status === 401) { window.location.href = '../public/login.html'; return; }
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
 
-      // ==========================================
-      // MAPEO DE DATOS (Incluye nuevos campos)
-      // ==========================================
       lotes = data.map(p => ({
         id: p.id,
         codigo: p.codigo_lote,
+        ticket_carga: p.ticket_carga || '—',
         prod: p.tipo_producto,
+        molde: p.molde || p.tipo_producto,
+        item: p.item || '—',
+        acabado: p.acabado || '—',
+        material: p.material || '',
+        tipo_boca: p.tipo_boca || '',
+        maquina: p.maquina || '—',
+        grupo: p.grupo || '—',
+        bpp: p.bpp || 0,
+        bpc: p.bot_por_caja || p.bpc || 0,
+        cajas_producidas: p.cajas_producidas || 0,
+        capacidad_ml: p.capacidad_ml ?? p.capacidad ?? null,
+        unidad_capacidad: (p.unidad_capacidad === 'l' || p.unidad_capacidad === 'L') ? 'l' : 'ml',
+        orden: p.orden || '—',
         linea: p.linea_produccion,
+        planta: p.planta || 'Valera',
         op: p.operador,
         uds: p.cantidad,
         turno: p.turno,
         paletas: p.paletas || 0,
         gruesas: p.gruesas || 0,
+        juego_envases: p.juego_envases || '',
+        tamano_muestra: p.tamano_muestra || '',
+        bot_por_canada: p.bot_por_canada || 0,
+        bot_por_paleta: p.bot_por_paleta || 0,
+        gruesas_por_paleta: p.gruesas_por_paleta || 0,
         cliente: p.cliente || 'Sin asignar',
+        estatus: p.estatus || '100',
+        estado_auditoria: p.estado_auditoria || 'Pendiente',
+        observaciones: p.observaciones || '',
+        fecha_prod: p.fecha_produccion || '',
         fecha: new Date(p.fecha_registro).toLocaleString('es-ES', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
         })
       }));
 
@@ -336,15 +701,11 @@
       const resultadoEl = document.getElementById('filtro-resultados');
       if (resultadoEl) {
         const filtrosActivosCount = Object.values(filtros).filter(v => v).length;
-        if (filtrosActivosCount > 0) {
-          resultadoEl.textContent = `🔍 Filtros aplicados: ${filtrosActivosCount} | ${data.length} resultados`;
-        } else {
-          resultadoEl.textContent = `📋 Mostrando ${data.length} lotes`;
-        }
+        resultadoEl.textContent = filtrosActivosCount > 0
+          ? `🔍 Filtros aplicados: ${filtrosActivosCount} | ${data.length} resultados`
+          : ` Mostrando ${data.length} lotes`;
       }
-
       logSuccess('Producción cargada correctamente');
-
     } catch (error) {
       logError('Error cargando producción:', error);
       mostrarError();
@@ -352,90 +713,29 @@
   }
 
   // ==========================================
-  // ACTUALIZAR KPIs
+  // KPIs
   // ==========================================
-
   function actualizarKPIs(lotesData) {
     const totalLotes = lotesData.length;
     const totalUnidades = lotesData.reduce((sum, l) => sum + (l.uds || 0), 0);
+    const totalPendientes = lotesData.filter(l => l.estado_auditoria === 'Pendiente').length;
+    const pctPendientes = totalLotes > 0 ? Math.round((totalPendientes / totalLotes) * 100) : 0;
 
     const kpis = [
-      {
-        id: 'cnt-lotes',
-        valor: totalLotes,
-        label: 'Lotes registrados',
-        formato: 'numero'
-      },
-      {
-        id: 'cnt-unidades',
-        valor: totalUnidades,
-        label: 'Unidades producidas',
-        formato: 'numero'
-      },
-      {
-        id: 'cnt-eficiencia',
-        valor: calcularEficiencia(lotesData),
-        label: 'Eficiencia',
-        formato: 'porcentaje'
-      },
-      {
-        id: 'cnt-rechazos',
-        valor: 0,
-        label: 'Rechazos',
-        formato: 'numero',
-        invertir: true
-      }
+      { id: 'cnt-lotes', valor: totalLotes, formato: 'numero', sub: `${totalLotes} lotes registrados` },
+      { id: 'cnt-unidades', valor: totalUnidades, formato: 'numero', sub: `${totalUnidades.toLocaleString()} unidades totales` },
+      { id: 'cnt-eficiencia', valor: calcularEficiencia(lotesData), formato: 'porcentaje', sub: 'Promedio general' },
+      { id: 'cnt-rechazos', valor: totalPendientes, formato: 'numero', sub: `${pctPendientes}% pendientes` }
     ];
 
     kpis.forEach(kpi => {
       const el = document.getElementById(kpi.id);
       if (!el) return;
-
-      const tendencia = 0;
-      const esCero = tendencia === 0;
-
-      let color = 'var(--text-hint)';
-      let flecha = '→';
-      let claseTendencia = 'neutral';
-
-      if (!esCero) {
-        color = tendencia > 0 ? 'var(--success)' : 'var(--danger)';
-        flecha = tendencia > 0 ? '↑' : '↓';
-        claseTendencia = tendencia > 0 ? 'up' : 'down';
-      }
-
-      let valorFormateado;
-      if (kpi.formato === 'porcentaje') {
-        valorFormateado = typeof kpi.valor === 'number' ? kpi.valor + '%' : kpi.valor;
-      } else {
-        valorFormateado = typeof kpi.valor === 'number' ? kpi.valor.toLocaleString() : kpi.valor;
-      }
-
-      const tendenciaHTML = !esCero ? `
-        <span class="tendencia ${claseTendencia}">
-          ${flecha} ${Math.abs(tendencia)}%
-        </span>
-      ` : '';
-
-      el.innerHTML = `
-        ${valorFormateado}
-        ${tendenciaHTML}
-      `;
-
+      el.innerHTML = kpi.formato === 'porcentaje' ? `${kpi.valor}%` : kpi.valor.toLocaleString();
       const card = el.closest('.stat-card');
       if (card) {
         const subEl = card.querySelector('.stat-sub');
-        if (subEl) {
-          if (kpi.id === 'cnt-lotes') {
-            subEl.textContent = `${totalLotes} lotes registrados`;
-          } else if (kpi.id === 'cnt-unidades') {
-            subEl.textContent = `${totalUnidades.toLocaleString()} unidades totales`;
-          } else if (kpi.id === 'cnt-eficiencia') {
-            subEl.textContent = `Promedio de líneas activas`;
-          } else if (kpi.id === 'cnt-rechazos') {
-            subEl.textContent = `0% del total`;
-          }
-        }
+        if (subEl) subEl.textContent = kpi.sub;
       }
     });
   }
@@ -448,19 +748,126 @@
   }
 
   // ==========================================
-  // GENERAR CÓDIGO DE LOTE
+  // MODAL: VISUALIZAR LOTE
   // ==========================================
+  function setTexto(id, valor) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = (valor !== null && valor !== undefined && valor !== '') ? valor : '—';
+  }
 
-  function generarCodigoLote() {
-    const año = new Date().getFullYear();
-    const count = lotes.length + 1;
-    return `PROD-${año}-${String(count).padStart(4, '0')}`;
+  function formatearFechaProd(fechaStr) {
+    if (!fechaStr) return '—';
+    try {
+      const d = new Date(fechaStr + 'T00:00:00');
+      return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch (e) {
+      return fechaStr;
+    }
+  }
+
+  window.verLote = function (id) {
+    const lote = lotes.find(l => l.id === id);
+    if (!lote) { logError(`Lote ${id} no encontrado`); return; }
+
+    setTexto('modal-lote-codigo', lote.codigo);
+    setTexto('detail-planta', lote.planta);
+    setTexto('detail-fecha', formatearFechaProd(lote.fecha_prod));
+    setTexto('detail-turno', lote.turno);
+
+    setTexto('detail-producto', lote.prod);
+    setTexto('detail-item', lote.item);
+    setTexto('detail-material', lote.material);
+    setTexto('detail-tipo-boca', lote.tipo_boca);
+    setTexto('detail-capacidad', etiquetaCapacidad(lote.capacidad_ml, lote.unidad_capacidad));
+    setTexto('detail-bpp', lote.bpp);
+    setTexto('detail-acabado', lote.acabado);
+    setTexto('detail-juego-envases', lote.juego_envases);
+    
+    let dimensionesMostrar = '—';
+    if (productosCache[lote.prod] && productosCache[lote.prod].dimensiones) {
+      dimensionesMostrar = productosCache[lote.prod].dimensiones;
+    } else if (lote.tamano_muestra && typeof lote.tamano_muestra === 'string' && lote.tamano_muestra.includes('cm')) {
+      dimensionesMostrar = lote.tamano_muestra;
+    }
+    setTexto('detail-dimensiones', dimensionesMostrar);
+
+    let bpcMostrar = lote.bpc || lote.bot_por_canada || 0;
+    if (bpcMostrar === 0 && productosCache[lote.prod]) {
+      bpcMostrar = productosCache[lote.prod].bpc || 0;
+    }
+    setTexto('detail-bpc', bpcMostrar || '—');
+
+    setTexto('detail-maquina', lote.maquina);
+    setTexto('detail-linea', lote.linea);
+    setTexto('detail-molde', lote.molde);
+    setTexto('detail-grupo', lote.grupo);
+    setTexto('detail-operador', lote.op);
+    setTexto('detail-orden', lote.orden);
+    setTexto('detail-ticket', lote.ticket_carga);
+
+    setTexto('detail-cantidad', lote.uds ? lote.uds.toLocaleString() : '—');
+    setTexto('detail-paletas', lote.paletas);
+
+    let cajasMostrar = '—';
+    if (lote.cajas_producidas > 0) {
+      cajasMostrar = formatearNumero(lote.cajas_producidas, 2);
+    } else if (lote.uds > 0 && bpcMostrar > 0) {
+      cajasMostrar = formatearNumero(lote.uds / bpcMostrar, 2);
+    }
+    setTexto('detail-cajas', cajasMostrar);
+
+    setTexto('detail-gruesas', lote.gruesas);
+    setTexto('detail-gruesas-paleta', lote.gruesas_por_paleta);
+
+    setTexto('detail-cliente', lote.cliente);
+    const estatusTexto = ESTATUS_LABELS[lote.estatus] || lote.estatus;
+    setTexto('detail-estatus', estatusTexto);
+    
+    let estadoAuditoria = lote.estado_auditoria || 'Pendiente';
+    if (lote.estatus === '200' || lote.estatus === '300') {
+        estadoAuditoria = 'Evaluado por Calidad';
+    }
+    setTexto('detail-estado-auditoria', estadoAuditoria);
+    
+    setTexto('detail-observaciones', lote.observaciones);
+
+    const modal = document.getElementById('modal-ver-lote');
+    if (modal) modal.style.display = 'flex';
+
+    log(`👁️ Visualizando lote: ${lote.codigo}`);
+  };
+
+  function cerrarModalLote() {
+    const modal = document.getElementById('modal-ver-lote');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function configurarModalLote() {
+    document.getElementById('btn-cerrar-modal-lote')?.addEventListener('click', cerrarModalLote);
+    document.getElementById('btn-cerrar-modal-lote-footer')?.addEventListener('click', cerrarModalLote);
+
+    const overlay = document.getElementById('modal-ver-lote');
+    if (overlay) {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) cerrarModalLote();
+      });
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('modal-ver-lote');
+        if (modal && modal.style.display === 'flex') {
+          e.preventDefault();
+          cerrarModalLote();
+        }
+      }
+    });
+    log('✅ Modal de visualización de lote configurado');
   }
 
   // ==========================================
-  // RENDER TABLA (Con nuevos campos)
+  // RENDER TABLA
   // ==========================================
-
   function renderTabla(filtro = '') {
     const tbody = document.getElementById('tabla-lotes');
     if (!tbody) return;
@@ -468,9 +875,11 @@
     const data = filtro
       ? lotes.filter(l =>
           l.codigo.toLowerCase().includes(filtro) ||
-          l.prod.toLowerCase().includes(filtro) ||
-          l.linea.toLowerCase().includes(filtro) ||
-          l.op.toLowerCase().includes(filtro)
+          l.ticket_carga.toLowerCase().includes(filtro) ||
+          (l.prod || '').toLowerCase().includes(filtro) ||
+          (l.linea || '').toLowerCase().includes(filtro) ||
+          (l.op || '').toLowerCase().includes(filtro) ||
+          (l.cliente || '').toLowerCase().includes(filtro)
         )
       : lotes;
 
@@ -479,7 +888,7 @@
     if (data.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted)">
+          <td colspan="14" style="text-align:center;padding:2rem;color:var(--text-muted)">
             <i class="ti ti-inbox" style="font-size:1.5rem;margin-right:0.5rem"></i>
             No hay lotes registrados
           </td>
@@ -492,37 +901,36 @@
       const tr = document.createElement('tr');
       tr.style.animationDelay = `${0.04 * i}s`;
 
-      // AGREGUÉ PALETAS Y GRUESAS A LA TABLA
+      const estatusClass = ESTATUS_CLASES[l.estatus] || 'estatus-100';
+      const plantaClass = PLANTA_CLASES[l.planta] || 'planta-valera';
+      const estatusTexto = ESTATUS_LABELS[l.estatus] || l.estatus;
+      const capacidadTexto = etiquetaCapacidad(l.capacidad_ml, l.unidad_capacidad);
+
       tr.innerHTML = `
-        <td class="font-mono" style="font-size:12px">
-          <span class="badge badge-info">${l.codigo}</span>
-        </td>
-        <td>${l.prod}</td>
+        <td class="font-mono" style="font-size:12px"><span class="badge badge-info">${l.codigo}</span></td>
+        <td style="font-family:'Courier New',monospace;font-size:11px">${l.ticket_carga}</td>
+        <td><span class="planta-badge ${plantaClass}">${l.planta}</span></td>
+        <td>${l.molde}</td>
+        <td>${l.maquina}</td>
         <td>${l.linea}</td>
         <td>${l.op}</td>
+        <td style="text-align:center"><span class="cell-capacidad">${capacidadTexto || '—'}</span></td>
         <td style="text-align:center">${l.uds}</td>
         <td><span class="badge badge-info">${l.turno}</span></td>
-        <td style="text-align:center">${l.paletas}</td>
-        <td style="text-align:center">${l.gruesas}</td>
-        <td class="text-muted text-sm">
-          <span style="display:block;font-weight:600;color:var(--navy);">${l.cliente}</span>
-          <span style="font-size:10px;color:var(--text-hint)">${l.fecha}</span>
-        </td>
+        <td style="text-align:center"><span class="estatus-badge ${estatusClass}">${estatusTexto}</span></td>
+        <td><span style="display:block;font-weight:600;color:var(--navy);">${l.cliente}</span></td>
+        <td class="text-muted text-sm">${l.fecha}</td>
         <td>
-          <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">
-            <button class="btn btn-success btn-xs" onclick="exportarLoteIndividual(${l.id})" title="Exportar Individual">
-              <i class="ti ti-file-spreadsheet"></i>
+          <div style="display:flex;gap:4px;justify-content:center;">
+            <button type="button" class="btn btn-primary btn-xs" onclick="verLote(${l.id})" title="Ver detalle del lote">
+              <i class="ti ti-eye"></i>
             </button>
-            <button class="btn btn-outline btn-xs" onclick="exportarLoteGeneral(${l.id})" title="Exportar Sábana General">
-              <i class="ti ti-file-sheet"></i>
-            </button>
-            <button class="btn btn-danger btn-xs" onclick="eliminarLote(${l.id})" title="Eliminar lote">
+            <button type="button" class="btn btn-danger btn-xs" onclick="eliminarLote(${l.id})" title="Eliminar lote">
               <i class="ti ti-trash"></i>
             </button>
           </div>
         </td>
       `;
-
       tbody.appendChild(tr);
     });
   }
@@ -530,45 +938,33 @@
   // ==========================================
   // ELIMINAR LOTE
   // ==========================================
-
-  window.eliminarLote = async function(id) {
-    if (!confirm('¿Estás seguro de eliminar este lote? Esta acción no se puede deshacer.')) {
-      return;
-    }
+  window.eliminarLote = async function (id) {
+    if (!confirm('¿Estás seguro de eliminar este lote? Esta acción no se puede deshacer.')) return;
 
     try {
       const response = await fetch(`${API_URL}/produccion/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+        headers: tokenHeader()
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          cerrarSesion('⏳ Tu sesión ha expirado.');
-          return;
-        }
+        if (response.status === 401) { window.location.href = '../public/login.html'; return; }
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
       logSuccess(`Lote ${id} eliminado correctamente`);
       await cargarProduccion(filtrosActivos);
+      generarCodigoLoteLocal();
 
       const toast = document.getElementById('toast-prod');
       if (toast) {
         toast.textContent = '✅ Lote eliminado correctamente';
-        toast.style.background = '#ffebee';
-        toast.style.color = '#b71c1c';
         toast.classList.add('show');
         setTimeout(() => {
           toast.classList.remove('show');
           toast.textContent = '✅ Lote registrado correctamente';
-          toast.style.background = '#d1fae5';
-          toast.style.color = '#065f46';
         }, 3000);
       }
-
     } catch (error) {
       logError('Error eliminando lote:', error);
       alert('No se pudo eliminar el lote: ' + error.message);
@@ -576,97 +972,198 @@
   };
 
   // ==========================================
-  // EXPORTAR LOTE
+  // REGISTRAR PRODUCCIÓN
   // ==========================================
-
-  window.exportarLoteIndividual = function(id) {
-    if (!id) {
-      alert('ID de lote no válido');
-      return;
-    }
-    log(`📤 Exportando lote ${id} a Excel Individual...`);
-    window.open(`${API_URL}/reportes/produccion/excel/individual/${id}?token=${localStorage.getItem('token')}`, '_blank');
-  };
-
-  window.exportarLoteGeneral = function(id) {
-    if (!id) {
-      alert('ID de lote no válido');
-      return;
-    }
-    log(`📤 Exportando lote ${id} a Excel General (Sábana)...`);
-    window.open(`${API_URL}/reportes/produccion/excel/general/${id}?token=${localStorage.getItem('token')}`, '_blank');
-  };
-
-  // ==========================================
-  // REGISTRAR PRODUCCIÓN (Actualizado con nuevos campos)
-  // ==========================================
-
   const btnRegistrar = document.getElementById('btn-registrar');
 
   if (btnRegistrar) {
-    btnRegistrar.addEventListener('click', async () => {
+    btnRegistrar.addEventListener('click', async (e) => {
+      e.preventDefault();
+
+      const ticket_carga = document.getElementById('ticket_carga').value.trim();
+      const planta = document.getElementById('planta').value;
+      const maquina = document.getElementById('maquina').value;
+      
+      // 👇 AQUÍ EL TURNO SE ENVÍA TAL CUAL (1, 2, 3, 4)
+      const turno = document.getElementById('turno').value; 
+      
+      const grupo = document.getElementById('grupo').value.trim();
       const linea = document.getElementById('linea').value.trim();
-      const prod = document.getElementById('producto').value.trim();
+      const operador = document.getElementById('operador').value.trim();
+      const orden = document.getElementById('orden').value.trim();
+      const acabado = document.getElementById('acabado').value.trim();
+      const item = document.getElementById('item').value.trim();
+      const material = document.getElementById('material')?.value?.trim() || '';
+      const tipo_boca = document.getElementById('tipo_boca')?.value?.trim() || '';
+      const molde = document.getElementById('molde').value.trim();
+      const bpp = document.getElementById('bpp').value;
+      const bpc = document.getElementById('bpc')?.value;
+      const capacidadValor = parseNumero(document.getElementById('capacidad')?.value);
+      const capacidadUnidad = unidadActual();
+      const capacidadMl = capacidadMlActual();
       const cant = document.getElementById('cantidad').value;
-      const op = document.getElementById('operador').value.trim();
-      const turno = document.getElementById('turno').value.trim();
-      const fecha = document.getElementById('fecha-prod').value;
-      const cliente = document.getElementById('cliente').value.trim();
       const paletas = document.getElementById('paletas').value;
+      const cajas_producidas = document.getElementById('cajas_producidas').value;
       const gruesas = document.getElementById('gruesas').value;
+      const gruesas_paleta = document.getElementById('gruesas_paleta').value;
+      const fecha = document.getElementById('fecha-prod').value;
+      const estatus = document.getElementById('estatus').value;
+      const observaciones = document.getElementById('obs-prod').value.trim();
 
-      if (!linea || !prod || !cant || !op || !turno || !cliente) {
-        alert('Completa todos los campos obligatorios (Línea, Molde, Cantidad, Operador, Turno, Cliente).');
-        return;
-      }
+      const prod = obtenerProducto();
+      const cliente = obtenerCliente();
+      const juego_envases = document.getElementById('juego_envases')?.value?.trim() || null;
+      const dimensiones = obtenerDimensiones();
+      const guardarEnCatalogo = document.getElementById('guardar-en-catalogo')?.checked || false;
 
-      const codigo = generarCodigoLote();
+      if (!planta) { alert('Selecciona una planta.'); return; }
+      if (!maquina) { alert('Selecciona una máquina.'); return; }
+      if (!turno) { alert('Selecciona un turno.'); return; }
+      if (!operador) { alert('Ingresa el operador.'); return; }
+      if (!molde) { alert('Ingresa el molde.'); return; }
+      if (!prod) { alert('Selecciona o crea un producto.'); return; }
+      if (!cliente) { alert('Selecciona o crea un cliente.'); return; }
+      if (!cant || parseInt(cant) <= 0) { alert('La cantidad debe ser mayor a 0.'); return; }
+      if (capacidadValor !== null && capacidadValor <= 0) { alert('El volumen debe ser mayor a 0.'); return; }
 
-      // CONSTRUCCIÓN DEL BODY CON LOS NUEVOS CAMPOS
       const body = {
-        codigo_lote: codigo,
-        linea_produccion: linea,
+        ticket_carga: ticket_carga || null,
+        planta: planta,
+        maquina: maquina || null,
+        turno: turno, // <-- Se envía "1", "2", "3" o "4"
+        grupo: grupo || null,
+        linea_produccion: linea || null,
+        operador: operador,
+        orden: orden || null,
         tipo_producto: prod,
+        acabado: acabado || null,
+        material: material || null,
+        tipo_boca: tipo_boca || null,
+        item: item || null,
+        molde: molde || null,
+        bpp: bpp ? parseFloat(bpp) : null,
+        bpc: bpc ? parseInt(bpc) : null,
+        capacidad: capacidadMl,
+        capacidad_ml: capacidadMl,
+        unidad_capacidad: capacidadUnidad,
         cantidad: parseInt(cant) || 0,
-        operador: op,
-        turno: turno,
+        paletas: paletas ? parseFloat(paletas) : null,
+        cajas_producidas: cajas_producidas ? parseFloat(cajas_producidas) : null,
+        gruesas: gruesas ? parseFloat(gruesas) : null,
+        juego_envases: juego_envases,
+        tamano_muestra: dimensiones,
+        bot_por_canada: bpc ? parseInt(bpc) : null,
+        bot_por_paleta: bpp ? parseFloat(bpp) : null,
+        gruesas_por_paleta: gruesas_paleta ? parseFloat(gruesas_paleta) : null,
         cliente: cliente,
-        paletas: parseInt(paletas) || 0,
-        gruesas: parseFloat(gruesas) || 0,
-        observaciones: document.getElementById('obs-prod').value || null
+        estatus: estatus,
+        observaciones: observaciones || null
       };
 
-      if (fecha) {
-        body.fecha_produccion = new Date(fecha).toISOString();
-      }
+      if (fecha) body.fecha_produccion = fecha;
 
       try {
+        // ---------- 1) GUARDAR PRODUCTO NUEVO (si aplica) ----------
+        if (modoNuevoProducto && prod && guardarEnCatalogo) {
+          log(`📦 Guardando nuevo producto en catálogo: ${prod}`);
+          const productBody = {
+            nombre: prod,
+            item: item || null,
+            acabado: acabado || null,
+            capacidad_ml: capacidadMl !== null ? Math.round(capacidadMl) : null,
+            bpp: bpp ? parseFloat(bpp) : null,
+            bpc: bpc ? parseInt(bpc) : null,
+            juego_envases: juego_envases || null,
+            material: material || null,
+            tipo_boca: tipo_boca || null,
+            dimensiones: dimensiones || null
+          };
+
+          const resProd = await fetch(`${API_URL}/productos`, {
+            method: 'POST',
+            headers: jsonHeader(),
+            body: JSON.stringify(productBody)
+          });
+
+          if (!resProd.ok) {
+            const err = await resProd.json().catch(() => ({}));
+            if (resProd.status === 400 || resProd.status === 409) {
+              log(`⚠️ Producto ya existe o datos inválidos: ${err.detail || prod}`);
+              alert(`El producto "${prod}" ya existe en el catálogo o los datos son inválidos. Se guardará el lote igual.`);
+            } else {
+              throw new Error(err.detail || `Error ${resProd.status} guardando producto`);
+            }
+          } else {
+            logSuccess(`Producto guardado en catálogo: ${prod}`);
+          }
+        }
+
+        // ---------- 2) GUARDAR CLIENTE NUEVO (si aplica) ----------
+        if (modoNuevoCliente && cliente) {
+          log(`👥 Guardando nuevo cliente en catálogo: ${cliente}`);
+          const resCli = await fetch(`${API_URL}/clientes`, {
+            method: 'POST',
+            headers: jsonHeader(),
+            body: JSON.stringify({ nombre: cliente })
+          });
+
+          if (!resCli.ok) {
+            const err = await resCli.json().catch(() => ({}));
+            if (resCli.status === 400 || resCli.status === 409) {
+              log(`⚠️ Cliente ya existe o datos inválidos: ${err.detail || cliente}`);
+              alert(`El cliente "${cliente}" ya existe en el catálogo o los datos son inválidos. Se guardará el lote igual.`);
+            } else {
+              throw new Error(err.detail || `Error ${resCli.status} guardando cliente`);
+            }
+          } else {
+            logSuccess(`Cliente guardado en catálogo: ${cliente}`);
+          }
+        }
+
+        // ---------- 3) GUARDAR LOTE DE PRODUCCIÓN ----------
         const response = await fetch(`${API_URL}/produccion`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
+          headers: jsonHeader(),
           body: JSON.stringify(body)
         });
 
         if (!response.ok) {
-          if (response.status === 401) {
-            cerrarSesion('⏳ Tu sesión ha expirado.');
-            return;
+          if (response.status === 401) { window.location.href = '../public/login.html'; return; }
+          const errorData = await response.json().catch(() => ({}));
+          
+          // Mostrar el error del Schema de Pydantic
+          let errorMsg = errorData.detail || `Error ${response.status} guardando lote`;
+          if (Array.isArray(errorMsg)) {
+            errorMsg = errorMsg.map(err => `${err.loc.join('.')}: ${err.msg}`).join('\n');
           }
-          const errorData = await response.json();
-          throw new Error(errorData.detail || 'Error guardando');
+          throw new Error(errorMsg);
         }
 
+        // ---------- 4) RECARGAR SELECTORES Y SELECCIONAR LO CREADO ----------
+        await cargarProductosYClientes();
+        await cargarOpcionesRegistradas();
         await cargarProduccion(filtrosActivos);
+
+        if (modoNuevoProducto && prod) {
+          const sp = document.getElementById('producto-select');
+          if (sp) {
+            const match = Array.from(sp.options).find(o => o.value.toUpperCase() === prod.toUpperCase());
+            if (match) sp.value = match.value;
+          }
+        }
+        if (modoNuevoCliente && cliente) {
+          const sc = document.getElementById('cliente-select');
+          if (sc) {
+            const match = Array.from(sc.options).find(o => o.value.toUpperCase() === cliente.toUpperCase());
+            if (match) sc.value = match.value;
+          }
+        }
 
         const toast = document.getElementById('toast-prod');
         if (toast) {
+          toast.textContent = '✅ Lote registrado correctamente';
           toast.classList.add('show');
-          setTimeout(() => {
-            toast.classList.remove('show');
-          }, 3000);
+          setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
         document.getElementById('btn-limpiar').click();
@@ -681,120 +1178,193 @@
   // ==========================================
   // LIMPIAR FORMULARIO
   // ==========================================
-
   const btnLimpiar = document.getElementById('btn-limpiar');
 
   if (btnLimpiar) {
-    btnLimpiar.addEventListener('click', () => {
-      ['lote-id', 'cantidad', 'operador', 'obs-prod', 'fecha-prod', 'paletas', 'gruesas'].forEach(id => {
+    btnLimpiar.addEventListener('click', async (e) => {
+      e.preventDefault();
+
+      const campos = [
+        'ticket_carga', 'grupo', 'linea', 'orden',
+        'acabado', 'item', 'material', 'tipo_boca', 'molde', 'bpp', 'bpc',
+        'cantidad', 'paletas', 'cajas_producidas', 'gruesas', 'juego_envases', 'capacidad',
+        'dim_diametro', 'dim_altura_cil', 'dim_largo', 'dim_ancho', 'dim_alto',
+        'gruesas_paleta', 'obs-prod'
+      ];
+
+      campos.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
       });
 
-      ['linea', 'producto', 'turno', 'cliente'].forEach(id => {
+      ['planta', 'maquina', 'turno'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.value = '';
+        if (el) el.selectedIndex = 0;
       });
 
-      const loteInput = document.getElementById('lote-id');
-      if (loteInput) {
-        loteInput.placeholder = `PROD-${new Date().getFullYear()}-${String(lotes.length + 1).padStart(4, '0')}`;
-      }
+      const unidad = document.getElementById('capacidad_unidad');
+      if (unidad) unidad.value = 'ml';
+
+      const estatusEl = document.getElementById('estatus');
+      if (estatusEl) estatusEl.value = '100';
+
+      const prodSelect = document.getElementById('producto-select');
+      if (prodSelect) prodSelect.value = '';
+      if (modoNuevoProducto) toggleNuevoProducto(false);
+
+      const cliSelect = document.getElementById('cliente-select');
+      if (cliSelect) cliSelect.value = '';
+      if (modoNuevoCliente) toggleNuevoCliente(false);
+
+      const chk = document.getElementById('guardar-en-catalogo');
+      if (chk) chk.checked = true;
+
+      const fechaInput = document.getElementById('fecha-prod');
+      if (fechaInput) fechaInput.value = new Date().toISOString().split('T')[0];
+
+      activarModoEdicionLibre(false);
+      limpiarFichaTecnica();
+      generarCodigoLoteLocal();
+      recalcularTodo();
     });
+  }
+
+  // ==========================================
+  // CARGAR PRODUCTOS Y CLIENTES
+  // ==========================================
+  async function cargarProductosYClientes() {
+    // ---------- PRODUCTOS ----------
+    try {
+      const resProd = await fetch(`${API_URL}/productos`, { headers: tokenHeader() });
+      const selectProd = document.getElementById('producto-select');
+
+      if (resProd.ok && selectProd) {
+        const productos = await resProd.json();
+        const valorActual = selectProd.value;
+
+        productosCache = {};
+        productos.forEach(p => { productosCache[p.nombre] = p; });
+
+        selectProd.innerHTML = '<option value="">-- Seleccione un producto --</option>';
+        productos.forEach(p => {
+          const cap = etiquetaCapacidad(p.capacidad_ml, 'ml');
+          const opt = document.createElement('option');
+          opt.value = p.nombre;
+          opt.textContent = p.nombre + (cap ? ` (${cap})` : '');
+          selectProd.appendChild(opt);
+        });
+
+        const optNuevo = document.createElement('option');
+        optNuevo.value = VALOR_NUEVO;
+        optNuevo.className = 'option-nuevo';
+        optNuevo.textContent = '➕ Registrar nuevo producto / Prototipo';
+        selectProd.appendChild(optNuevo);
+
+        if (valorActual) selectProd.value = valorActual;
+        log(`✅ ${productos.length} productos cargados`);
+      } else if (!resProd.ok) {
+        logError(`Error cargando productos: ${resProd.status}`);
+      }
+    } catch (e) {
+      logError('Error de red cargando productos:', e);
+    }
+
+    // ---------- CLIENTES ----------
+    try {
+      const resCli = await fetch(`${API_URL}/clientes`, { headers: tokenHeader() });
+      const selectCli = document.getElementById('cliente-select');
+
+      if (resCli.ok && selectCli) {
+        const clientes = await resCli.json();
+        const valorActual = selectCli.value;
+
+        selectCli.innerHTML = '<option value="">-- Seleccione un cliente --</option>';
+        clientes.forEach(c => {
+          const nombre = c.nombre;
+          if (!nombre) return;
+          const opt = document.createElement('option');
+          opt.value = nombre;
+          opt.textContent = nombre;
+          selectCli.appendChild(opt);
+        });
+
+        const optNuevoCli = document.createElement('option');
+        optNuevoCli.value = VALOR_NUEVO;
+        optNuevoCli.className = 'option-nuevo';
+        optNuevoCli.textContent = '➕ Registrar nuevo cliente';
+        selectCli.appendChild(optNuevoCli);
+
+        if (valorActual) selectCli.value = valorActual;
+        log(`✅ ${clientes.length} clientes cargados`);
+      } else if (!resCli.ok) {
+        logError(`Error cargando clientes: ${resCli.status}`);
+      }
+    } catch (e) {
+      logError('Error de red cargando clientes:', e);
+    }
   }
 
   // ==========================================
   // FILTROS
   // ==========================================
-
   function aplicarFiltros() {
     filtrosActivos = {
       codigo: document.getElementById('filtro-codigo')?.value.trim() || '',
-      producto: document.getElementById('filtro-producto')?.value.trim() || '',
-      linea: document.getElementById('filtro-linea')?.value.trim() || '',
+      ticket: document.getElementById('filtro-ticket')?.value.trim() || '',
+      molde: document.getElementById('filtro-molde')?.value.trim() || '',
+      maquina: document.getElementById('filtro-maquina')?.value.trim() || '',
       operador: document.getElementById('filtro-operador')?.value.trim() || '',
-      turno: document.getElementById('filtro-turno')?.value.trim() || '',
+      turno: document.getElementById('filtro-turno')?.value || '',
+      estatus: document.getElementById('filtro-estatus')?.value || '',
       fecha_desde: document.getElementById('filtro-fecha-desde')?.value || '',
       fecha_hasta: document.getElementById('filtro-fecha-hasta')?.value || ''
     };
-
     log('🔍 Aplicando filtros:', filtrosActivos);
     cargarProduccion(filtrosActivos);
   }
 
   function limpiarFiltros() {
-    document.getElementById('filtro-codigo').value = '';
-    document.getElementById('filtro-producto').value = '';
-    document.getElementById('filtro-linea').value = '';
-    document.getElementById('filtro-operador').value = '';
-    document.getElementById('filtro-turno').value = '';
-    document.getElementById('filtro-fecha-desde').value = '';
-    document.getElementById('filtro-fecha-hasta').value = '';
-
+    ['filtro-codigo', 'filtro-ticket', 'filtro-molde', 'filtro-maquina',
+     'filtro-operador', 'filtro-fecha-desde', 'filtro-fecha-hasta'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    ['filtro-turno', 'filtro-estatus'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.selectedIndex = 0;
+    });
     filtrosActivos = {};
     log('🧹 Filtros limpiados');
     cargarProduccion({});
   }
 
   // ==========================================
-  // CARGAR OPCIONES DE FILTROS Y DATALISTS (Registrables)
+  // CARGAR OPCIONES REGISTRADAS (Datalists)
   // ==========================================
-
   async function cargarOpcionesRegistradas() {
     try {
-      const response = await fetch(`${API_URL}/produccion/opciones`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await fetch(`${API_URL}/produccion/opciones`, { headers: tokenHeader() });
       if (!response.ok) throw new Error('Error cargando opciones');
 
       const data = await response.json();
 
-      // ACTUALIZAR FILTROS
-      const filtros = [
-        { id: 'filtro-producto', opciones: data.productos || [] },
-        { id: 'filtro-linea', opciones: data.lineas || [] },
-        { id: 'filtro-operador', opciones: data.operadores || [] },
-        { id: 'filtro-turno', opciones: data.turnos || [] }
-      ];
-
-      filtros.forEach(({ id, opciones }) => {
-        const select = document.getElementById(id);
-        if (!select) return;
-
-        while (select.options.length > 0) {
-          select.remove(0);
-        }
-
-        const optTodos = document.createElement('option');
-        optTodos.value = '';
-        optTodos.textContent = 'Todos';
-        select.appendChild(optTodos);
-
-        [...new Set(opciones)].sort().forEach(val => {
-          if (val) {
-            const opt = document.createElement('option');
-            opt.value = val;
-            opt.textContent = val;
-            select.appendChild(opt);
-          }
-        });
-      });
-
-      // ACTUALIZAR DATALISTS (Para el formulario registrable)
       const datalists = [
         { id: 'lista-lineas', opciones: data.lineas || [] },
-        { id: 'lista-moldes', opciones: data.productos || [] },
-        { id: 'lista-turnos', opciones: data.turnos || [] },
+        { id: 'lista-maquinas', opciones: data.maquinas || [] },
         { id: 'lista-operadores', opciones: data.operadores || [] },
-        { id: 'lista-clientes', opciones: data.clientes || [] }
+        { id: 'lista-items', opciones: data.items || [] },
+        { id: 'lista-moldes', opciones: data.moldes || [] },
+        { id: 'lista-acabados', opciones: data.acabados || [] },
+        { id: 'lista-grupos', opciones: data.grupos || [] },
+        { id: 'lista-ordenes', opciones: data.ordenes || [] },
+        { id: 'filtro-lista-moldes', opciones: data.moldes || [] },
+        { id: 'filtro-lista-maquinas', opciones: data.maquinas || [] },
+        { id: 'filtro-lista-operadores', opciones: data.operadores || [] }
       ];
 
       datalists.forEach(({ id, opciones }) => {
         const datalist = document.getElementById(id);
         if (!datalist) return;
-
         datalist.innerHTML = '';
         [...new Set(opciones)].sort().forEach(val => {
           if (val) {
@@ -804,9 +1374,7 @@
           }
         });
       });
-
       log('✅ Opciones registradas cargadas');
-
     } catch (error) {
       logError('Error cargando opciones registradas:', error);
     }
@@ -815,9 +1383,7 @@
   // ==========================================
   // BUSCADOR RÁPIDO
   // ==========================================
-
   const buscar = document.getElementById('buscar-lote');
-
   if (buscar) {
     buscar.addEventListener('input', e => {
       renderTabla(e.target.value.toLowerCase().trim());
@@ -825,83 +1391,25 @@
   }
 
   // ==========================================
-  // EXPORTAR A CSV
-  // ==========================================
-
-  function exportarCSV() {
-    if (lotes.length === 0) {
-      alert('No hay datos para exportar');
-      return;
-    }
-
-    const headers = ['Código', 'Producto', 'Línea', 'Operador', 'Unidades', 'Turno', 'Paletas', 'Gruesas', 'Fecha', 'Cliente'];
-    const rows = lotes.map(l => [
-      l.codigo,
-      l.prod,
-      l.linea,
-      l.op,
-      l.uds,
-      l.turno,
-      l.paletas,
-      l.gruesas,
-      l.fecha,
-      l.cliente
-    ]);
-
-    const csvContent = [headers, ...rows]
-      .map(row => row.join(','))
-      .join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `produccion_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }
-
-  // ==========================================
-  // EXPORTAR TODOS A EXCEL Y PDF
-  // ==========================================
-
-  function exportarExcel() {
-    if (lotes.length === 0) {
-      alert('No hay datos para exportar');
-      return;
-    }
-    window.open(`${API_URL}/reportes/produccion/excel/general/${lotes[0].id}?token=${localStorage.getItem('token')}`, '_blank');
-  }
-
-  function exportarPDF() {
-    if (lotes.length === 0) {
-      alert('No hay datos para exportar');
-      return;
-    }
-    window.open(`${API_URL}/reportes/produccion/pdf/general/${lotes[0].id}?token=${localStorage.getItem('token')}`, '_blank');
-  }
-
-  // ==========================================
   // RECARGAR MANUAL
   // ==========================================
-
-  window.recargarProduccion = function() {
+  window.recargarProduccion = function () {
     log('🔄 Recargando producción manualmente...');
     cargarProduccion(filtrosActivos);
+    cargarOpcionesRegistradas();
+    cargarProductosYClientes();
+    generarCodigoLoteLocal();
   };
 
   // ==========================================
   // MOSTRAR ERROR
   // ==========================================
-
   function mostrarError() {
     const tbody = document.getElementById('tabla-lotes');
     if (tbody) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="10" style="text-align:center;padding:2rem;color:var(--text-muted)">
+          <td colspan="14" style="text-align:center;padding:2rem;color:var(--text-muted)">
             <i class="ti ti-alert-circle" style="font-size:1.5rem;margin-right:0.5rem"></i>
             Error al cargar datos. Verifica que el servidor esté corriendo en ${API_URL}
           </td>
@@ -913,48 +1421,73 @@
   // ==========================================
   // INICIALIZACIÓN
   // ==========================================
-
   function init() {
-    log('🚀 Producción iniciado');
-
+    log('🐉 Producción iniciado (MoonDRAGO)');
     mostrarSkeleton();
-
-    // Cargar opciones registradas (para datalists y filtros)
     cargarOpcionesRegistradas();
+    cargarProductosYClientes();
 
-    // Event listeners
-    document.getElementById('btn-aplicar-filtros')?.addEventListener('click', aplicarFiltros);
-    document.getElementById('btn-limpiar-filtros')?.addEventListener('click', limpiarFiltros);
+    const fechaInput = document.getElementById('fecha-prod');
+    if (fechaInput) fechaInput.value = new Date().toISOString().split('T')[0];
 
-    document.getElementById('filtro-codigo')?.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') aplicarFiltros();
+    const unidadInit = document.getElementById('capacidad_unidad');
+    if (unidadInit) unidadInit.value = 'ml';
+
+    const selectorMes = document.getElementById('selector-mes');
+    if (selectorMes) {
+      const hoy = new Date();
+      const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+      selectorMes.value = mesActual;
+    }
+
+    configurarGeneracionCodigo();
+    configurarAutoCalculos();
+    configurarCapacidad();
+    configurarListenersSelectores();
+    configurarEventosDimensiones();
+    configurarModalLote();
+
+    activarModoEdicionLibre(false);
+
+    document.getElementById('btn-aplicar-mes')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const mes = document.getElementById('selector-mes')?.value || '';
+      if (!mes) { alert('Selecciona un mes'); return; }
+
+      const [year, month] = mes.split('-');
+      const ultimoDia = new Date(parseInt(year), parseInt(month), 0).getDate();
+      const desde = `${mes}-01`;
+      const hasta = `${mes}-${String(ultimoDia).padStart(2, '0')}`;
+
+      const desdeEl = document.getElementById('filtro-fecha-desde');
+      const hastaEl = document.getElementById('filtro-fecha-hasta');
+      if (desdeEl) desdeEl.value = desde;
+      if (hastaEl) hastaEl.value = hasta;
+
+      aplicarFiltros();
     });
 
-    document.getElementById('btn-exportar-csv')?.addEventListener('click', exportarCSV);
-    document.getElementById('btn-exportar-excel')?.addEventListener('click', exportarExcel);
-    document.getElementById('btn-exportar-pdf')?.addEventListener('click', exportarPDF);
+    document.getElementById('btn-aplicar-filtros')?.addEventListener('click', (e) => {
+      e.preventDefault(); aplicarFiltros();
+    });
+    document.getElementById('btn-limpiar-filtros')?.addEventListener('click', (e) => {
+      e.preventDefault(); limpiarFiltros();
+    });
+    document.getElementById('filtro-codigo')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); aplicarFiltros(); }
+    });
 
     cargarProduccion({});
 
-    // Auto-refresh
-    if (intervaloCarga) {
-      clearInterval(intervaloCarga);
-    }
-
+    if (intervaloCarga) clearInterval(intervaloCarga);
     intervaloCarga = setInterval(() => {
       log('🔄 Auto-actualización de producción...');
       cargarProduccion(filtrosActivos);
     }, 30000);
 
-    // Inicializar controles de usuario
     initUserControls();
-
     log('✅ Producción iniciado correctamente');
   }
-
-  // ==========================================
-  // INICIO - Verificar sesión primero
-  // ==========================================
 
   log('🔐 Verificando sesión...');
   verificarSesion();

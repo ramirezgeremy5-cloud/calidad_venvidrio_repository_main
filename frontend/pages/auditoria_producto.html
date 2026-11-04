@@ -3,30 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Auditoría de Producto Terminado — Venvidrio CQ</title>
+  <title>Auditoría de Producto No Conforme — Venvidrio CQ</title>
+  
+  <!-- Estilos Globales y Específicos -->
   <link rel="stylesheet" href="../assets/css/shared.css"/>
   <link rel="stylesheet" href="../assets/css/auditoria_producto.css"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
 </head>
 <body>
 
-<!-- NAVBAR -->
+<!-- ================= NAVBAR ================= -->
 <nav class="navbar">
-  <div class="nav-brand">VENV<span>IDRIO</span></div>
-  <ul class="nav-links">
+  <div class="nav-brand">
+    <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
+  </div>
+
+  <ul class="nav-links" id="navLinks">
     <li><a href="../public/dashboard.html"><i class="ti ti-layout-dashboard"></i> Panel Principal</a></li>
     <li><a href="../pages/produccion.html"><i class="ti ti-building-factory-2"></i> Producción</a></li>
     <li><a href="../pages/defectos.html"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
     <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
-    <li><a href="../pages/auditoria.html"><i class="ti ti-clipboard-check"></i> Auditoría</a></li>
+    <li><a href="../pages/auditoria_interna.html"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a></li>
     <li><a href="../pages/auditoria_producto.html" class="active"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
+    <li id="navUsuariosLink" style="display:none;">
+      <a href="../pages/usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
+    </li>
   </ul>
 
-  <!-- ===== ÁREA DE USUARIO CON DROPDOWN ===== -->
   <div class="nav-user" id="navUserContainer">
     <div class="nav-avatar-circle" id="navAvatar">US</div>
     <span class="nav-username" id="navUsername">Cargando...</span>
-
     <div class="user-dropdown" id="userDropdown">
       <div class="dropdown-header">
         <div class="dropdown-avatar-circle" id="dropdownAvatar">US</div>
@@ -36,6 +42,10 @@
         </div>
       </div>
       <div class="dropdown-divider"></div>
+      <a class="dropdown-item" id="dropdownPerfil" style="cursor:pointer;">
+        <i class="ti ti-user-circle"></i> Mi Perfil
+      </a>
+      <div class="dropdown-divider"></div>
       <a class="dropdown-item dropdown-danger" id="dropdownLogout">
         <i class="ti ti-logout"></i> Cerrar Sesión
       </a>
@@ -43,113 +53,199 @@
   </div>
 </nav>
 
-<!-- CONTENIDO -->
+<!-- ================= CONTENIDO PRINCIPAL ================= -->
 <main class="page">
 
   <div class="page-header">
-    <h1>Auditoría de Producto Terminado</h1>
-    <p>Seleccione un lote pendiente y registre su inspección de calidad</p>
+    <h1>Auditoría de Producto No Conforme</h1>
+    <p>Registro de inspección, muestreo y disposición final de lotes retenidos</p>
   </div>
 
-  <div class="prod-layout">
-
-    <!-- FORMULARIO DE AUDITORÍA -->
+  <div class="aud-layout" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+    
+    <!-- COLUMNA IZQUIERDA: FORMULARIO -->
     <div class="card anim-card">
       <div class="card-header">
-        <div class="card-title"><i class="ti ti-file-description"></i> Registro de Auditoría</div>
-        <span class="badge badge-info">Nuevo</span>
+        <div class="card-title"><i class="ti ti-clipboard-list"></i> Ficha de No Conformidad</div>
+        <span class="badge badge-danger">Acción Requerida</span>
+      </div>
+      
+      <div class="card-body">
+        
+        <!-- PASO 1: SELECCIÓN DEL LOTE -->
+        <div class="form-section">
+          <h3 class="form-section-title">
+            <span class="step-number">1</span> Identificación del Producto
+          </h3>
+          
+          <div class="grid-2">
+            <div class="field" style="grid-column: 1 / -1;">
+              <label for="lote_id">Seleccione el Lote a Evaluar *</label>
+              <select id="lote_id" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:var(--radius-sm);">
+                <option value="">-- Buscar lote retenido o pendiente --</option>
+                <!-- Se llena con JS (Lotes con estatus 100 o 300) -->
+              </select>
+              <small class="field-hint">Solo se muestran lotes pendientes o retenidos.</small>
+            </div>
+
+            <div class="field">
+              <label>Máquina</label>
+              <input type="text" id="maquina" readonly style="background:#f8fafc;" />
+            </div>
+            
+            <div class="field">
+              <label>Item (EV)</label>
+              <input type="text" id="item" readonly style="background:#f8fafc;" />
+            </div>
+
+            <div class="field" style="grid-column: 1 / -1;">
+              <label>Producto / Cliente</label>
+              <input type="text" id="producto_cliente" readonly style="background:#f8fafc;" />
+            </div>
+          </div>
+        </div>
+
+        <hr style="border:0; border-top:1px solid var(--border); margin: 1.5rem 0;">
+
+        <!-- PASO 2: INSPECCIÓN Y MUESTREO (Basado en Excel) -->
+        <div class="form-section">
+          <h3 class="form-section-title">
+            <span class="step-number">2</span> Inspección y Muestreo
+          </h3>
+          
+          <div class="grid-2">
+            <div class="field">
+              <label for="paletas_inspeccionadas">Paletas Inspeccionadas *</label>
+              <input type="number" id="paletas_inspeccionadas" min="1" placeholder="0" />
+            </div>
+            
+            <div class="field">
+              <label for="paletas_rechazadas">Paletas Rechazadas *</label>
+              <input type="number" id="paletas_rechazadas" min="0" placeholder="0" />
+            </div>
+
+            <div class="field field-auto">
+              <label for="paletas_aprobadas">Paletas Aprobadas (auto)</label>
+              <input type="number" id="paletas_aprobadas" readonly style="background:#eef2ff; font-weight:bold; color:var(--navy);" />
+            </div>
+
+            <div class="field">
+              <label for="evidencia_foto">Cargar Evidencia (Opcional)</label>
+              <input type="file" id="evidencia_foto" accept="image/*" style="padding:6px;" />
+            </div>
+          </div>
+        </div>
+
+        <hr style="border:0; border-top:1px solid var(--border); margin: 1.5rem 0;">
+
+        <!-- PASO 3: CATALOGACIÓN DEL DEFECTO (Basado en Imagen 21) -->
+        <div class="form-section">
+          <h3 class="form-section-title">
+            <span class="step-number">3</span> Defectos Detectados
+          </h3>
+          
+          <div class="field">
+            <label for="defectos">Seleccione los Defectos Críticos encontrados *</label>
+            <select id="defectos" multiple style="width:100%; min-height:120px; padding:8px;">
+              <!-- Opciones extraídas del Manual de Calidad (Imagen 21) -->
+              <option value="Telefono">Teléfono</option>
+              <option value="Filamento interno">Filamento interno</option>
+              <option value="Marca de Tubo de Soplo">Marca de Tubo de Soplo</option>
+              <option value="Sobreprensa">Sobreprensa</option>
+              <option value="Brida en el Acabado">Brida en el Acabado</option>
+              <option value="Acabado Astillado">Acabado Astillado</option>
+              <option value="Acabado Filoso">Acabado Filoso</option>
+              <option value="Vidrio Interno Pegado o Suelto">Vidrio Interno Pegado o Suelto</option>
+              <option value="Ampolla Superficial Interna">Ampolla Superficial Interna</option>
+              <option value="Ampolla Fina (Blowout)">Ampolla Fina (Blowout)</option>
+              <option value="Marca Interna">Marca Interna</option>
+              <option value="Vidrio Externo Pegado Cortante">Vidrio Externo Pegado Cortante</option>
+              <option value="Costura Gruesa Cortante (Aleta)">Costura Gruesa Cortante (Aleta)</option>
+              <option value="Cuello Obstruido">Cuello Obstruido</option>
+            </select>
+            <small class="field-hint">Mantenga presionado <strong>Ctrl</strong> (o Cmd en Mac) para seleccionar varios defectos.</small>
+          </div>
+
+          <div class="field">
+            <label for="observaciones">Observaciones / Descripción del Hallazgo</label>
+            <textarea id="observaciones" rows="3" placeholder="Detalle cómo se encontró el producto, cantidad de piezas afectadas, etc."></textarea>
+          </div>
+        </div>
+
+        <hr style="border:0; border-top:1px solid var(--border); margin: 1.5rem 0;">
+
+        <!-- PASO 4: DISPOSICIÓN FINAL (Basado en Imagen 20) -->
+        <div class="form-section">
+          <h3 class="form-section-title">
+            <span class="step-number">4</span> Disposición del Producto
+          </h3>
+          
+          <div class="grid-2">
+            <div class="field" style="grid-column: 1 / -1;">
+              <label for="movimiento">Acción a Tomar *</label>
+              <select id="movimiento">
+                <option value="">-- Seleccione la acción --</option>
+                <option value="Retenido (Cuarentena)">Mantener Retenido (Cuarentena)</option>
+                <option value="Reseleccion (Resort)">Enviar a Reselección (Resort)</option>
+                <option value="Reempaque (Repack)">Enviar a Reempaque (Repack)</option>
+                <option value="Unificación (Resore)">Unificación de Lotes (Resore)</option>
+                <option value="Desecho">Desecho / Chatarra</option>
+                <option value="Aprobado por Desviación">Aprobado por Desviación</option>
+              </select>
+            </div>
+
+            <div class="field" style="grid-column: 1 / -1;">
+              <label for="responsable">Inspector / Auditor Responsable *</label>
+              <input type="text" id="responsable" placeholder="Nombre de quien realiza la auditoría" readonly style="background:#f8fafc;" />
+            </div>
+          </div>
+        </div>
+
+        <!-- BOTONES -->
+        <div class="form-actions" style="margin-top: 2rem; display: flex; gap: 10px; justify-content: flex-end;">
+          <button class="btn btn-outline" id="btn-limpiar">
+            <i class="ti ti-eraser"></i> Limpiar
+          </button>
+          <button class="btn btn-primary" id="btn-guardar">
+            <i class="ti ti-device-floppy"></i> Registrar Auditoría
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- COLUMNA DERECHA: AYUDA / GLOSARIO -->
+    <div class="card anim-card" style="height: fit-content;">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-info-circle"></i> Glosario de Estatus</div>
       </div>
       <div class="card-body">
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:1rem;">
-          <i class="ti ti-info-circle" style="color:var(--navy);"></i>
-          Seleccione un lote de la lista. Los datos de producción se autocompletarán.
-        </p>
-
-        <div class="grid-2">
-          
-          <!-- SELECTOR DE LOTE PENDIENTE -->
-          <div class="field">
-            <label for="lote_id">Lote a Auditar *</label>
-            <select id="lote_id" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;">
-              <option value="">-- Seleccione un lote pendiente --</option>
-            </select>
-          </div>
-
-          <!-- FECHA -->
-          <div class="field">
-            <label for="fecha_auditoria">Fecha de Auditoría</label>
-            <input type="date" id="fecha_auditoria" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
-          </div>
-
-          <!-- MÁQUINA (Solo lectura) -->
-          <div class="field">
-            <label>Máquina</label>
-            <input type="text" id="maquina" disabled style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:#f5f5f5;cursor:not-allowed;color:var(--text-muted);" />
-          </div>
-
-          <!-- EV (Solo lectura) -->
-          <div class="field">
-            <label>EV (Código de Lote)</label>
-            <input type="text" id="ev" disabled style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:#f5f5f5;cursor:not-allowed;color:var(--text-muted);" />
-          </div>
-
-          <!-- ITEM (Solo lectura) -->
-          <div class="field">
-            <label>Item</label>
-            <input type="text" id="item" disabled style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:#f5f5f5;cursor:not-allowed;color:var(--text-muted);" />
-          </div>
-
-          <!-- PALETAS INSPECCIONADAS -->
-          <div class="field">
-            <label for="paletas_inspeccionadas">Paletas Inspeccionadas *</label>
-            <input type="number" id="paletas_inspeccionadas" placeholder="0" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
-          </div>
-
-          <!-- PALETAS APROBADAS -->
-          <div class="field">
-            <label for="paletas_aprobadas">Paletas Aprobadas *</label>
-            <input type="number" id="paletas_aprobadas" placeholder="0" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
-          </div>
-
-          <!-- PALETAS RECHAZADAS -->
-          <div class="field">
-            <label for="paletas_rechazadas">Paletas Rechazadas *</label>
-            <input type="number" id="paletas_rechazadas" placeholder="0" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;" />
-          </div>
-
-          <!-- DEFECTOS (Múltiple) -->
-          <div class="field">
-            <label for="defectos_ids">Defectos Encontrados</label>
-            <select id="defectos_ids" multiple style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;min-height:80px;">
-              <option value="">-- Seleccione los defectos --</option>
-            </select>
-            <small style="font-size:10px;color:var(--text-hint);">Mantenga Ctrl presionado para seleccionar varios defectos.</small>
-          </div>
-          
-        </div>
-
-        <!-- OBSERVACIONES -->
-        <div class="field">
-          <label for="observaciones">Observaciones</label>
-          <textarea id="observaciones" placeholder="Notas adicionales..." rows="3" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);outline:none;background:white;resize:vertical;min-height:60px;"></textarea>
-        </div>
-
-        <div class="flex gap-2" style="margin-top:0.5rem">
-          <button class="btn btn-primary" id="btn-registrar"><i class="ti ti-device-floppy"></i> Guardar Auditoría</button>
-          <button class="btn btn-outline" id="btn-limpiar"><i class="ti ti-eraser"></i> Limpiar</button>
-        </div>
-
-        <div class="toast-success" id="toast-auditoria">
-          <i class="ti ti-circle-check"></i> Auditoría registrada correctamente
-        </div>
+        <ul style="list-style: none; padding: 0; margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+          <li style="margin-bottom: 8px;"><strong>100 - Ticket Generado:</strong> Producto recién fabricado, pendiente por evaluar.</li>
+          <li style="margin-bottom: 8px;"><strong>200 - Apto:</strong> Cumple especificaciones, disponible para despacho.</li>
+          <li style="margin-bottom: 8px;"><strong>300 - Retenido:</strong> No conforme, en cuarentena o auditoría.</li>
+          <li style="margin-bottom: 8px;"><strong>950 - Reseleccionado:</strong> Paleta que pasó por un proceso de reempaque o unificación.</li>
+        </ul>
+        
+        <hr style="border:0; border-top:1px solid var(--border); margin: 12px 0;">
+        
+        <p style="font-size: 11px; margin: 0;"><strong>Nota:</strong> Si el producto se aprueba por desviación, requiere firma del Gerente de Calidad.</p>
       </div>
     </div>
 
   </div>
-
 </main>
 
-<!-- JavaScript separado -->
+<footer class="footer">
+  <p>© 2026 MoonDRAGO — Sistema de Control de Calidad para Venvidrio</p>
+</footer>
+
+<!-- ================= SCRIPTS ================= -->
+<!-- 1. Shared: Inyecta el modal de perfil y maneja el navbar -->
+<script src="../assets/js/shared.js"></script>
+<!-- 2. Login App: Controla el botón "Mi Perfil" y la sesión -->
+<script src="../assets/js/login_app.js"></script>
+<!-- 3. Auditoría Producto: Lógica exclusiva de esta página -->
 <script src="../assets/js/auditoria_producto.js" defer></script>
 
 </body>
