@@ -5,19 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Venvidrio | Dashboard</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
-  <link rel="stylesheet" href="../assets/css/shared.css?v=3">
-  <link rel="stylesheet" href="../assets/css/dashboard.css?v=3">
+  <!-- CORREGIDO: Quitado el ../ y subido a v=4 -->
+  <link rel="stylesheet" href="./assets/css/shared.css?v=4">
+  <link rel="stylesheet" href="./assets/css/dashboard.css?v=4">
 </head>
 <body>
 
 <!-- ================= NAVBAR ================= -->
 <nav class="navbar">
   <div class="nav-brand">
-    <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
+    <!-- CORREGIDO -->
+    <img src="./assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
   </div>
 
   <ul class="nav-links" id="navLinks">
-    <li><a href="../public/dashboard.html" class="active"><i class="ti ti-layout-dashboard"></i> Panel Principal</a></li>
+    <li><a href="dashboard.html" class="active"><i class="ti ti-layout-dashboard"></i> Panel Principal</a></li>
     <li><a href="../pages/produccion.html"><i class="ti ti-building-factory-2"></i> Producción</a></li>
     <li><a href="../pages/defectos.html"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
     <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
@@ -70,7 +72,6 @@
     </div>
   </div>
 
-  <!-- 👇 AHORA SON 6 TARJETAS (kpi-grid-6) -->
   <section class="kpi-grid kpi-grid-6">
     <div class="kpi-card anim-card produccion" title="Total de unidades producidas">
       <p class="kpi-label">Producción Total</p>
@@ -284,9 +285,10 @@
 
 <!-- ================= SCRIPTS ================= -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="../assets/js/shared.js?v=4"></script>
-<script src="../assets/js/login_app.js?v=4"></script>
-<script src="../assets/js/dashboard.js?v=5"></script>
+<!-- CORREGIDO: Quitado el ../ y subido a v=6 para forzar la recarga -->
+<script src="./assets/js/shared.js?v=6"></script>
+<script src="./assets/js/login_app.js?v=6"></script>
+<script src="./assets/js/dashboard.js?v=6"></script>
 
 </body>
 </html>
