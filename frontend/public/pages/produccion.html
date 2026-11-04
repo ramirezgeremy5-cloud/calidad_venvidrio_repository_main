@@ -64,8 +64,10 @@
   </div>
 
   <div class="ultima-actualizacion">
-    <i class="ti ti-clock"></i>
-    Última actualización: <span id="ultima-actualizacion">--:--:--</span>
+    <div class="flex gap-2 align-center">
+      <i class="ti ti-clock"></i>
+      Última actualización: <span id="ultima-actualizacion">--:--:--</span>
+    </div>
     <button type="button" class="btn-refresh" onclick="window.recargarProduccion()" title="Recargar datos">
       <i class="ti ti-refresh"></i> Recargar
     </button>
@@ -95,6 +97,7 @@
     </div>
   </div>
 
+  <!-- CONTENEDOR DE DOS COLUMNAS (FORMULARIO) -->
   <div class="prod-layout">
 
     <!-- FORMULARIO NUEVO LOTE (CON PESTAÑAS) -->
@@ -316,7 +319,13 @@
               </div>
 
               <div id="guardar-en-catalogo-wrapper" class="checkbox-catalogo">
-                <label><input type="checkbox" id="guardar-en-catalogo" checked /> <strong>Guardar ficha técnica en catálogo</strong></label>
+                <label class="checkbox-catalogo-label">
+                  <input type="checkbox" id="guardar-en-catalogo" checked /> 
+                  <span>
+                    <strong>Guardar ficha técnica en catálogo</strong>
+                    <small>El producto estará disponible para futuros lotes.</small>
+                  </span>
+                </label>
               </div>
 
               <div class="grid-2">
@@ -355,8 +364,8 @@
 
   </div>
 
-  <!-- TABLA DE LOTES -->
-  <div class="card anim-card card-historial">
+  <!-- TABLA DE LOTES (HISTORIAL) -->
+  <div class="card anim-card card-historial" style="margin-top: 1.5rem;">
     <div class="card-header header-historial">
       <div class="card-title"><i class="ti ti-list-details"></i> Historial de Producción</div>
       <div class="flex gap-2 flex-wrap align-center">
@@ -369,6 +378,7 @@
       </div>
     </div>
 
+    <!-- FILTROS (Ahora se acomodan en columnas gracias al CSS) -->
     <div class="filtros-bar">
       <div class="filtros-grid">
         <div class="field"><label for="filtro-codigo" class="filtro-label">Código</label><input type="text" id="filtro-codigo" class="input-filtro" /></div>
@@ -388,10 +398,11 @@
         </div>
         <div class="field"><label for="filtro-fecha-desde" class="filtro-label">Desde</label><input type="date" id="filtro-fecha-desde" class="input-filtro" /></div>
         <div class="field"><label for="filtro-fecha-hasta" class="filtro-label">Hasta</label><input type="date" id="filtro-fecha-hasta" class="input-filtro" /></div>
-        <div class="filtros-botones">
-          <button type="button" class="btn btn-primary btn-sm" id="btn-aplicar-filtros"><i class="ti ti-search"></i> Filtrar</button>
-          <button type="button" class="btn btn-outline btn-sm" id="btn-limpiar-filtros"><i class="ti ti-x"></i> Limpiar</button>
-        </div>
+      </div>
+      
+      <div class="filtros-botones">
+        <button type="button" class="btn btn-primary btn-sm" id="btn-aplicar-filtros"><i class="ti ti-search"></i> Filtrar</button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-limpiar-filtros"><i class="ti ti-x"></i> Limpiar</button>
       </div>
       <div class="filtro-resultados"><span id="filtro-resultados">📋 Mostrando todos los lotes</span></div>
     </div>
@@ -412,7 +423,7 @@
 </main>
 
 <!-- MODAL: VISUALIZADOR DE LOTE -->
-<div class="modal-overlay-detalle" id="modal-ver-lote">
+<div class="modal-overlay-detalle" id="modal-ver-lote" style="display: none;">
   <div class="modal-container-detalle modal-large">
 
     <div class="modal-header">

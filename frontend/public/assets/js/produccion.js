@@ -29,6 +29,7 @@
   let productosCache = {};
 
   let geometriaActual = 'cilindrico';
+  let timeoutBusqueda = null; // Para el debounce del buscador
 
   const MAQUINA_LINEA_MAP = {
     'A1': 'Línea A', 'A2': 'Línea A', 'A3': 'Línea A', 'A4': 'Línea A',
@@ -66,7 +67,6 @@
     };
   }
 
-  // 👇 NUEVA FUNCIÓN: Normaliza la URL de la foto
   function obtenerUrlFoto(fotoUrl) {
     if (!fotoUrl) return null;
     if (fotoUrl.startsWith('http://') || fotoUrl.startsWith('https://')) {
@@ -85,7 +85,6 @@
         const user = JSON.parse(userData);
         let avatarHtml = '';
         if (user.foto_url) {
-          // 👇 CORREGIDO: Usar la función normalizadora
           const urlFoto = obtenerUrlFoto(user.foto_url);
           avatarHtml = `<img src="${urlFoto}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
         } else {
@@ -146,16 +145,18 @@
     const dropdown = document.getElementById('userDropdown');
     const logoutBtn = document.getElementById('dropdownLogout');
 
-    if (container) {
+    if (container && dropdown) {
       container.addEventListener('click', function (e) {
         e.stopPropagation();
         dropdown.classList.toggle('show');
       });
     }
-    document.addEventListener('click', () => dropdown.classList.remove('show'));
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') dropdown.classList.remove('show');
-    });
+    if (dropdown) {
+      document.addEventListener('click', () => dropdown.classList.remove('show'));
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') dropdown.classList.remove('show');
+      });
+    }
     if (logoutBtn) {
       logoutBtn.addEventListener('click', function (e) {
         e.preventDefault(); e.stopPropagation();
@@ -176,11 +177,9 @@
 
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
-        // Quitar activo de todos
         tabs.forEach(t => t.classList.remove('active'));
         panels.forEach(p => p.classList.remove('active'));
 
-        // Activar el seleccionado
         tab.classList.add('active');
         const targetId = tab.getAttribute('data-tab');
         const targetPanel = document.getElementById(targetId);
@@ -260,8 +259,6 @@
         : formatearNumero(valor * 1000, 3);
       log(`🍾 Unidad cambiada a ${unidad.value}: ${cap.value}`);
     });
-
-    log('✅ Capacidad de valor libre configurada');
   }
 
   // ==========================================
@@ -323,7 +320,6 @@
       document.getElementById(id)?.addEventListener('input', actualizarPreviewDimensiones);
     });
     cambiarGeometria('cilindrico');
-    log('✅ Eventos de dimensiones configurados');
   }
 
   function aplicarDimensionesDesdeString(dimensiones) {
@@ -354,7 +350,6 @@
       if (hEl && hMatch) hEl.value = hMatch[1].trim();
     }
     actualizarPreviewDimensiones();
-    log(`📐 Dimensiones autocompletadas desde producto: ${str}`);
   }
 
   // ==========================================
@@ -392,8 +387,6 @@
     if (aviso) aviso.style.display = activo ? 'flex' : 'none';
     const chkWrap = document.getElementById('guardar-en-catalogo-wrapper');
     if (chkWrap) chkWrap.style.display = activo ? 'block' : 'none';
-
-    log(`Modo edición libre: ${activo ? 'ACTIVADO' : 'DESACTIVADO'}`);
   }
 
   function limpiarFichaTecnica() {
@@ -436,7 +429,6 @@
       aplicarDimensionesDesdeString(producto.dimensiones);
     }
     recalcularTodo();
-    log(`📋 Ficha técnica autocompletada: ${producto.nombre || ''}`);
   }
 
   // ==========================================
@@ -504,7 +496,7 @@
   }
 
   // ==========================================
-  // LISTENERS SELECTORES (con manejo de __NUEVO__)
+  // LISTENERS SELECTORES
   // ==========================================
   function configurarListenersSelectores() {
     const prodInput = document.getElementById('producto-select');
@@ -530,7 +522,6 @@
           prodInput.value = productoEncontrado[0];
           autocompletarFichaTecnica(productoEncontrado[1]);
         } else {
-          logError(`Producto no encontrado en caché: ${val}`);
           limpiarFichaTecnica();
         }
       });
@@ -565,7 +556,6 @@
     document.getElementById('btn-nuevo-cliente')?.addEventListener('click', (e) => {
       e.preventDefault(); toggleNuevoCliente();
     });
-    log('✅ Listeners de selectores configurados');
   }
 
   // ==========================================
@@ -594,7 +584,6 @@
       autocompletarLineaPorMaquina();
     });
     generarCodigoLoteLocal();
-    log('✅ Generación de código de lote configurada');
   }
 
   function autocompletarLineaPorMaquina() {
@@ -647,7 +636,6 @@
     ['cantidad', 'bpp', 'bpc'].forEach(id => {
       document.getElementById(id)?.addEventListener('input', recalcularTodo);
     });
-    log('✅ Auto-cálculos configurados');
   }
 
   // ==========================================
@@ -670,7 +658,6 @@
   // ==========================================
   async function cargarProduccion(filtros = {}) {
     try {
-      log('Cargando producción desde API...');
       const params = new URLSearchParams();
       Object.entries(filtros).forEach(([k, v]) => { if (v) params.append(k, v); });
 
@@ -740,7 +727,6 @@
           ? `🔍 Filtros aplicados: ${filtrosActivosCount} | ${data.length} resultados`
           : ` Mostrando ${data.length} lotes`;
       }
-      logSuccess('Producción cargada correctamente');
     } catch (error) {
       logError('Error cargando producción:', error);
       mostrarError();
@@ -868,8 +854,6 @@
 
     const modal = document.getElementById('modal-ver-lote');
     if (modal) modal.style.display = 'flex';
-
-    log(`👁️ Visualizando lote: ${lote.codigo}`);
   };
 
   function cerrarModalLote() {
@@ -897,7 +881,6 @@
         }
       }
     });
-    log('✅ Modal de visualización de lote configurado');
   }
 
   // ==========================================
@@ -987,7 +970,6 @@
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
-      logSuccess(`Lote ${id} eliminado correctamente`);
       await cargarProduccion(filtrosActivos);
       generarCodigoLoteLocal();
 
@@ -1018,10 +1000,7 @@
       const ticket_carga = document.getElementById('ticket_carga').value.trim();
       const planta = document.getElementById('planta').value;
       const maquina = document.getElementById('maquina').value;
-      
-      // 👇 AQUÍ EL TURNO SE ENVÍA TAL CUAL (1, 2, 3, 4)
       const turno = document.getElementById('turno').value; 
-      
       const grupo = document.getElementById('grupo').value.trim();
       const linea = document.getElementById('linea').value.trim();
       const operador = document.getElementById('operador').value.trim();
@@ -1065,7 +1044,7 @@
         ticket_carga: ticket_carga || null,
         planta: planta,
         maquina: maquina || null,
-        turno: turno, // <-- Se envía "1", "2", "3" o "4"
+        turno: turno,
         grupo: grupo || null,
         linea_produccion: linea || null,
         operador: operador,
@@ -1098,9 +1077,7 @@
       if (fecha) body.fecha_produccion = fecha;
 
       try {
-        // ---------- 1) GUARDAR PRODUCTO NUEVO (si aplica) ----------
         if (modoNuevoProducto && prod && guardarEnCatalogo) {
-          log(`📦 Guardando nuevo producto en catálogo: ${prod}`);
           const productBody = {
             nombre: prod,
             item: item || null,
@@ -1123,19 +1100,14 @@
           if (!resProd.ok) {
             const err = await resProd.json().catch(() => ({}));
             if (resProd.status === 400 || resProd.status === 409) {
-              log(`⚠️ Producto ya existe o datos inválidos: ${err.detail || prod}`);
               alert(`El producto "${prod}" ya existe en el catálogo o los datos son inválidos. Se guardará el lote igual.`);
             } else {
               throw new Error(err.detail || `Error ${resProd.status} guardando producto`);
             }
-          } else {
-            logSuccess(`Producto guardado en catálogo: ${prod}`);
           }
         }
 
-        // ---------- 2) GUARDAR CLIENTE NUEVO (si aplica) ----------
         if (modoNuevoCliente && cliente) {
-          log(`👥 Guardando nuevo cliente en catálogo: ${cliente}`);
           const resCli = await fetch(`${API_URL}/clientes`, {
             method: 'POST',
             headers: jsonHeader(),
@@ -1145,17 +1117,13 @@
           if (!resCli.ok) {
             const err = await resCli.json().catch(() => ({}));
             if (resCli.status === 400 || resCli.status === 409) {
-              log(`⚠️ Cliente ya existe o datos inválidos: ${err.detail || cliente}`);
               alert(`El cliente "${cliente}" ya existe en el catálogo o los datos son inválidos. Se guardará el lote igual.`);
             } else {
               throw new Error(err.detail || `Error ${resCli.status} guardando cliente`);
             }
-          } else {
-            logSuccess(`Cliente guardado en catálogo: ${cliente}`);
           }
         }
 
-        // ---------- 3) GUARDAR LOTE DE PRODUCCIÓN ----------
         const response = await fetch(`${API_URL}/produccion`, {
           method: 'POST',
           headers: jsonHeader(),
@@ -1173,7 +1141,6 @@
           throw new Error(errorMsg);
         }
 
-        // ---------- 4) RECARGAR SELECTORES Y SELECCIONAR LO CREADO ----------
         await cargarProductosYClientes();
         await cargarOpcionesRegistradas();
         await cargarProduccion(filtrosActivos);
@@ -1295,9 +1262,6 @@
         selectProd.appendChild(optNuevo);
 
         if (valorActual) selectProd.value = valorActual;
-        log(`✅ ${productos.length} productos cargados`);
-      } else if (!resProd.ok) {
-        logError(`Error cargando productos: ${resProd.status}`);
       }
     } catch (e) {
       logError('Error de red cargando productos:', e);
@@ -1329,9 +1293,6 @@
         selectCli.appendChild(optNuevoCli);
 
         if (valorActual) selectCli.value = valorActual;
-        log(`✅ ${clientes.length} clientes cargados`);
-      } else if (!resCli.ok) {
-        logError(`Error cargando clientes: ${resCli.status}`);
       }
     } catch (e) {
       logError('Error de red cargando clientes:', e);
@@ -1353,13 +1314,12 @@
       fecha_desde: document.getElementById('filtro-fecha-desde')?.value || '',
       fecha_hasta: document.getElementById('filtro-fecha-hasta')?.value || ''
     };
-    log('🔍 Aplicando filtros:', filtrosActivos);
     cargarProduccion(filtrosActivos);
   }
 
   function limpiarFiltros() {
     ['filtro-codigo', 'filtro-ticket', 'filtro-molde', 'filtro-maquina',
-     'filtro-operador', 'filtro-fecha-desde', 'filtro-fecha-hasta'].forEach(id => {
+     'filtro-operador', 'filtro-fecha-desde', 'filtro-fecha-hasta', 'buscar-lote'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
@@ -1368,7 +1328,6 @@
       if (el) el.selectedIndex = 0;
     });
     filtrosActivos = {};
-    log('🧹 Filtros limpiados');
     cargarProduccion({});
   }
 
@@ -1408,19 +1367,21 @@
           }
         });
       });
-      log('✅ Opciones registradas cargadas');
     } catch (error) {
       logError('Error cargando opciones registradas:', error);
     }
   }
 
   // ==========================================
-  // BUSCADOR RÁPIDO
+  // BUSCADOR RÁPIDO (Optimizado con Debounce)
   // ==========================================
   const buscar = document.getElementById('buscar-lote');
   if (buscar) {
     buscar.addEventListener('input', e => {
-      renderTabla(e.target.value.toLowerCase().trim());
+      clearTimeout(timeoutBusqueda);
+      timeoutBusqueda = setTimeout(() => {
+        renderTabla(e.target.value.toLowerCase().trim());
+      }, 300); // Espera 300ms después de dejar de escribir
     });
   }
 
@@ -1428,7 +1389,6 @@
   // RECARGAR MANUAL
   // ==========================================
   window.recargarProduccion = function () {
-    log('🔄 Recargando producción manualmente...');
     cargarProduccion(filtrosActivos);
     cargarOpcionesRegistradas();
     cargarProductosYClientes();
@@ -1456,12 +1416,10 @@
   // INICIALIZACIÓN
   // ==========================================
   function init() {
-    log('🐉 Producción iniciado (MoonDRAGO)');
     mostrarSkeleton();
     cargarOpcionesRegistradas();
     cargarProductosYClientes();
 
-    // 👇 INICIALIZAR LAS PESTAÑAS (TABS)
     inicializarTabs();
 
     const fechaInput = document.getElementById('fecha-prod');
@@ -1518,15 +1476,12 @@
 
     if (intervaloCarga) clearInterval(intervaloCarga);
     intervaloCarga = setInterval(() => {
-      log('🔄 Auto-actualización de producción...');
       cargarProduccion(filtrosActivos);
     }, 30000);
 
     initUserControls();
-    log('✅ Producción iniciado correctamente');
   }
 
-  log('🔐 Verificando sesión...');
   verificarSesion();
 
 })();
