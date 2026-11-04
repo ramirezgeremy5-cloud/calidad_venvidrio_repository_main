@@ -33,10 +33,13 @@ router = APIRouter(
 @router.post("/upload-foto")
 def subir_foto(
     file: UploadFile = File(...),
-    current_user: Usuario = Depends(check_role([2, 3]))
+    current_user: Usuario = Depends(get_current_active_user)  # 👈 Cualquier usuario logueado
 ):
     if not file.content_type.startswith("image/"):
         raise HTTPException(400, "El archivo debe ser una imagen")
+    
+    # Crear la carpeta si no existe
+    os.makedirs("app/static/uploads", exist_ok=True)
     
     ext = file.filename.split(".")[-1]
     filename = f"{uuid.uuid4()}.{ext}"
@@ -136,7 +139,6 @@ def crear_usuario(
                 detail="El cargo indicado no existe"
             )
 
-    # Aseguramos que el turno se guarde correctamente (el schema ya lo limpia a "1", "2", etc.)
     turno_final = getattr(usuario, "turno", None)
     if turno_final == "": turno_final = None
 
@@ -149,7 +151,7 @@ def crear_usuario(
         activo=True,
         creado_en=datetime.utcnow(),
         cargo_id=cargo_id_final,
-        turno=turno_final,  # 👈 Aquí se guarda "1", "2", "3", etc.
+        turno=turno_final,
         fecha_ingreso=usuario.fecha_ingreso,
         fecha_nacimiento=usuario.fecha_nacimiento,
         foto_url=usuario.foto_url
@@ -163,15 +165,22 @@ def crear_usuario(
 
 
 # =========================
-# ACTUALIZAR USUARIO (Supervisor y Admin)
+# ACTUALIZAR USUARIO
 # =========================
 @router.put("/{usuario_id}", response_model=UsuarioResponse)
 def actualizar_usuario(
     usuario_id: int,
     usuario_data: UsuarioUpdate,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(check_role([2, 3]))
+    current_user: Usuario = Depends(get_current_active_user)  # 👈 Cualquier usuario logueado
 ):
+    # 👇 VALIDACIÓN CLAVE: Solo el mismo usuario o un admin/supervisor puede editar
+    if current_user.id != usuario_id and current_user.rol_id not in [2, 3]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para editar este usuario"
+        )
+
     usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
     if not usuario:
         raise HTTPException(
@@ -241,9 +250,7 @@ def actualizar_usuario(
                 )
             usuario.cargo_id = cargo_id_actual
 
-    # 👇 ACTUALIZAR CAMPOS NUEVOS (TURNO, FECHAS, FOTO)
     if usuario_data.turno is not None:
-        # El schema ya se encarga de limpiar el valor a "1", "2", etc.
         usuario.turno = usuario_data.turno
         
     if usuario_data.fecha_ingreso is not None:
