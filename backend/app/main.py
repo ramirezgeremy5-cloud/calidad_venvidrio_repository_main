@@ -16,9 +16,7 @@ from app.database.connection import engine, Base
 # MODELOS (ORDEN CRÍTICO)
 # =========================
 
-# Dejamos SOLO el modelo Usuario, que es el único que el main usa para consultas directas
 from app.models.usuario import Usuario
-# Los demás modelos ya son importados por sus respectivos routers
 
 
 # =========================
@@ -49,10 +47,6 @@ scheduler = BackgroundScheduler()
 
 
 def limpiar_sesiones_expiradas():
-    """
-    Libera sesiones que llevan más de TIEMPO_INACTIVIDAD_MINUTOS sin actividad.
-    Se ejecuta cada minuto vía APScheduler.
-    """
     try:
         limite = (datetime.utcnow() - timedelta(minutes=TIEMPO_INACTIVIDAD_MINUTOS)).isoformat()
         with engine.connect() as conn:
@@ -79,14 +73,12 @@ def limpiar_sesiones_expiradas():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # ---------- STARTUP ----------
     print("=" * 60)
     print("🐉 MoonDRAGO — Sistema de Control de Calidad")
     print("   Desarrollado para Venvidrio C.A.")
     print("=" * 60)
     print("🚀 MoonDRAGO API iniciada")
     
-    # Verificación de conexión a la base de datos
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
@@ -94,7 +86,6 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"❌ ERROR CRÍTICO: No se pudo conectar a la base de datos: {e}")
 
-    # Arrancar scheduler de limpieza de sesiones
     scheduler.add_job(
         limpiar_sesiones_expiradas,
         "interval",
@@ -106,12 +97,11 @@ async def lifespan(app: FastAPI):
     print("🧹 Scheduler de limpieza de sesiones iniciado (cada 1 min)")
 
     print("=" * 60)
-    print("🌐 CORS habilitado para puertos 5500-5503, 8000, 3000 y red local")
+    print("🌐 CORS habilitado para puertos locales y Render")
     print("=" * 60)
 
     yield
 
-    # ---------- SHUTDOWN ----------
     try:
         print("🛑 Deteniendo scheduler de limpieza...")
         if scheduler.running:
@@ -144,7 +134,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
 # =========================
-# CORS FRONTEND (Debe ir ANTES de cualquier ruta)
+# CORS FRONTEND (MODIFICADO)
 # =========================
 
 origins = [
@@ -161,6 +151,7 @@ origins = [
     "http://localhost:8000",
     "http://127.0.0.1:3000",
     "http://localhost:3000",
+    "https://venvidrio-calidad.onrender.com", # <-- FRONTEND EN RENDER
 ]
 
 app.add_middleware(
@@ -190,12 +181,10 @@ except Exception as e:
 # REGISTRO ROUTERS
 # =========================
 
-# Autenticación y usuarios
 app.include_router(auth.router)
 app.include_router(usuarios.router)
 app.include_router(cargos.router)
 
-# Negocio
 app.include_router(clientes.router)
 app.include_router(productos.router)
 app.include_router(produccion.router)
@@ -205,7 +194,6 @@ app.include_router(defecto.router)
 app.include_router(auditoria_calidad.router)
 app.include_router(dashboard.router)
 
-# Reportes
 app.include_router(reportes.router)
 app.include_router(reportes_defectos.router)
 
