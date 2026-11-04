@@ -1,10 +1,13 @@
 (function () {
   'use strict';
 
-  // Detectar la URL de la API
-  var API_URL = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') 
-    ? "http://127.0.0.1:8000" 
-    : "http://" + window.location.hostname + ":8000";
+  // Detectar la URL de la API (CORREGIDO)
+  var API_URL;
+  if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
+    API_URL = "http://127.0.0.1:8000";
+  } else {
+    API_URL = "https://calidad-venvidrio-repository-main.onrender.com";
+  }
 
   // =============================================
   // INYECTAR ESTILOS DE ANIMACIÓN
