@@ -24,7 +24,7 @@
     <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
     <li><a href="../pages/auditoria_interna.html"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a></li>
     <li><a href="../pages/auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
-    <li id="navUsuariosLink" style="display:none;">
+    <li id="navUsuariosLink" class="nav-hidden">
       <a href="../pages/usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
     </li>
   </ul>
@@ -43,7 +43,7 @@
       <div class="dropdown-divider"></div>
       
       <!-- BOTÓN "MI PERFIL" -->
-      <a class="dropdown-item" id="dropdownPerfil" style="cursor:pointer;">
+      <a class="dropdown-item" id="dropdownPerfil">
         <i class="ti ti-user-circle"></i> Mi Perfil
       </a>
       <div class="dropdown-divider"></div>
@@ -60,51 +60,51 @@
 
   <div class="page-header">
     <h1>Registro de la Producción</h1>
-    <p>Complete los pasos en orden. Los campos con <strong style="color:#1976d2;">(auto)</strong> se calculan o autocompletan automáticamente.</p>
+    <p>Complete los pasos en orden. Los campos con <strong>(auto)</strong> se calculan o autocompletan automáticamente.</p>
   </div>
 
   <div class="ultima-actualizacion">
     <i class="ti ti-clock"></i>
     Última actualización: <span id="ultima-actualizacion">--:--:--</span>
-    <button type="button" class="btn-refresh" onclick="window.recargarProduccion()" title="Recargar datos (Ctrl+R)">
+    <button type="button" class="btn-refresh" onclick="window.recargarProduccion()" title="Recargar datos">
       <i class="ti ti-refresh"></i> Recargar
     </button>
   </div>
 
   <!-- MÉTRICAS -->
   <div class="stats-grid">
-    <div class="stat-card" style="animation-delay:0.05s">
+    <div class="stat-card">
       <div class="stat-label">Lotes Hoy</div>
       <div class="stat-value" id="cnt-lotes"><span class="skeleton"></span></div>
       <div class="stat-sub">Cargando...</div>
     </div>
-    <div class="stat-card" style="animation-delay:0.1s">
+    <div class="stat-card">
       <div class="stat-label">Unidades Producidas</div>
       <div class="stat-value" id="cnt-unidades"><span class="skeleton"></span></div>
       <div class="stat-sub" id="sub-unidades">Total producción</div>
     </div>
-    <div class="stat-card" style="animation-delay:0.15s">
+    <div class="stat-card">
       <div class="stat-label">Eficiencia</div>
       <div class="stat-value warning" id="cnt-eficiencia"><span class="skeleton"></span></div>
       <div class="stat-sub" id="estado-lineas">Cargando líneas...</div>
     </div>
-    <div class="stat-card" style="animation-delay:0.2s">
+    <div class="stat-card">
       <div class="stat-label">Pendientes por Auditar</div>
       <div class="stat-value danger" id="cnt-rechazos"><span class="skeleton"></span></div>
       <div class="stat-sub" id="pct-rechazos">0% del total</div>
     </div>
   </div>
 
-  <div class="prod-layout" style="display: block;">
+  <div class="prod-layout">
 
     <!-- FORMULARIO NUEVO LOTE (CON PESTAÑAS) -->
-    <div class="card anim-card" style="animation-delay:0.2s">
+    <div class="card anim-card">
       <div class="card-header">
         <div class="card-title"><i class="ti ti-file-description"></i> Registro de Lote</div>
         <span class="badge badge-info">Nuevo</span>
       </div>
       
-      <div class="card-body" style="padding-top: 10px;">
+      <div class="card-body">
         
         <!-- PESTAÑAS -->
         <div class="tabs-container">
@@ -127,7 +127,7 @@
           
           <!-- PESTAÑA 1: CONTEXTO -->
           <div class="tab-panel active" id="tab-contexto">
-            <div class="form-section" style="border:none; padding:0; margin:0;">
+            <div class="form-section">
               <p class="form-section-desc">Defina dónde y cuándo se está fabricando este lote.</p>
               <div class="grid-2">
                 <div class="field">
@@ -158,10 +158,10 @@
 
           <!-- PESTAÑA 2: PRODUCTO -->
           <div class="tab-panel" id="tab-producto">
-            <div class="form-section" style="border:none; padding:0; margin:0;">
+            <div class="form-section">
               <p class="form-section-desc">Seleccione un producto o cree uno nuevo. Los campos técnicos se autocompletan.</p>
               <div class="grid-2">
-                <div class="field" style="grid-column:1/-1;">
+                <div class="field field-full-width">
                   <label for="producto-select">Producto / Ítem *</label>
                   <div class="select-with-button">
                     <select id="producto-select">
@@ -169,12 +169,12 @@
                     </select>
                     <button type="button" class="btn-new" id="btn-nuevo-producto"><i class="ti ti-plus"></i> Nuevo</button>
                   </div>
-                  <div class="input-nuevo-wrapper" id="producto-nuevo-wrapper" style="display:none;">
+                  <div class="input-nuevo-wrapper" id="producto-nuevo-wrapper">
                     <input type="text" id="producto-nuevo" class="input-nuevo" placeholder="Nombre del nuevo producto..." />
                     <button type="button" class="btn-clear-input" id="btn-cancelar-producto"><i class="ti ti-x"></i></button>
                   </div>
                   <small class="field-hint" id="producto-hint">Seleccione un producto o cree uno nuevo</small>
-                  <div class="aviso-nuevo-producto" id="aviso-nuevo-producto" style="display:none;">
+                  <div class="aviso-nuevo-producto" id="aviso-nuevo-producto">
                     <i class="ti ti-info-circle"></i>
                     <span><strong>Producto nuevo:</strong> los campos técnicos se desbloquean para entrada manual.</span>
                   </div>
@@ -205,10 +205,10 @@
                 </div>
                 <div class="field"><label>BPP (Botellas/Paleta)</label><input type="number" id="bpp" step="0.001" /></div>
                 <div class="field"><label>Bot. por Caja</label><input type="number" id="bpc" min="1" /></div>
-                <div class="field field-auto" style="grid-column:1/-1;"><label>Juego de Envases</label><input type="text" id="juego_envases" readonly /></div>
+                <div class="field field-auto field-full-width"><label>Juego de Envases</label><input type="text" id="juego_envases" readonly /></div>
                 
                 <!-- DIMENSIONES -->
-                <div class="field" id="field-dimensiones" style="grid-column:1/-1; display:none;">
+                <div class="field field-full-width" id="field-dimensiones">
                   <label>Dimensiones Físicas</label>
                   <div class="geometria-toggle">
                     <button type="button" class="geo-btn active" data-geo="cilindrico">Cilíndrico</button>
@@ -217,20 +217,20 @@
                   <div class="dim-panel" id="dim-cilindrico">
                     <div class="input-pair">
                       <input type="text" id="dim_diametro" placeholder="Ø Diámetro" />
-                      <span>×</span>
+                      <span class="pair-separator">×</span>
                       <input type="text" id="dim_altura_cil" placeholder="H Altura" />
                     </div>
                   </div>
-                  <div class="dim-panel" id="dim-rectangular" style="display:none;">
+                  <div class="dim-panel" id="dim-rectangular">
                     <div class="input-pair input-pair-3">
                       <input type="text" id="dim_largo" placeholder="L Largo" />
-                      <span>×</span>
+                      <span class="pair-separator">×</span>
                       <input type="text" id="dim_ancho" placeholder="A Ancho" />
-                      <span>×</span>
+                      <span class="pair-separator">×</span>
                       <input type="text" id="dim_alto" placeholder="H Alto" />
                     </div>
                   </div>
-                  <div class="dim-preview" id="dim-preview" style="display:none;">
+                  <div class="dim-preview" id="dim-preview">
                     <i class="ti ti-ruler-measure"></i> <span id="dim-preview-text">—</span>
                   </div>
                 </div>
@@ -244,9 +244,9 @@
                   <label>Cliente Destino *</label>
                   <div class="select-with-button">
                     <select id="cliente-select"><option value="">-- Seleccione --</option></select>
-                    <button type="button" class="btn-new" id="btn-nuevo-cliente"><i class="ti ti-plus"></i></button>
+                    <button type="button" class="btn-new" id="btn-nuevo-cliente"><i class="ti ti-plus"></i> Nuevo</button>
                   </div>
-                  <div class="input-nuevo-wrapper" id="cliente-nuevo-wrapper" style="display:none;">
+                  <div class="input-nuevo-wrapper" id="cliente-nuevo-wrapper">
                     <input type="text" id="cliente-nuevo" placeholder="Nuevo cliente..." />
                     <button type="button" class="btn-clear-input" id="btn-cancelar-cliente"><i class="ti ti-x"></i></button>
                   </div>
@@ -257,7 +257,7 @@
 
           <!-- PESTAÑA 3: TRAZABILIDAD -->
           <div class="tab-panel" id="tab-trazabilidad">
-            <div class="form-section" style="border:none; padding:0; margin:0;">
+            <div class="form-section">
               <p class="form-section-desc">Identifique el lote y asigne los datos de la línea.</p>
               <div class="grid-2">
                 <div class="field">
@@ -270,7 +270,7 @@
                 </div>
                 <div class="field">
                   <label>Código de Lote (auto)</label>
-                  <input type="text" id="lote-id" readonly style="background:#f0f0f0; font-weight:bold;" />
+                  <input type="text" id="lote-id" readonly class="input-lote-auto" />
                 </div>
                 <div class="field">
                   <label>Nº Ticket</label>
@@ -291,7 +291,7 @@
                   <input type="text" id="operador" list="lista-operadores" />
                   <datalist id="lista-operadores"></datalist>
                 </div>
-                <div class="field" style="grid-column:1/-1;">
+                <div class="field field-full-width">
                   <label>Orden (ORDER)</label>
                   <input type="text" id="orden" list="lista-ordenes" />
                   <datalist id="lista-ordenes"></datalist>
@@ -302,12 +302,12 @@
 
           <!-- PESTAÑA 4: CANTIDADES -->
           <div class="tab-panel" id="tab-cantidades">
-            <div class="form-section" style="border:none; padding:0; margin:0;">
+            <div class="form-section">
               <p class="form-section-desc">Registre la cantidad producida. Los cálculos son automáticos.</p>
               <div class="grid-2">
-                <div class="field" style="grid-column:1/-1;">
+                <div class="field field-full-width">
                   <label>Cantidad Total (unidades) *</label>
-                  <input type="number" id="cantidad" min="1" style="font-size:16px; font-weight:bold;" />
+                  <input type="number" id="cantidad" min="1" class="input-cantidad-grande" />
                 </div>
                 <div class="field field-auto"><label>Paletas</label><input type="number" id="paletas" readonly /></div>
                 <div class="field field-auto"><label>Cajas / Canastas</label><input type="number" id="cajas_producidas" readonly /></div>
@@ -315,19 +315,19 @@
                 <div class="field field-auto"><label>Gruesas/Paleta</label><input type="number" id="gruesas_paleta" readonly /></div>
               </div>
 
-              <div id="guardar-en-catalogo-wrapper" class="checkbox-catalogo" style="display:none; margin-top:15px;">
+              <div id="guardar-en-catalogo-wrapper" class="checkbox-catalogo">
                 <label><input type="checkbox" id="guardar-en-catalogo" checked /> <strong>Guardar ficha técnica en catálogo</strong></label>
               </div>
 
-              <div class="grid-2" style="margin-top:15px;">
+              <div class="grid-2">
                 <div class="field">
                   <label>Estatus Inicial</label>
                   <div class="estatus-fijo">
-                    <span class="estatus-fijo-badge">100</span> <span>Ticket Generado</span>
+                    <span class="estatus-fijo-badge">100</span> <span class="estatus-fijo-texto">Ticket Generado</span>
                   </div>
                   <input type="hidden" id="estatus" value="100" />
                 </div>
-                <div class="field" style="grid-column:1/-1;">
+                <div class="field field-full-width">
                   <label>Observaciones</label>
                   <textarea id="obs-prod" rows="3"></textarea>
                 </div>
@@ -338,7 +338,7 @@
         </div> <!-- Fin form-card-content -->
 
         <!-- ACCIONES (Siempre visibles) -->
-        <div class="form-actions" style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 15px;">
+        <div class="form-actions">
           <button type="button" class="btn btn-primary" id="btn-registrar">
             <i class="ti ti-device-floppy"></i> Guardar Lote
           </button>
@@ -356,13 +356,13 @@
   </div>
 
   <!-- TABLA DE LOTES -->
-  <div class="card anim-card" style="animation-delay:0.35s; margin-top:1.5rem">
-    <div class="card-header" style="flex-wrap:wrap;gap:10px;">
+  <div class="card anim-card card-historial">
+    <div class="card-header header-historial">
       <div class="card-title"><i class="ti ti-list-details"></i> Historial de Producción</div>
-      <div class="flex gap-2" style="flex-wrap:wrap;align-items:center;">
+      <div class="flex gap-2 flex-wrap align-center">
         <input type="text" id="buscar-lote" placeholder="Buscar lote..." class="input-buscar" />
         <div class="selector-mes-container">
-          <i class="ti ti-calendar" style="color:var(--navy);font-size:15px;"></i>
+          <i class="ti ti-calendar"></i>
           <input type="month" id="selector-mes" class="input-mes" />
           <button type="button" class="btn btn-primary btn-sm" id="btn-aplicar-mes"><i class="ti ti-search"></i> Ver Mes</button>
         </div>
@@ -371,26 +371,26 @@
 
     <div class="filtros-bar">
       <div class="filtros-grid">
-        <div class="field" style="margin:0"><label for="filtro-codigo" class="filtro-label">Código</label><input type="text" id="filtro-codigo" class="input-filtro" /></div>
-        <div class="field" style="margin:0"><label for="filtro-ticket" class="filtro-label">Ticket</label><input type="text" id="filtro-ticket" class="input-filtro" /></div>
-        <div class="field" style="margin:0"><label for="filtro-molde" class="filtro-label">Molde</label><input type="text" id="filtro-molde" list="filtro-lista-moldes" class="input-filtro" /><datalist id="filtro-lista-moldes"></datalist></div>
-        <div class="field" style="margin:0"><label for="filtro-maquina" class="filtro-label">Máquina</label><input type="text" id="filtro-maquina" list="filtro-lista-maquinas" class="input-filtro" /><datalist id="filtro-lista-maquinas"></datalist></div>
-        <div class="field" style="margin:0"><label for="filtro-operador" class="filtro-label">Operador</label><input type="text" id="filtro-operador" list="filtro-lista-operadores" class="input-filtro" /><datalist id="filtro-lista-operadores"></datalist></div>
-        <div class="field" style="margin:0">
+        <div class="field"><label for="filtro-codigo" class="filtro-label">Código</label><input type="text" id="filtro-codigo" class="input-filtro" /></div>
+        <div class="field"><label for="filtro-ticket" class="filtro-label">Ticket</label><input type="text" id="filtro-ticket" class="input-filtro" /></div>
+        <div class="field"><label for="filtro-molde" class="filtro-label">Molde</label><input type="text" id="filtro-molde" list="filtro-lista-moldes" class="input-filtro" /><datalist id="filtro-lista-moldes"></datalist></div>
+        <div class="field"><label for="filtro-maquina" class="filtro-label">Máquina</label><input type="text" id="filtro-maquina" list="filtro-lista-maquinas" class="input-filtro" /><datalist id="filtro-lista-maquinas"></datalist></div>
+        <div class="field"><label for="filtro-operador" class="filtro-label">Operador</label><input type="text" id="filtro-operador" list="filtro-lista-operadores" class="input-filtro" /><datalist id="filtro-lista-operadores"></datalist></div>
+        <div class="field">
           <label for="filtro-turno" class="filtro-label">Turno</label>
           <select id="filtro-turno" class="input-filtro"><option value="">Todos</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
         </div>
-        <div class="field" style="margin:0">
+        <div class="field">
           <label for="filtro-estatus" class="filtro-label">Estatus</label>
           <select id="filtro-estatus" class="input-filtro">
             <option value="">Todos</option><option value="100">100</option><option value="200">200</option><option value="300">300</option>
           </select>
         </div>
-        <div class="field" style="margin:0"><label for="filtro-fecha-desde" class="filtro-label">Desde</label><input type="date" id="filtro-fecha-desde" class="input-filtro" /></div>
-        <div class="field" style="margin:0"><label for="filtro-fecha-hasta" class="filtro-label">Hasta</label><input type="date" id="filtro-fecha-hasta" class="input-filtro" /></div>
+        <div class="field"><label for="filtro-fecha-desde" class="filtro-label">Desde</label><input type="date" id="filtro-fecha-desde" class="input-filtro" /></div>
+        <div class="field"><label for="filtro-fecha-hasta" class="filtro-label">Hasta</label><input type="date" id="filtro-fecha-hasta" class="input-filtro" /></div>
         <div class="filtros-botones">
           <button type="button" class="btn btn-primary btn-sm" id="btn-aplicar-filtros"><i class="ti ti-search"></i> Filtrar</button>
-          <button type="button" class="btn btn-outline btn-sm" id="btn-limpiar-filtros"><i class="ti ti-x"></i></button>
+          <button type="button" class="btn btn-outline btn-sm" id="btn-limpiar-filtros"><i class="ti ti-x"></i> Limpiar</button>
         </div>
       </div>
       <div class="filtro-resultados"><span id="filtro-resultados">📋 Mostrando todos los lotes</span></div>
@@ -401,7 +401,7 @@
         <thead>
           <tr>
             <th>Código</th><th>Ticket</th><th>Planta</th><th>Molde</th><th>Máquina</th><th>Línea</th>
-            <th>Operador</th><th>Capacidad</th><th>Unidades</th><th>Turno</th><th>Estatus</th><th>Cliente</th><th>Fecha</th><th style="text-align:center;">Acciones</th>
+            <th>Operador</th><th>Capacidad</th><th>Unidades</th><th>Turno</th><th>Estatus</th><th>Cliente</th><th>Fecha</th><th class="th-acciones">Acciones</th>
           </tr>
         </thead>
         <tbody id="tabla-lotes"></tbody>
@@ -412,7 +412,7 @@
 </main>
 
 <!-- MODAL: VISUALIZADOR DE LOTE -->
-<div class="modal-overlay-detalle" id="modal-ver-lote" style="display:none;">
+<div class="modal-overlay-detalle" id="modal-ver-lote">
   <div class="modal-container-detalle modal-large">
 
     <div class="modal-header">
