@@ -8,12 +8,17 @@
   'use strict';
 
   // =========================
-  // CONFIGURACIÓN DINÁMICA DE API
+  // CONFIGURACIÓN DINÁMICA DE API (CORREGIDA)
   // =========================
   var hostname = window.location.hostname;
-  var API_URL = (hostname === 'localhost' || hostname === '127.0.0.1')
-    ? 'http://127.0.0.1:8000'
-    : 'http://' + hostname + ':8000';
+  var API_URL;
+
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    API_URL = 'http://127.0.0.1:8000';
+  } else {
+    // En producción usamos la URL segura de Render
+    API_URL = 'https://calidad-venvidrio-repository-main.onrender.com';
+  }
 
   var TIEMPO_ALERTA_MS      = 3.5 * 60 * 1000;
   var TIEMPO_INACTIVIDAD_MS = 4 * 60 * 1000;
