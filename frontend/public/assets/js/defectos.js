@@ -1,11 +1,6 @@
 /* ==========================================
    VENVIDRIO - DEFECTOS
-   JS v12 - Compatibilidad móvil mejorada
-           + Eventos touch/click unificados
-           + Cierre de dropdown con touch
-           + Scroll suave con fallback
-           + Listeners pasivos donde aplica
-           + CORREGIDO: URL de foto de perfil
+   JS v14 - Solución definitiva Mixed Content & Render
    ========================================== */
 
 (function () {
@@ -67,7 +62,6 @@
   function logError(msg, err = null) { console.error(`[${new Date().toLocaleTimeString()}] ❌ ${msg}`, err || ''); }
   function logSuccess(msg, data = null) { console.log(`[${new Date().toLocaleTimeString()}] ✅ ${msg}`, data || ''); }
 
-  // 👇 NUEVA FUNCIÓN: Normaliza la URL de la foto
   function obtenerUrlFoto(fotoUrl) {
     if (!fotoUrl) return null;
     if (fotoUrl.startsWith('http://') || fotoUrl.startsWith('https://')) {
@@ -132,7 +126,6 @@
     return String(a.codigo_lote || '').localeCompare(String(b.codigo_lote || ''), 'es', { numeric: true });
   }
 
-  // Scroll suave con fallback para móviles antiguos
   function scrollSuave(elemento) {
     if (!elemento) return;
     try {
@@ -188,7 +181,6 @@
       
       let avatarHtml = '';
       if (user.foto_url) {
-        // 👇 CORREGIDO: Usar la función normalizadora
         const urlFoto = obtenerUrlFoto(user.foto_url);
         avatarHtml = `<img src="${urlFoto}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
       } else {
@@ -215,27 +207,99 @@
     if (link && rol === 3) link.style.display = 'flex';
   }
 
-  function verificarSesion() {
+  // 👇 VERIFICACIÓN DE SESIÓN CORREGIDA (No expulsa si falla la red)
+  async function verificarSesion() {
     const token = localStorage.getItem('token');
-    if (!token) { window.location.href = '../public/login.html'; return; }
+    if (!token) { 
+      window.location.href = '../public/login.html'; 
+      return; 
+    }
 
-    fetch(`${API_URL}/auth/verify`, { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(r => { if (!r.ok) throw new Error('Token inválido'); return r.json(); })
-      .then(() => {
-        cargarUsuarioNav();
-        mostrarEnlaceUsuarios();
-        initUserControls();
-        init();
-      })
-      .catch(() => cerrarSesion('Sesión expirada.'));
+    const fetchConTimeout = async (url, options, timeout = 15000) => {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeout);
+      try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(id);
+        return response;
+      } catch (error) {
+        clearTimeout(id);
+        throw error;
+      }
+    };
+
+    try {
+      let response;
+      try {
+        response = await fetchConTimeout(`${API_URL}/auth/verify`, { headers: { 'Authorization': `Bearer ${token}` } }, 15000);
+      } catch (err) {
+        // Pantalla de carga si Render duerme o falla la red
+        document.body.insertAdjacentHTML('beforeend', `
+          <div id="render-wake-up" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.9);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;">
+            <div style="border: 4px solid #f3f3f3; border-top: 4px solid #1a237e; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 20px;"></div>
+            <h2 style="color:#1a237e;margin-bottom:10px;">Conectando con el servidor...</h2>
+            <p style="color:#64748b;">El servidor estaba en reposo. Reintentando...</p>
+            <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+          </div>
+        `);
+
+        await new Promise(r => setTimeout(r, 5000));
+        response = await fetchConTimeout(`${API_URL}/auth/verify`, { headers: { 'Authorization': `Bearer ${token}` } }, 30000); 
+      }
+
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('UNAUTHORIZED'); // Token realmente inválido
+      }
+      
+      if (!response.ok) {
+        throw new Error('SERVER_ERROR');
+      }
+
+      // Todo OK
+      cargarUsuarioNav();
+      mostrarEnlaceUsuarios();
+      initUserControls();
+      init();
+
+    } catch (error) {
+      logError('Error en verificación de sesión:', error);
+      
+      const loader = document.getElementById('render-wake-up');
+      if (loader) loader.remove();
+
+      if (error.message === 'UNAUTHORIZED') {
+        cerrarSesion('Sesión expirada. Por favor, vuelve a iniciar sesión.');
+        return;
+      }
+
+      // Si es un fallo de conexión (Mixed Content, red, etc.), NO borramos el token para no bloquear Supabase.
+      alert('No se pudo conectar con el servidor (Error de red o bloqueo del navegador). Revisa tu conexión. La aplicación intentará cargar de todos modos.');
+      
+      // Forzamos la carga de la UI para no dejar la pantalla en blanco
+      cargarUsuarioNav();
+      initUserControls();
+      init();
+    }
   }
 
-  function cerrarSesion(mensaje) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('role');
-    if (mensaje) alert(mensaje);
-    window.location.href = '../public/login.html';
+  // 👇 Cierre de sesión limpio para Supabase
+  async function cerrarSesion(mensaje) {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await fetch(`${API_URL}/auth/logout`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).catch(() => {}); 
+      }
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('role');
+      
+      if (mensaje) alert(mensaje);
+      window.location.href = '../public/login.html';
+    }
   }
 
   function initUserControls() {
@@ -243,7 +307,6 @@
     const dropdown = document.getElementById('userDropdown');
     const logoutBtn = document.getElementById('dropdownLogout');
 
-    // Toggle con click y touch (evitando doble disparo)
     let lastToggle = 0;
     const toggleDropdown = (e) => {
       e.stopPropagation();
@@ -268,7 +331,9 @@
     if (logoutBtn) {
       logoutBtn.addEventListener('click', e => {
         e.preventDefault(); e.stopPropagation();
-        if (confirm('¿Estás seguro de que deseas cerrar sesión?')) cerrarSesion('👋 Sesión cerrada exitosamente.');
+        if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+          cerrarSesion('👋 Sesión cerrada exitosamente.');
+        }
       });
     }
   }
@@ -355,12 +420,11 @@
   function initPendientes() {
     const tbody = document.getElementById('tabla-pendientes');
     if (tbody) {
-      // Unificar click y touch con delegación
       let lastTouch = 0;
       const handler = (e) => {
         const now = Date.now();
         if (e.type === 'touchend') { lastTouch = now; }
-        else if (now - lastTouch < 400) { return; } // evitar doble disparo
+        else if (now - lastTouch < 400) { return; }
         const btn = e.target.closest('[data-evaluar]');
         if (!btn) return;
         e.preventDefault();
@@ -437,7 +501,6 @@
         return;
       }
 
-      // 1. Info general del lote
       setText('lote-info-ticket', lote.ticket_carga || 'Sin ticket');
       setText('lote-info-producto', lote.tipo_producto || '—');
       setText('lote-info-cliente', lote.cliente || '—');
@@ -448,7 +511,6 @@
       const insp = document.getElementById('d-inspector');
       if (insp) insp.value = lote.inspector || lote.operador || (usuarioActual ? usuarioActual.nombre : '');
 
-      // 2. Info de muestra
       const setVal = (id, v) => {
         const el = document.getElementById(id);
         if (el) el.value = v !== undefined && v !== null ? v : 0;
@@ -460,14 +522,11 @@
       setVal('d-tam-poblacion', lote.cantidad);
       setVal('d-gruesas-paleta', lote.gruesas_por_paleta);
 
-      // 3. Reflejar en el panel visual
       actualizarDisplayMuestra();
 
-      // 4. Resetear canastas a 1 y calcular muestra
       if (inputCanastas) inputCanastas.value = 1;
       calcularTamanoMuestra();
 
-      // 5. Mostrar paneles
       panel.style.display = 'block';
       muestraPanel.style.display = 'block';
 
@@ -632,7 +691,6 @@
     if (buscador) buscador.value = '';
   }
 
-  // Clic en un tipo → agregar a la BANDEJA del grupo actual
   function initClickItemsTipos() {
     const contenedor = document.getElementById('lista-tipos-agrupada');
     if (!contenedor) return;
@@ -1214,7 +1272,6 @@
     tbody.innerHTML = lotes.map(l => {
       const defs = defectosDeLote(l);
 
-      // Calcular piezas retenidas sin duplicar los grupos
       let piezasRet = 0;
       const gruposSumados = new Set();
 
