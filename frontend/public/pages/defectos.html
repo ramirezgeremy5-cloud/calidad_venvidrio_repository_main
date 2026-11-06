@@ -26,7 +26,7 @@
     <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
     <li><a href="../pages/auditoria_interna.html"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a></li>
     <li><a href="../pages/auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
-    <li id="navUsuariosLink" style="display:none;">
+    <li id="navUsuariosLink" class="nav-hidden">
       <a href="../pages/usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
     </li>
   </ul>
@@ -43,7 +43,7 @@
         </div>
       </div>
       <div class="dropdown-divider"></div>
-      <a class="dropdown-item" id="dropdownPerfil" style="cursor:pointer;">
+      <a class="dropdown-item" id="dropdownPerfil">
         <i class="ti ti-user-circle"></i> Mi Perfil
       </a>
       <div class="dropdown-divider"></div>
@@ -94,15 +94,15 @@
       </div>
 
       <div class="card-body">
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:1rem;">
-          <i class="ti ti-info-circle" style="color:var(--navy);"></i>
+        <p class="info-text">
+          <i class="ti ti-info-circle"></i>
           Seleccione un lote y determine su conformidad.
         </p>
 
         <div class="grid-2">
 
           <!-- SELECTOR DE LOTE -->
-          <div class="field" style="grid-column: 1 / -1;">
+          <div class="field field-full-width">
             <label for="d-lote">Lote a Evaluar *</label>
             <select id="d-lote">
               <option value="">-- Seleccione un lote pendiente --</option>
@@ -111,22 +111,22 @@
           </div>
 
           <!-- INFO DEL LOTE SELECCIONADO -->
-          <div id="lote-info-panel" style="grid-column: 1 / -1; display:none;">
+          <div id="lote-info-panel" class="field-full-width" style="display:none;">
             <div class="lote-info-box">
               <div class="lote-info-row"><span class="lote-info-label">Ticket:</span><span id="lote-info-ticket">—</span></div>
               <div class="lote-info-row"><span class="lote-info-label">Producto:</span><span id="lote-info-producto">—</span></div>
               <div class="lote-info-row"><span class="lote-info-label">Cliente:</span><span id="lote-info-cliente">—</span></div>
               <div class="lote-info-row"><span class="lote-info-label">Cantidad:</span><span id="lote-info-cantidad">—</span></div>
               <div class="lote-info-row"><span class="lote-info-label">Operador Producción:</span><span id="lote-info-operador">—</span></div>
-              <div class="lote-info-row" style="align-items:flex-start;">
+              <div class="lote-info-row align-top">
                 <span class="lote-info-label">Obs. Producción:</span>
-                <span id="lote-info-obs-produccion" style="font-style:italic;color:var(--text-muted);">—</span>
+                <span id="lote-info-obs-produccion" class="texto-italica-muted">—</span>
               </div>
             </div>
           </div>
 
           <!-- ================= TAMAÑO DE MUESTRA Y DATOS DEL LOTE ================= -->
-          <div id="muestra-panel" class="muestra-box" style="grid-column: 1 / -1; display:none;">
+          <div id="muestra-panel" class="muestra-box field-full-width" style="display:none;">
             <div class="muestra-header">
               <i class="ti ti-ruler-measure"></i>
               <span>Datos del Lote y Tamaño de Muestra</span>
@@ -159,7 +159,7 @@
 
               <!-- Input para Canastas -->
               <div class="muestra-input-box">
-                <div class="field" style="margin:0;">
+                <div class="field">
                   <label for="d-canastas">Canastas a Revisar *</label>
                   <input type="number" id="d-canastas" min="1" step="1" placeholder="Ej: 3" value="1">
                   <small class="field-hint">Indique cuántas canastas se van a inspeccionar.</small>
@@ -177,7 +177,7 @@
           </div>
 
           <!-- DECISIÓN: APTO / RETENIDO -->
-          <div class="field" style="grid-column: 1 / -1;">
+          <div class="field field-full-width">
             <label>Resultado de la Evaluación *</label>
             <div class="evaluacion-toggle">
               <button type="button" class="eval-btn eval-apto active" id="btn-apto" data-valor="no">
@@ -194,18 +194,18 @@
           </div>
 
           <!-- INSPECTOR Y OBSERVACIONES -->
-          <div class="field" style="grid-column: 1 / -1;">
+          <div class="field field-full-width">
             <label for="d-inspector">Operador / Inspector Responsable *</label>
-            <input type="text" id="d-inspector" list="lista-inspectores" readonly style="background-color: #f8f9fa; cursor: not-allowed;">
+            <input type="text" id="d-inspector" list="lista-inspectores" readonly class="input-readonly">
           </div>
 
-          <div class="field" style="grid-column: 1 / -1;">
+          <div class="field field-full-width">
             <label for="d-observaciones">Observaciones Generales</label>
             <textarea id="d-observaciones" placeholder="Notas generales del lote..." rows="2"></textarea>
           </div>
 
           <!-- CAMPOS DE CATALOGACIÓN (Solo si "Retenido") -->
-          <div id="campos-defecto" style="display:none;grid-column: 1 / -1;">
+          <div id="campos-defecto" class="field-full-width" style="display:none;">
             <div class="aviso-defecto">
               <i class="ti ti-alert-triangle"></i>
               <span><strong>Registro de piezas afectadas:</strong> Indique la <strong>cantidad de piezas</strong> que comparten los defectos, agréguelos desde el catálogo o escríbalos manualmente, y pulse <strong>"Agregar grupo a la evaluación"</strong>. Puede repetir el proceso para otros grupos.</span>
@@ -213,7 +213,7 @@
 
             <!-- GRUPO ACTUAL: cantidad de piezas que comparten los defectos -->
             <div class="grupo-actual-box">
-              <div class="field" style="margin:0;">
+              <div class="field">
                 <label for="d-piezas-grupo">
                   Cantidad de piezas que comparten estos defectos *
                 </label>
@@ -282,9 +282,7 @@
               <!-- 2.B Catálogo clickeable (filtrado por clasificación activa) -->
               <div id="panel-tipos-clasificacion" class="panel-tipos" style="display:none; margin-top:8px;">
                 <input type="text" id="buscar-tipos-clasificacion" placeholder="Filtrar catálogo..." class="buscador-tipos">
-                <div id="lista-tipos-agrupada" class="lista-tipos-agrupada">
-                  <!-- Se llena con JS -->
-                </div>
+                <div id="lista-tipos-agrupada" class="lista-tipos-agrupada"></div>
               </div>
               <div id="catalogo-placeholder" class="catalogo-placeholder">
                 <i class="ti ti-hand-click"></i>
@@ -314,14 +312,12 @@
                   <span>Defectos en el grupo actual</span>
                   <span id="contador-grupo" class="badge badge-info" style="margin-left:6px;">0</span>
                 </div>
-                <button type="button" class="btn btn-outline btn-sm" id="btn-vaciar-grupo" style="font-size:11px;padding:4px 10px;">
+                <button type="button" class="btn btn-outline btn-sm" id="btn-vaciar-grupo">
                   <i class="ti ti-x"></i> Vaciar grupo
                 </button>
               </div>
 
-              <div id="lista-grupo-actual" class="lista-grupo-actual">
-                <!-- Se llena con JS -->
-              </div>
+              <div id="lista-grupo-actual" class="lista-grupo-actual"></div>
 
               <div class="bandeja-footer">
                 <button type="button" class="btn btn-primary btn-sm" id="btn-agregar-grupo">
@@ -338,14 +334,12 @@
                   <span>Grupos de piezas agregados a la evaluación</span>
                   <span id="contador-grupos" class="badge badge-danger" style="margin-left:6px;">0</span>
                 </div>
-                <button type="button" class="btn btn-outline btn-sm" id="btn-limpiar-evaluacion" style="font-size:11px;padding:4px 10px;">
+                <button type="button" class="btn btn-outline btn-sm" id="btn-limpiar-evaluacion">
                   <i class="ti ti-trash"></i> Vaciar evaluación
                 </button>
               </div>
 
-              <div id="lista-grupos-agregados" class="lista-grupos-agregados">
-                <!-- Se llena con JS -->
-              </div>
+              <div id="lista-grupos-agregados" class="lista-grupos-agregados"></div>
 
               <small class="field-hint" style="margin-top:8px;display:block;">
                 <i class="ti ti-info-circle"></i>
@@ -386,21 +380,21 @@
 
   <!-- ================= LOTES PENDIENTES DE EVALUAR ================= -->
   <div class="card" style="margin-top:1.5rem">
-    <div class="card-header">
+    <div class="card-header header-flex">
       <div class="card-title"><i class="ti ti-clock-hour3"></i> Lotes Pendientes de Evaluar</div>
-      <div class="flex gap-2" style="flex-wrap:wrap;">
-        <input type="text" id="buscar-lote-pendiente" placeholder="Buscar lote o ticket..." class="input-buscar" style="width:220px;">
+      <div class="flex gap-2 flex-wrap">
+        <input type="text" id="buscar-lote-pendiente" placeholder="Buscar lote o ticket..." class="input-buscar">
         <button class="btn btn-outline btn-sm" id="btn-refrescar-pendientes"><i class="ti ti-refresh"></i> Actualizar</button>
       </div>
     </div>
-    <div class="filtro-resultados" style="padding:0.5rem 1.25rem;">
+    <div class="filtro-resultados">
       <span id="pendientes-resultados">📋 Mostrando lotes con estatus 100 (Ticket Generado)</span>
     </div>
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Ticket</th><th>Lote</th><th>Producto</th><th>Cliente</th><th>Cantidad</th><th>Línea</th><th>Turno</th><th>Fecha Producción</th><th style="text-align:center;min-width:90px;">Acción</th>
+            <th>Ticket</th><th>Lote</th><th>Producto</th><th>Cliente</th><th>Cantidad</th><th>Línea</th><th>Turno</th><th>Fecha Producción</th><th class="th-acciones">Acción</th>
           </tr>
         </thead>
         <tbody id="tabla-pendientes"></tbody>
@@ -410,9 +404,9 @@
 
   <!-- ================= SÁBANA: DIVIDIDA POR CLIENTE Y MES ================= -->
   <div class="card" style="margin-top:1.5rem">
-    <div class="card-header">
+    <div class="card-header header-flex">
       <div class="card-title"><i class="ti ti-table-options"></i> Sábana de Lotes</div>
-      <div class="flex gap-2" style="flex-wrap:wrap;">
+      <div class="flex gap-2 flex-wrap">
         <button class="btn btn-outline btn-sm" id="btn-sabana-excel"><i class="ti ti-file-spreadsheet"></i> Excel</button>
         <button class="btn btn-outline btn-sm" id="btn-sabana-pdf"><i class="ti ti-file-type-pdf"></i> PDF</button>
         <button class="btn btn-outline btn-sm" id="btn-sabana-word"><i class="ti ti-file-type-doc"></i> Word</button>
@@ -421,15 +415,15 @@
 
     <div class="filtros-bar">
       <div class="filtros-grid">
-        <div class="field" style="margin:0">
+        <div class="field">
           <label for="sabana-mes" class="filtro-label">Mes</label>
           <select id="sabana-mes" class="input-filtro"><option value="">Todos los meses</option></select>
         </div>
-        <div class="field" style="margin:0">
+        <div class="field">
           <label for="sabana-cliente" class="filtro-label">Cliente</label>
           <select id="sabana-cliente" class="input-filtro"><option value="">Todos los clientes</option></select>
         </div>
-        <div class="field" style="margin:0">
+        <div class="field">
           <label for="sabana-buscar" class="filtro-label">Buscar</label>
           <input type="text" id="sabana-buscar" class="input-filtro" placeholder="Lote, ticket o producto..." />
         </div>
@@ -448,7 +442,7 @@
         <table class="tabla-angosta">
           <thead>
             <tr>
-              <th>Ticket</th><th>Código</th><th>Producto</th><th>Cliente</th><th>Cantidad</th><th>Turno / Grupo</th><th>Fecha</th><th style="text-align:center;min-width:60px;">Ver</th>
+              <th>Ticket</th><th>Código</th><th>Producto</th><th>Cliente</th><th>Cantidad</th><th>Turno / Grupo</th><th>Fecha</th><th class="th-acciones">Ver</th>
             </tr>
           </thead>
           <tbody id="tabla-apto"></tbody>
@@ -466,7 +460,7 @@
         <table class="tabla-angosta">
           <thead>
             <tr>
-              <th>Ticket</th><th>Código</th><th>Producto</th><th>Cliente</th><th>Defectos</th><th>Clasificación</th><th>Pzas. Ret.</th><th style="text-align:center;min-width:100px;">Acciones</th>
+              <th>Ticket</th><th>Código</th><th>Producto</th><th>Cliente</th><th>Defectos</th><th>Clasificación</th><th>Pzas. Ret.</th><th class="th-acciones">Acciones</th>
             </tr>
           </thead>
           <tbody id="tabla-retenido"></tbody>
@@ -481,7 +475,7 @@
 <div class="modal-overlay" id="modal-ver-lote" style="display:none;">
   <div class="modal-container">
     <div class="modal-header">
-      <div class="modal-title"><i class="ti ti-file-search"></i> Detalle del Lote: <span id="modal-lote-codigo" style="color:var(--navy);font-weight:700;"></span></div>
+      <div class="modal-title"><i class="ti ti-file-search"></i> Detalle del Lote: <span id="modal-lote-codigo" class="modal-lote-codigo"></span></div>
       <button type="button" class="modal-close" id="btn-cerrar-modal-lote"><i class="ti ti-x"></i></button>
     </div>
 
@@ -498,7 +492,7 @@
       <div class="modal-section">
         <div class="modal-section-title"><i class="ti ti-package"></i> Producto y Cliente</div>
         <div class="modal-detail-grid">
-          <div class="modal-detail-item" style="grid-column: 1 / -1;"><span class="modal-detail-label">Producto</span><span class="modal-detail-value" id="detail-producto">—</span></div>
+          <div class="modal-detail-item detail-item-full"><span class="modal-detail-label">Producto</span><span class="modal-detail-value" id="detail-producto">—</span></div>
           <div class="modal-detail-item"><span class="modal-detail-label">Cliente</span><span class="modal-detail-value" id="detail-cliente">—</span></div>
           <div class="modal-detail-item"><span class="modal-detail-label">Cantidad Producida</span><span class="modal-detail-value" id="detail-cantidad">—</span></div>
           <div class="modal-detail-item"><span class="modal-detail-label">Estatus del Lote</span><span class="modal-detail-value detail-value-highlight" id="detail-estatus">—</span></div>
@@ -511,18 +505,18 @@
           <div class="modal-detail-item"><span class="modal-detail-label">Canastas Revisadas</span><span class="modal-detail-value" id="detail-canastas">—</span></div>
           <div class="modal-detail-item"><span class="modal-detail-label">Tamaño de Muestra (n)</span><span class="modal-detail-value detail-value-highlight" id="detail-muestra">—</span></div>
           <div class="modal-detail-item"><span class="modal-detail-label">Inspector</span><span class="modal-detail-value" id="detail-inspector">—</span></div>
-          <div class="modal-detail-item"><span class="modal-detail-label">Piezas Retenidas</span><span class="modal-detail-value" id="detail-retenidas" style="color:var(--danger); font-weight:700;">—</span></div>
-          <div class="modal-detail-item" style="grid-column: 1 / -1;"><span class="modal-detail-label">Observaciones</span><span class="modal-detail-value" id="detail-observaciones">—</span></div>
+          <div class="modal-detail-item"><span class="modal-detail-label">Piezas Retenidas</span><span class="modal-detail-value detail-value-danger" id="detail-retenidas">—</span></div>
+          <div class="modal-detail-item detail-item-full"><span class="modal-detail-label">Observaciones</span><span class="modal-detail-value" id="detail-observaciones">—</span></div>
         </div>
       </div>
 
       <div class="modal-section" id="modal-seccion-defectos" style="display:none;">
         <div class="modal-section-title"><i class="ti ti-alert-triangle"></i> Defectos Encontrados</div>
-        <div class="table-wrap" style="margin-top:10px; border:1px solid var(--border); border-radius:var(--radius-sm);">
-          <table style="font-size:12px; width:100%;">
-            <thead style="background:var(--off-white);">
+        <div class="table-wrap table-modal-defectos">
+          <table>
+            <thead>
               <tr>
-                <th style="width:100px;">Piezas</th>
+                <th class="th-piezas">Piezas</th>
                 <th>Defectos en este grupo</th>
               </tr>
             </thead>

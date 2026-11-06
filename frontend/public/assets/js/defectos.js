@@ -5,6 +5,7 @@
            + Cierre de dropdown con touch
            + Scroll suave con fallback
            + Listeners pasivos donde aplica
+           + CORREGIDO: URL de foto de perfil
    ========================================== */
 
 (function () {
@@ -14,9 +15,12 @@
   // CONFIGURACIÓN DINÁMICA DE API
   // ==========================================
   const hostname = window.location.hostname;
-  const API_URL = (hostname === 'localhost' || hostname === '127.0.0.1')
-    ? 'http://127.0.0.1:8000'
-    : 'http://' + hostname + ':8000';
+  let API_URL;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    API_URL = 'http://127.0.0.1:8000';
+  } else {
+    API_URL = 'https://calidad-venvidrio-repository-main.onrender.com';
+  }
 
   // ==========================================
   // ESTADO GLOBAL
@@ -62,6 +66,15 @@
   function log(msg, data = null) { console.log(`[${new Date().toLocaleTimeString()}] 🔍 ${msg}`, data || ''); }
   function logError(msg, err = null) { console.error(`[${new Date().toLocaleTimeString()}] ❌ ${msg}`, err || ''); }
   function logSuccess(msg, data = null) { console.log(`[${new Date().toLocaleTimeString()}] ✅ ${msg}`, data || ''); }
+
+  // 👇 NUEVA FUNCIÓN: Normaliza la URL de la foto
+  function obtenerUrlFoto(fotoUrl) {
+    if (!fotoUrl) return null;
+    if (fotoUrl.startsWith('http://') || fotoUrl.startsWith('https://')) {
+      return fotoUrl.replace(/^(https?)\/\//, '$1://');
+    }
+    return `${API_URL}${fotoUrl}`;
+  }
 
   function val(id) {
     const el = document.getElementById(id);
@@ -172,10 +185,23 @@
     try {
       const user = JSON.parse(userData);
       usuarioActual = user;
-      const iniciales = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
-      setText('navAvatar', iniciales);
+      
+      let avatarHtml = '';
+      if (user.foto_url) {
+        // 👇 CORREGIDO: Usar la función normalizadora
+        const urlFoto = obtenerUrlFoto(user.foto_url);
+        avatarHtml = `<img src="${urlFoto}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
+      } else {
+        avatarHtml = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
+      }
+
+      const navAvatar = document.getElementById('navAvatar');
+      if (navAvatar) navAvatar.innerHTML = avatarHtml;
+      
+      const dropdownAvatar = document.getElementById('dropdownAvatar');
+      if (dropdownAvatar) dropdownAvatar.innerHTML = avatarHtml;
+
       setText('navUsername', user.nombre || 'Usuario');
-      setText('dropdownAvatar', iniciales);
       setText('dropdownName', user.nombre || 'Usuario');
       setText('dropdownEmail', user.correo || 'usuario@email.com');
     } catch (e) {
