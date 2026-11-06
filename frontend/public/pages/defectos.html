@@ -162,7 +162,11 @@
                 <div class="field">
                   <label for="d-canastas">Canastas a Revisar *</label>
                   <input type="number" id="d-canastas" min="1" step="1" placeholder="Ej: 3" value="1">
-                  <small class="field-hint">Indique cuántas canastas se van a inspeccionar.</small>
+                  <!-- 👇 NUEVO CONTENEDOR PARA LA SUGERENCIA AUTOMÁTICA -->
+                  <small class="field-hint" id="sugerencia-muestra" style="color: var(--brand-2); font-weight: 600; margin-top: 4px; display: block;">
+                    <!-- Aquí el JS inyectará el cálculo del porcentaje -->
+                  </small>
+                  <small class="field-hint" style="margin-top: 2px;">Indique cuántas canastas se van a inspeccionar.</small>
                 </div>
               </div>
             </div>

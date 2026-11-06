@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - DEFECTOS
-   JS v14 - Solución definitiva Mixed Content & Render
+   JS v15 - Cálculo automático de muestra (10%)
    ========================================== */
 
 (function () {
@@ -542,16 +542,43 @@
     setText('d-tam-muestra-display', val('d-tam-muestra') || '0');
   }
 
+  // 👇 CÁLCULO AUTOMÁTICO DE MUESTRA (10% del lote)
   function calcularTamanoMuestra() {
-    const canastas = parseFloat(document.getElementById('d-canastas')?.value) || 0;
-    const botellasPorCaja = parseFloat(document.getElementById('d-botellas-caja')?.value) || 0;
+    const botellasCaja = parseFloat(document.getElementById('d-botellas-caja')?.value) || 0;
+    const poblacionTotal = parseFloat(document.getElementById('d-tam-poblacion')?.value) || 0;
+    const inputCanastas = document.getElementById('d-canastas');
     const inputMuestra = document.getElementById('d-tam-muestra');
+    const textoSugerencia = document.getElementById('sugerencia-muestra');
 
-    const muestra = (canastas > 0 && botellasPorCaja > 0) ? canastas * botellasPorCaja : 0;
+    if (!inputCanastas || !inputMuestra) return;
 
-    if (inputMuestra) {
-      inputMuestra.value = muestra;
+    // 1. Calcular sugerencia (10% de las canastas del lote, mínimo 1)
+    let canastasSugeridas = 1;
+    
+    if (botellasCaja > 0 && poblacionTotal > 0) {
+      const totalCanastasLote = poblacionTotal / botellasCaja;
+      const porcentajeARevisar = totalCanastasLote * 0.10; // 10% del lote
+      
+      canastasSugeridas = Math.max(1, Math.ceil(porcentajeARevisar));
+      
+      if (textoSugerencia) {
+        textoSugerencia.innerHTML = `<i class="ti ti-info-circle"></i> Sugerido: ${canastasSugeridas} canasta(s) (10% del lote)`;
+        textoSugerencia.style.display = 'block';
+      }
+    } else if (textoSugerencia) {
+      textoSugerencia.style.display = 'none';
     }
+
+    // 2. Si el usuario no ha tocado el input, le ponemos la sugerencia automáticamente
+    if (inputCanastas.value === '1' && canastasSugeridas > 1) {
+      inputCanastas.value = canastasSugeridas;
+    }
+
+    // 3. Calcular la muestra final basada en lo que esté en el input
+    const canastasFinales = parseFloat(inputCanastas.value) || 0;
+    const muestra = canastasFinales * botellasCaja;
+
+    inputMuestra.value = muestra;
     setText('d-tam-muestra-display', muestra);
   }
 
@@ -1687,6 +1714,10 @@
     });
 
     actualizarDisplayMuestra();
+    
+    if (document.getElementById('sugerencia-muestra')) {
+      document.getElementById('sugerencia-muestra').style.display = 'none';
+    }
   }
 
   // ==========================================
