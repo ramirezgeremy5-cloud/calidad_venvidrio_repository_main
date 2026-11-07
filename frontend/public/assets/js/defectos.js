@@ -1,6 +1,7 @@
 /* ==========================================
    VENVIDRIO - DEFECTOS
-   JS v15 - Cálculo automático de muestra (10%)
+   JS v16 - Cálculo automático de muestra (10%) 
+            + Mensajes de sugerencia y error corregidos
    ========================================== */
 
 (function () {
@@ -207,7 +208,7 @@
     if (link && rol === 3) link.style.display = 'flex';
   }
 
-  // 👇 VERIFICACIÓN DE SESIÓN CORREGIDA (No expulsa si falla la red)
+  // VERIFICACIÓN DE SESIÓN CORREGIDA
   async function verificarSesion() {
     const token = localStorage.getItem('token');
     if (!token) { 
@@ -282,7 +283,7 @@
     }
   }
 
-  // 👇 Cierre de sesión limpio para Supabase
+  // Cierre de sesión limpio para Supabase
   async function cerrarSesion(mensaje) {
     try {
       const token = localStorage.getItem('token');
@@ -524,6 +525,7 @@
 
       actualizarDisplayMuestra();
 
+      // Al cambiar de lote, reseteamos el input a 1 y recalculamos
       if (inputCanastas) inputCanastas.value = 1;
       calcularTamanoMuestra();
 
@@ -542,7 +544,9 @@
     setText('d-tam-muestra-display', val('d-tam-muestra') || '0');
   }
 
-  // 👇 CÁLCULO AUTOMÁTICO DE MUESTRA (10% del lote)
+  // ==========================================
+  // CÁLCULO AUTOMÁTICO DE MUESTRA (10% del lote)
+  // ==========================================
   function calcularTamanoMuestra() {
     const botellasCaja = parseFloat(document.getElementById('d-botellas-caja')?.value) || 0;
     const poblacionTotal = parseFloat(document.getElementById('d-tam-poblacion')?.value) || 0;
@@ -550,28 +554,30 @@
     const inputMuestra = document.getElementById('d-tam-muestra');
     const textoSugerencia = document.getElementById('sugerencia-muestra');
 
-    if (!inputCanastas || !inputMuestra) return;
+    if (!inputCanastas || !inputMuestra || !textoSugerencia) return;
 
-    // 1. Calcular sugerencia (10% de las canastas del lote, mínimo 1)
-    let canastasSugeridas = 1;
-    
-    if (botellasCaja > 0 && poblacionTotal > 0) {
+    // 1. Si faltan datos para el cálculo, mostrar advertencia
+    if (botellasCaja <= 0) {
+      textoSugerencia.innerHTML = `<i class="ti ti-alert-triangle"></i> Falta configurar "Bot. por Caja" en producción.`;
+      textoSugerencia.style.color = '#dc3545'; // Rojo
+    } else if (poblacionTotal <= 0) {
+      textoSugerencia.innerHTML = `<i class="ti ti-alert-triangle"></i> Falta la cantidad total producida.`;
+      textoSugerencia.style.color = '#dc3545'; // Rojo
+    } else {
+      // 2. Calcular el 10% de las canastas del lote
       const totalCanastasLote = poblacionTotal / botellasCaja;
-      const porcentajeARevisar = totalCanastasLote * 0.10; // 10% del lote
+      const porcentajeARevisar = totalCanastasLote * 0.10; 
       
-      canastasSugeridas = Math.max(1, Math.ceil(porcentajeARevisar));
+      // Redondear hacia arriba y mínimo 1 canasta
+      const canastasSugeridas = Math.max(1, Math.ceil(porcentajeARevisar));
       
-      if (textoSugerencia) {
-        textoSugerencia.innerHTML = `<i class="ti ti-info-circle"></i> Sugerido: ${canastasSugeridas} canasta(s) (10% del lote)`;
-        textoSugerencia.style.display = 'block';
-      }
-    } else if (textoSugerencia) {
-      textoSugerencia.style.display = 'none';
-    }
+      textoSugerencia.innerHTML = `<i class="ti ti-info-circle"></i> Sugerido: ${canastasSugeridas} canasta(s) (10% del lote)`;
+      textoSugerencia.style.color = 'var(--brand-2)'; // Azul normal
 
-    // 2. Si el usuario no ha tocado el input, le ponemos la sugerencia automáticamente
-    if (inputCanastas.value === '1' && canastasSugeridas > 1) {
-      inputCanastas.value = canastasSugeridas;
+      // Si el input está en 1 (valor por defecto), poner la sugerencia automáticamente
+      if (inputCanastas.value === '1' && canastasSugeridas > 1) {
+        inputCanastas.value = canastasSugeridas;
+      }
     }
 
     // 3. Calcular la muestra final basada en lo que esté en el input
@@ -1716,7 +1722,8 @@
     actualizarDisplayMuestra();
     
     if (document.getElementById('sugerencia-muestra')) {
-      document.getElementById('sugerencia-muestra').style.display = 'none';
+      document.getElementById('sugerencia-muestra').innerHTML = 'Calculando muestra sugerida...';
+      document.getElementById('sugerencia-muestra').style.color = 'var(--brand-2)';
     }
   }
 
