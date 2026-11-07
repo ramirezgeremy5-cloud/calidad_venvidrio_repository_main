@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v3 (Fix display inputs nuevos)
+   produccion.js - v4 (Reloj + Escáner QR)
    ========================================== */
 
 (function () {
@@ -165,6 +165,28 @@
         }
       });
     }
+  }
+
+  // ==========================================
+  // RELOJ EN TIEMPO REAL
+  // ==========================================
+  function iniciarReloj() {
+    const reloj = document.getElementById('reloj-real');
+    if (!reloj) return;
+
+    const actualizarHora = () => {
+      const ahora = new Date();
+      // Formato HH:MM:SS
+      reloj.textContent = ahora.toLocaleTimeString('es-VE', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit' 
+      });
+    };
+    
+    actualizarHora();
+    setInterval(actualizarHora, 1000);
   }
 
   // ==========================================
@@ -430,7 +452,7 @@
   }
 
   // ==========================================
-  // TOGGLE NUEVO PRODUCTO / CLIENTE (FIX VISIBILIDAD)
+  // TOGGLE NUEVO PRODUCTO / CLIENTE
   // ==========================================
   function toggleNuevoProducto(forzarActivo) {
     modoNuevoProducto = (forzarActivo === true) ? true : !modoNuevoProducto;
@@ -441,7 +463,6 @@
     const hint = document.getElementById('producto-hint');
 
     if (modoNuevoProducto) {
-      // 👇 MOSTRAR CON FLEX PARA QUE SE ALINEE EN UNA SOLA FILA
       if (wrapper) wrapper.style.display = 'flex';
       if (input) { input.value = ''; input.focus(); }
       if (searchInput) searchInput.disabled = true;
@@ -450,7 +471,6 @@
       activarModoEdicionLibre(true);
       document.getElementById('capacidad')?.focus();
     } else {
-      // 👇 OCULTAR CON NONE
       if (wrapper) wrapper.style.display = 'none';
       if (input) input.value = '';
       if (searchInput) { searchInput.disabled = false; searchInput.value = ''; }
@@ -469,13 +489,11 @@
     const btn = document.getElementById('btn-nuevo-cliente');
 
     if (modoNuevoCliente) {
-      // 👇 MOSTRAR CON FLEX
       if (wrapper) wrapper.style.display = 'flex';
       if (input) { input.value = ''; input.focus(); }
       if (searchInput) searchInput.disabled = true;
       if (btn) { btn.classList.add('active'); btn.innerHTML = '<i class="ti ti-x"></i> Cancelar'; }
     } else {
-      // 👇 OCULTAR CON NONE
       if (wrapper) wrapper.style.display = 'none';
       if (input) input.value = '';
       if (searchInput) { searchInput.disabled = false; searchInput.value = ''; }
@@ -991,6 +1009,113 @@
   };
 
   // ==========================================
+  // ESCÁNER DE CÁMARA
+  // ==========================================
+  function initEscanerProduccion() {
+    const btnEscanear = document.getElementById('btn-escanear-prod');
+    const btnCerrar = document.getElementById('btn-cerrar-camara-prod');
+    const readerContainer = document.getElementById('reader-container-prod');
+    const inputTicket = document.getElementById('ticket_carga');
+
+    if (!btnEscanear) return;
+
+    let html5QrCode = null;
+
+    btnEscanear.addEventListener('click', () => {
+      readerContainer.style.display = 'block';
+      btnEscanear.style.display = 'none';
+
+      html5QrCode = new Html5Qrcode("reader-prod");
+      
+      const config = { 
+        fps: 10, 
+        qrbox: { width: 250, height: 250 },
+        formatsToSupport: [ 
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.CODE_39
+        ]
+      };
+
+      html5QrCode.start(
+        { facingMode: "environment" }, 
+        config,
+        (decodedText) => {
+          html5QrCode.stop().then(() => {
+            readerContainer.style.display = 'none';
+            btnEscanear.style.display = 'block';
+            
+            if (inputTicket) inputTicket.value = decodedText;
+            buscarLoteEscaneado(decodedText);
+          }).catch(err => console.error("Error al detener cámara", err));
+        },
+        (errorMessage) => { }
+      ).catch(err => {
+        alert("No se pudo acceder a la cámara. Verifica los permisos del navegador.");
+        readerContainer.style.display = 'none';
+        btnEscanear.style.display = 'block';
+      });
+    });
+
+    if (btnCerrar) {
+      btnCerrar.addEventListener('click', () => {
+        if (html5QrCode) {
+          html5QrCode.stop().then(() => {
+            readerContainer.style.display = 'none';
+            btnEscanear.style.display = 'block';
+          });
+        }
+      });
+    }
+  }
+
+  async function buscarLoteEscaneado(codigoEscaneado) {
+    try {
+      const inputTicket = document.getElementById('ticket_carga');
+      if (inputTicket) inputTicket.style.borderColor = '#3b82f6';
+
+      // 👇 AQUI SE HACE LA PETICIÓN AL NUEVO ENDPOINT QUE CREAMOS EN PYTHON
+      const response = await fetch(`${API_URL}/produccion/buscar/${encodeURIComponent(codigoEscaneado)}`, {
+        headers: tokenHeader()
+      });
+
+      if (response.ok) {
+        const lote = await response.json();
+        
+        document.getElementById('planta').value = lote.planta || '';
+        document.getElementById('maquina').value = lote.maquina || '';
+        document.getElementById('turno').value = lote.turno || '';
+        document.getElementById('grupo').value = lote.grupo || '';
+        document.getElementById('linea').value = lote.linea_produccion || '';
+        document.getElementById('operador').value = lote.operador || '';
+        document.getElementById('orden').value = lote.orden || '';
+        document.getElementById('molde').value = lote.molde || '';
+        document.getElementById('ticket_carga').value = lote.ticket_carga || codigoEscaneado;
+        
+        const prodSelect = document.getElementById('producto-select');
+        if (prodSelect && lote.tipo_producto) {
+          const match = Array.from(prodSelect.options).find(o => o.value.toUpperCase() === lote.tipo_producto.toUpperCase());
+          if (match) {
+            prodSelect.value = match.value;
+            prodSelect.dispatchEvent(new Event('change'));
+          }
+        }
+
+        document.getElementById('maquina').dispatchEvent(new Event('change'));
+        document.getElementById('fecha-prod').dispatchEvent(new Event('change'));
+
+        alert(`✅ Lote encontrado: ${lote.codigo_lote}. Datos autocompletados.`);
+      } else if (response.status === 404) {
+        console.log("Lote nuevo detectado. Los datos no se autocompletaron porque no existen en BD.");
+      }
+    } catch (error) {
+      console.error("Error buscando lote escaneado:", error);
+    } finally {
+      if (inputTicket) inputTicket.style.borderColor = '';
+    }
+  }
+
+  // ==========================================
   // REGISTRAR
   // ==========================================
   const btnRegistrar = document.getElementById('btn-registrar');
@@ -1421,6 +1546,7 @@
     mostrarSkeleton();
     cargarOpcionesRegistradas();
     cargarProductosYClientes();
+    iniciarReloj(); // 👈 INICIAR EL RELOJ
 
     inicializarTabs();
 
@@ -1443,8 +1569,8 @@
     configurarListenersSelectores();
     configurarEventosDimensiones();
     configurarModalLote();
+    initEscanerProduccion(); // 👈 INICIAR EL ESCÁNER
 
-    // 👇 FORZAR EL OCULTAMIENTO AL INICIAR LA PÁGINA
     toggleNuevoProducto(false);
     toggleNuevoCliente(false);
     

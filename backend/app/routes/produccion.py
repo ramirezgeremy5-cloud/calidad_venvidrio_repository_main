@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from datetime import datetime, date
 from typing import Optional
 
@@ -27,9 +27,9 @@ def get_db():
 
 
 # =========================
-# GENERADOR DE CÓDIGO DE LOTE
-# Formato: YYYYMMDD + Máquina + XXX
-# Ejemplo: 20260810A1001
+# GENERADOR DE CÓDIGO DE LOTE (CORREGIDO A DD/MM/AAAA)
+# Formato: DDMMAAAA + Máquina + XXX
+# Ejemplo: 08102026A1001
 # =========================
 def _generar_codigo_lote(
     db: Session,
@@ -37,16 +37,17 @@ def _generar_codigo_lote(
     maquina: Optional[str] = None
 ) -> str:
     """
-    Genera un código de lote con formato YYYYMMDD + Máquina + XXX.
-    - YYYYMMDD  = fecha de producción (ej: 20260810)
+    Genera un código de lote con formato DDMMAAAA + Máquina + XXX.
+    - DDMMAAAA  = fecha de producción (ej: 08102026 para 8 de Octubre)
     - Máquina   = código de máquina en mayúsculas (ej: A1)
     - XXX       = consecutivo de 3 dígitos (001, 002, ...)
-    Ejemplo: 20260810A1001
+    Ejemplo: 08102026A1001
     """
     if fecha is None:
         fecha = date.today()
 
-    fecha_str = fecha.strftime("%Y%m%d")
+    # 👇 CORRECCIÓN DE FECHA: Día, Mes, Año
+    fecha_str = fecha.strftime("%d%m%Y") 
     maquina_limpia = (maquina or "XX").replace(" ", "").upper()
     prefijo = f"{fecha_str}{maquina_limpia}"
 
@@ -80,10 +81,7 @@ def listar_produccion(
     linea: Optional[str] = Query(None),
     maquina: Optional[str] = Query(None),
     operador: Optional[str] = Query(None),
-    
-    # 👇 CAMBIO: Ahora es int, ya no acepta "Turno 1" como string
     turno: Optional[int] = Query(None),
-    
     planta: Optional[str] = Query(None),
     molde: Optional[str] = Query(None),
     cliente: Optional[str] = Query(None),
@@ -111,7 +109,6 @@ def listar_produccion(
     if operador:
         query = query.filter(Produccion.operador.ilike(f"%{operador}%"))
     if turno:
-        # Al ser entero, se busca directamente
         query = query.filter(Produccion.turno == turno)
     if planta:
         query = query.filter(Produccion.planta.ilike(f"%{planta}%"))
@@ -130,6 +127,31 @@ def listar_produccion(
 
     query = query.order_by(Produccion.fecha_registro.desc())
     return query.offset(skip).limit(limit).all()
+
+
+# =========================
+# BUSCAR POR CÓDIGO ESCANEADO (NUEVO)
+# =========================
+@router.get("/buscar/{codigo_escaneado}", response_model=ProduccionResponse)
+def buscar_lote_por_codigo(codigo_escaneado: str, db: Session = Depends(get_db)):
+    """
+    Endpoint para el escáner de la cámara.
+    Busca un lote comparando el código escaneado con el 'codigo_lote' o con el 'ticket_carga'.
+    """
+    # Limpiamos posibles espacios en blanco del escáner
+    codigo_limpio = codigo_escaneado.strip()
+    
+    produccion = db.query(Produccion).filter(
+        or_(
+            Produccion.codigo_lote == codigo_limpio,
+            Produccion.ticket_carga == codigo_limpio
+        )
+    ).first()
+
+    if not produccion:
+        raise HTTPException(status_code=404, detail="No se encontró ningún lote con ese código o ticket.")
+    
+    return produccion
 
 
 # =========================
@@ -153,7 +175,6 @@ def obtener_opciones_filtros(db: Session = Depends(get_db)):
         "acabados": unicos(Produccion.acabado),
         "grupos": unicos(Produccion.grupo),
         "ordenes": unicos(Produccion.orden),
-        # Turnos ya no se envían como string
         "turnos": [1, 2, 3, 4] 
     }
 
@@ -202,10 +223,6 @@ def preview_codigo_lote(
 # =========================
 @router.get("/productos", response_model=list[dict])
 def listar_productos(db: Session = Depends(get_db)):
-    """
-    Lista todos los productos activos (para el <select> del frontend).
-    Si aún no tienes tabla 'producto', devuelve los únicos de la tabla produccion.
-    """
     try:
         from app.models.producto import Producto
         productos = (
@@ -219,7 +236,6 @@ def listar_productos(db: Session = Depends(get_db)):
             for p in productos
         ]
     except ImportError:
-        # Fallback: usar los únicos de la tabla produccion
         rows = db.query(
             Produccion.tipo_producto,
             Produccion.capacidad
@@ -248,11 +264,6 @@ def crear_producto(
     dimensiones: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
-    """
-    Crea un producto o devuelve el existente.
-    Si aún no tienes tabla 'producto', simplemente lo ignora
-    (el producto ya quedará guardado en el lote).
-    """
     nombre = nombre.strip()
 
     try:
@@ -294,7 +305,6 @@ def crear_producto(
         }
 
     except ImportError:
-        # Fallback: no hay tabla producto, solo devolvemos OK
         return {"id": None, "nombre": nombre, "capacidad_ml": capacidad_ml, "bpp": bpp, "bpc": bpc, "nuevo": True}
 
 
@@ -303,22 +313,13 @@ def crear_producto(
 # =========================
 @router.get("/debug-schema", response_model=dict)
 def debug_schema(db: Session = Depends(get_db)):
-    """
-    Endpoint SOLO PARA DESARROLLO.
-    Muestra los tipos SQLAlchemy y el último registro guardado.
-    """
     from sqlalchemy import inspect
 
     inspector = inspect(db.bind)
     columnas = inspector.get_columns("produccion")
-
     tipos = {c["name"]: str(c["type"]) for c in columnas}
 
-    ultimo = (
-        db.query(Produccion)
-        .order_by(Produccion.id.desc())
-        .first()
-    )
+    ultimo = db.query(Produccion).order_by(Produccion.id.desc()).first()
 
     ultimo_data = None
     if ultimo:
@@ -362,16 +363,14 @@ def obtener_produccion(produccion_id: int, db: Session = Depends(get_db)):
 def crear_produccion(datos: ProduccionCreate, db: Session = Depends(get_db)):
     """
     Crea un nuevo lote.
-    El código se genera como YYYYMMDD + Máquina + XXX (ej: 20260810A1001).
+    El código se genera como DDMMAAAA + Máquina + XXX (ej: 08102026A1001).
     """
-    # Generar código de lote automáticamente con fecha + máquina
     fecha_ref = datos.fecha_produccion if datos.fecha_produccion else date.today()
     if isinstance(fecha_ref, datetime):
         fecha_ref = fecha_ref.date()
 
     codigo_generado = _generar_codigo_lote(db, fecha_ref, datos.maquina)
 
-    # Verificar duplicado de ticket
     if datos.ticket_carga:
         existe_ticket = db.query(Produccion).filter(
             Produccion.ticket_carga == datos.ticket_carga
@@ -382,7 +381,6 @@ def crear_produccion(datos: ProduccionCreate, db: Session = Depends(get_db)):
                 detail=f"El ticket {datos.ticket_carga} ya está registrado en el lote {existe_ticket.codigo_lote}."
             )
 
-    # Preparar datos para guardar
     nueva = Produccion(
         codigo_lote=codigo_generado,
         ticket_carga=datos.ticket_carga,
@@ -390,7 +388,7 @@ def crear_produccion(datos: ProduccionCreate, db: Session = Depends(get_db)):
         maquina=datos.maquina,
         linea_produccion=datos.linea_produccion,
         grupo=datos.grupo,
-        turno=datos.turno, # <-- Ahora se guarda como int
+        turno=datos.turno,
         operador=datos.operador,
         orden=datos.orden,
         tipo_producto=datos.tipo_producto,

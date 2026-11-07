@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="../assets/css/shared.css"/>
   <link rel="stylesheet" href="../assets/css/produccion.css"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <!-- Librería para la cámara -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 <body>
 
@@ -50,15 +52,22 @@
 <!-- CONTENIDO -->
 <main class="page">
 
-  <div class="page-header">
-    <h1>Registro de la Producción</h1>
-    <p>Complete los pasos en orden. Los campos con <strong>(auto)</strong> se calculan o autocompletan automáticamente.</p>
+  <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+    <div>
+      <h1>Registro de la Producción</h1>
+      <p>Complete los pasos en orden. Los campos con <strong>(auto)</strong> se calculan o autocompletan automáticamente.</p>
+    </div>
+    <!-- Reloj en Tiempo Real -->
+    <div style="background: #fff; padding: 8px 16px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 8px;">
+      <i class="ti ti-clock" style="color: #3b82f6; font-size: 20px;"></i>
+      <span id="reloj-real" style="font-family: 'SF Mono', 'Consolas', monospace; font-size: 18px; font-weight: 700; color: #0f172a;">--:--:--</span>
+    </div>
   </div>
 
   <div class="ultima-actualizacion">
     <div class="flex gap-2 align-center">
-      <i class="ti ti-clock"></i>
-      Última actualización: <span id="ultima-actualizacion">--:--:--</span>
+      <i class="ti ti-refresh"></i>
+      Última actualización de datos: <span id="ultima-actualizacion">--:--:--</span>
     </div>
     <button type="button" class="btn-refresh" onclick="window.recargarProduccion()" title="Recargar datos">
       <i class="ti ti-refresh"></i> Recargar
@@ -168,13 +177,13 @@
                   </div>
                   
                   <!-- Input para nuevo producto (ahora en línea con su botón) -->
-                  <div class="input-nuevo-wrapper" id="producto-nuevo-wrapper" style="flex-direction: row;">
+                  <div class="input-nuevo-wrapper" id="producto-nuevo-wrapper" style="flex-direction: row; display: none;">
                     <input type="text" id="producto-nuevo" class="input-nuevo" placeholder="Escriba el nombre..." style="flex:1;" />
                     <button type="button" class="btn-clear-input" id="btn-cancelar-producto" style="width:auto; flex-shrink:0;"><i class="ti ti-x"></i></button>
                   </div>
                   
                   <small class="field-hint" id="producto-hint">Seleccione un producto o cree uno nuevo</small>
-                  <div class="aviso-nuevo-producto" id="aviso-nuevo-producto">
+                  <div class="aviso-nuevo-producto" id="aviso-nuevo-producto" style="display: none;">
                     <i class="ti ti-info-circle"></i>
                     <span><strong>Producto nuevo:</strong> los campos técnicos se desbloquean para entrada manual.</span>
                   </div>
@@ -248,7 +257,7 @@
                     <select id="cliente-select" style="flex:1;"><option value="">-- Seleccione --</option></select>
                     <button type="button" class="btn-new" id="btn-nuevo-cliente" style="width:auto; flex-shrink:0;"><i class="ti ti-plus"></i> Nuevo</button>
                   </div>
-                  <div class="input-nuevo-wrapper" id="cliente-nuevo-wrapper" style="flex-direction: row; margin-top: 6px;">
+                  <div class="input-nuevo-wrapper" id="cliente-nuevo-wrapper" style="flex-direction: row; display: none; margin-top: 6px;">
                     <input type="text" id="cliente-nuevo" placeholder="Nombre del cliente..." style="flex:1;" />
                     <button type="button" class="btn-clear-input" id="btn-cancelar-cliente" style="width:auto; flex-shrink:0;"><i class="ti ti-x"></i></button>
                   </div>
@@ -275,10 +284,26 @@
                   <label>Código de Lote (auto)</label>
                   <input type="text" id="lote-id" readonly class="input-lote-auto" />
                 </div>
-                <div class="field">
-                  <label>Nº Ticket</label>
-                  <input type="text" id="ticket_carga" />
+                
+                <!-- INPUT DE TICKET CON BOTÓN DE ESCÁNER -->
+                <div class="field field-full-width">
+                  <label>Nº Ticket / Escanear</label>
+                  <div style="display: flex; gap: 8px;">
+                    <input type="text" id="ticket_carga" style="flex: 1;" />
+                    <button type="button" id="btn-escanear-prod" class="btn btn-primary" style="width: 44px; padding: 0;" title="Escanear Código de Barras">
+                      <i class="ti ti-scan" style="font-size: 20px;"></i>
+                    </button>
+                  </div>
+                  
+                  <!-- Contenedor de la cámara (oculto por defecto) -->
+                  <div id="reader-container-prod" style="display: none; margin-top: 12px; border: 2px dashed #cbd5e1; border-radius: 8px; padding: 10px; background: #f8fafc;">
+                    <div id="reader-prod" style="width: 100%; border-radius: 8px; overflow: hidden;"></div>
+                    <button type="button" id="btn-cerrar-camara-prod" class="btn btn-outline btn-sm" style="width: 100%; margin-top: 10px; color: #ef4444; border-color: #ef4444;">
+                      <i class="ti ti-x"></i> Cancelar Escaneo
+                    </button>
+                  </div>
                 </div>
+
                 <div class="field field-auto">
                   <label>Línea de Producción</label>
                   <input type="text" id="linea" list="lista-lineas" />
