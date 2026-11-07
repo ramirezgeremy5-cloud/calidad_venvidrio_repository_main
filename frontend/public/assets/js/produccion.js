@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v13 (Fix Descargas JPG/PDF y Avatar)
+   produccion.js - v15 (Fix código de lote AAAAMMDD y etiqueta completa)
    ========================================== */
 
 (function () {
@@ -85,7 +85,6 @@
     if (userData) {
       try {
         const user = JSON.parse(userData);
-        // 👇 FIX: Verifica si la URL de la foto ya es absoluta para no duplicar el dominio
         let avatarHtml = 'US';
         if (user.foto_url) {
           const fullUrl = user.foto_url.startsWith('http') ? user.foto_url : `${API_URL}${user.foto_url}`;
@@ -392,14 +391,25 @@
   // ==========================================
   // GENERACIÓN DE CÓDIGO Y CÁLCULOS
   // ==========================================
+  
+  // 👇 FIX: Genera el código en formato AAAAMMDD correctamente
   function generarCodigoLoteLocal() {
     const fechaInput = document.getElementById('fecha-prod');
     const maquinaInput = document.getElementById('maquina');
     const loteInput = document.getElementById('lote-id');
+    
     if (!fechaInput || !maquinaInput || !loteInput) return;
-    const fecha = fechaInput.value; const maquina = (maquinaInput.value || '').trim();
-    if (!fecha || !maquina) { loteInput.value = ''; return; }
-    loteInput.value = `${fecha.replace(/-/g, '')}${maquina.replace(/\s+/g, '').toUpperCase()}`;
+    
+    const fechaVal = fechaInput.value; // Viene como YYYY-MM-DD
+    const maquina = (maquinaInput.value || '').trim();
+    
+    if (!fechaVal || !maquina) { 
+      loteInput.value = ''; 
+      return; 
+    }
+    
+    // El formato HTML5 date ya es YYYY-MM-DD, solo quitamos guiones
+    loteInput.value = `${fechaVal.replace(/-/g, '')}${maquina.replace(/\s+/g, '').toUpperCase()}`;
   }
 
   function configurarGeneracionCodigo() {
@@ -528,9 +538,8 @@
     const elementoCaptura = document.getElementById("ticket-para-captura");
     if (!elementoCaptura) { mostrarToast("No se encontró la etiqueta visual", true); return; }
 
-    // Forzamos la visibilidad para que html2canvas calcule bien el tamaño
     const displayOriginal = elementoCaptura.parentElement.style.display;
-    elementoCaptura.parentElement.style.display = 'block'; // o 'flex' según tu CSS
+    elementoCaptura.parentElement.style.display = 'block';
 
     html2canvas(elementoCaptura, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
       const imgData = canvas.toDataURL("image/jpeg", 0.9);
@@ -541,7 +550,6 @@
       enlace.click();
       document.body.removeChild(enlace);
       
-      // Restauramos el estado original
       elementoCaptura.parentElement.style.display = displayOriginal;
     }).catch(err => { 
       console.error(err); 
@@ -565,9 +573,8 @@
       const imgWidth = 100; 
       let imgHeight = (canvas.height * imgWidth) / canvas.width; 
       
-      // 👇 FIX: Validación para evitar el error de jsPDF.scale
       if (!imgHeight || !isFinite(imgHeight) || imgHeight <= 0) {
-          imgHeight = 150; // Altura por defecto segura
+          imgHeight = 150; 
       }
 
       const x = (pdf.internal.pageSize.getWidth() - imgWidth) / 2;
@@ -642,7 +649,6 @@
     if (qrContainer) {
       qrContainer.innerHTML = ''; 
       
-      // Construimos la URL apuntando a etiqueta.html (Página independiente)
       const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
       const urlEtiqueta = `${baseUrl}/etiqueta.html?lote=${encodeURIComponent(lote.codigo)}`;
 
@@ -668,13 +674,26 @@
     document.getElementById("ticket-title-code").innerText = lote.ticket_carga || "TICKET-PRUEBA-123";
     document.getElementById("ticket-cliente").innerText = lote.cliente || "CLIENTE STOCK";
     document.getElementById("ticket-orden").innerText = lote.orden || "NO APLICA";
-    document.getElementById("ticket-maquina").innerText = lote.maquina || "A1";
+    
+    // 👇 FIX: Agregamos fecha, bpp y capacidad al ticket visual
+    document.getElementById("ticket-fecha").innerText = formatearFechaProd(lote.fecha_prod);
+    document.getElementById("ticket-bpp").innerText = lote.bpp || "—";
+    document.getElementById("ticket-cap").innerText = etiquetaCapacidad(lote.capacidad_ml, lote.unidad_capacidad) || "—";
+
+    document.getElementById("ticket-maquina").innerText = `${lote.maquina || "A1"}    ${lote.turno || "1"}    ${lote.grupo || "A"}`;
     document.getElementById("ticket-producto").innerText = lote.prod || "BOTELLA PRUEBA 500ML";
     document.getElementById("ticket-acabado").innerText = lote.acabado || "26-600-BEAD";
     document.getElementById("ticket-item-code").innerText = lote.item || "V-TEST-001";
     document.getElementById("ticket-molde").innerText = lote.molde || "MOLDE-PRUEBA-01";
-    document.getElementById("ticket-lote").innerText = lote.codigo || "07112026A1001";
-    document.getElementById("ticket-ticket-text").innerText = lote.ticket_carga || "TICKET-PRUEBA-123";
+    document.getElementById("ticket-lote").innerText = lote.codigo || "20261106A1001";
+    document.getElementById("ticket-barcode-text").innerText = lote.ticket_carga || "TICKET-PRUEBA-123";
+
+    // Si usas JsBarcode en producción.js, puedes generarlo aquí:
+    if (typeof JsBarcode !== 'undefined') {
+        JsBarcode("#barcode-svg", lote.ticket_carga || lote.codigo, {
+            format: "CODE128", lineColor: "#000", width: 2, height: 60, displayValue: false
+        });
+    }
 
     // 2. Asignar eventos a los botones de descarga (eliminar anteriores para evitar duplicados)
     const btnJPG = document.getElementById("btn-descargar-jpg");
@@ -767,7 +786,6 @@
         const response = await fetch(`${API_URL}/escaner/buscar/${encodeURIComponent(codigoEscaneado)}`, { headers: tokenHeader() });
 
         if (response.ok) {
-          // --- LOTE ENCONTRADO EN BD ---
           const lote = await response.json();
 
           document.getElementById('planta').value = lote.planta || '';
@@ -812,7 +830,6 @@
           mostrarToast(`✅ Lote ${lote.codigo_lote} encontrado y autocompletado.`);
 
         } else if (response.status === 404) {
-          // --- LOTE NUEVO (NO ESTÁ EN BD) ---
           
           document.getElementById('ticket_carga').value = codigoEscaneado;
           document.getElementById('fecha-prod').value = new Date().toISOString().split('T')[0];
