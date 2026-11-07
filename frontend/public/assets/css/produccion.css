@@ -1,6 +1,6 @@
 /* ==========================================================
    PRODUCCIÓN — VENVIDRIO
-   produccion.css — v7 (Diseño de captura de etiqueta corregido)
+   produccion.css — v8 (Diseño de captura idéntico a etiquetas.css)
    ========================================================== */
 
 /* ================= VARIABLES DE MARCA ================= */
@@ -601,99 +601,129 @@ body {
 }
 
 /* ==========================================================
-   ETIQUETA DE CAPTURA (PRODUCCIÓN) - v7
+   DISEÑO DE LA ETIQUETA (IDÉNTICO A etiquetas.css)
    ========================================================== */
 
+/* ================= TICKET (etiqueta física) ================= */
 .ticket-preview-container {
   background: #fff;
-  border: 2px solid #000;
-  border-radius: 8px;
-  padding: 25px 30px;
   width: 100%;
   max-width: 650px;
-  margin: 0 auto;
-  font-family: "Courier New", Courier, monospace;
-  color: #000;
+  min-height: 500px;
+  padding: 20px;
+  border-radius: 10px;
+  border: 2px solid #000; 
+  box-shadow:
+    0 18px 40px -16px rgba(15, 23, 42, 0.35),
+    0 0 0 1px rgba(15, 23, 42, 0.06);
+  font-family: 'Courier New', Courier, monospace;
+  color: #111;
   box-sizing: border-box;
-  text-align: left;
+  position: relative;
 }
 
-/* Cabecera */
+/* ================= TIPOGRAFÍA DEL TICKET ================= */
+.ticket-content {
+  display: flex;
+  flex-direction: column;
+}
+
 .ticket-header {
-  text-align: center;
-  border-bottom: 1px dashed #ccc;
-  padding-bottom: 10px;
-  margin-bottom: 10px;
-}
-.ticket-header .brand {
-  font-weight: bold;
-  font-size: 14px;
-  letter-spacing: 1px;
-}
-.ticket-header .title {
-  font-size: 18px;
-  font-weight: bold;
-  margin-top: 5px;
-  letter-spacing: 2px;
-}
-
-/* Información general */
-.ticket-info {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
-  margin-bottom: 5px;
-  line-height: 1.4;
-}
-.ticket-info .left { text-align: left; }
-.ticket-info .right { text-align: right; font-weight: bold; }
-
-.ticket-separator {
-  border-top: 1px dashed #ccc;
-  margin: 8px 0;
+  align-items: flex-start;
+  gap: 10px;
+  padding-bottom: 8px;
 }
 
-/* Items grandes (ITEM, MOLD, LOT) */
-.ticket-item {
-  font-size: 14px;
-  font-weight: bold;
-  margin: 10px 0;
+.ticket-logo {
   display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
-.ticket-item span { font-weight: normal; margin-left: 10px; }
 
-/* Código de barras */
-.ticket-barcode {
-  text-align: center;
-  margin: 15px 0;
-  padding: 10px 0;
-  border-top: 1px solid #000;
-  border-bottom: 1px solid #000;
+.ticket-logo img {
+  height: 32px;
+  object-fit: contain;
+  filter: grayscale(100%);
 }
-.ticket-barcode svg {
-  max-width: 100%;
-  height: 60px;
+
+.ticket-sub {
+  font-size: 8px;
+  line-height: 1.15;
+  margin-top: 2px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
-.ticket-barcode .barcode-text {
+
+.ticket-planta {
+  text-align: right;
+}
+
+.ticket-planta-nombre {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  margin-bottom: 4px;
+}
+
+.ticket-ticket {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.ticket-divider {
+  border-top: 1.5px dashed #cbd5e1;
+  margin: 10px 0;
+}
+
+.tk-label {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #64748b;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+.tk-val {
   font-size: 12px;
-  font-weight: bold;
-  margin-top: 5px;
-  letter-spacing: 1px;
+  font-weight: 700;
+  color: #111;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
-/* Footer */
+.ticket-row-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ticket-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+
 .ticket-footer {
+  font-size: 8px;
+  font-weight: 700;
   text-align: center;
-  font-size: 10px;
-  color: #555;
   margin-top: 15px;
-  border-top: 1px dashed #ccc;
-  padding-top: 8px;
+  padding-top: 10px;
+  border-top: 1.5px dashed #cbd5e1;
+  letter-spacing: 0.5px;
+  color: #475569;
 }
 
-/* Ajuste del contenedor del código de barras al imprimir (si aplica) */
-#barcode {
-  max-width: 100%;
+#barcode-svg {
+  width: 100%;
+  height: auto;
 }
 
 /* ================= ACCESIBILIDAD ================= */
