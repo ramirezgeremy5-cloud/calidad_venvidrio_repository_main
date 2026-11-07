@@ -1,11 +1,14 @@
 /* ==========================================
-   VENVIDRIO - PRODUCCIÓN
-   produccion.js - v7 (Modular)
+   VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
+   produccion.js - v7 (Lógica completa restaurada)
    ========================================== */
 
 (function () {
   'use strict';
 
+  // ==========================================
+  // CONFIGURACIÓN DINÁMICA DE API
+  // ==========================================
   const hostname = window.location.hostname;
   let API_URL;
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
@@ -20,9 +23,11 @@
   let lotes = [];
   let intervaloCarga = null;
   let filtrosActivos = {};
+  
   let modoNuevoProducto = false;
   let modoNuevoCliente = false;
   let productosCache = {};
+
   let geometriaActual = 'cilindrico';
   let timeoutBusqueda = null;
 
@@ -178,14 +183,23 @@
   }
 
   // ==========================================
-  // CAPACIDAD Y GEOMETRÍA
+  // LOGS
+  // ==========================================
+  function log(msg, d = null) { console.log(`[${new Date().toLocaleTimeString()}]  ${msg}`, d || ''); }
+  function logError(msg, e = null) { console.error(`[${new Date().toLocaleTimeString()}] ❌ ${msg}`, e || ''); }
+  function logSuccess(msg, d = null) { console.log(`[${new Date().toLocaleTimeString()}] ✅ ${msg}`, d || ''); }
+
+  // ==========================================
+  // CAPACIDAD
   // ==========================================
   function unidadActual() { return document.getElementById('capacidad_unidad')?.value === 'l' ? 'l' : 'ml'; }
+  
   function capacidadMlActual() {
     const valor = parseNumero(document.getElementById('capacidad')?.value);
     if (valor === null) return null;
     return unidadActual() === 'l' ? parseFloat((valor * 1000).toFixed(2)) : parseFloat(valor.toFixed(2));
   }
+
   function escribirCapacidadEnMl(ml) {
     const cap = document.getElementById('capacidad');
     const unidad = document.getElementById('capacidad_unidad');
@@ -194,11 +208,13 @@
     if (valor === null) { cap.value = ''; if (unidad) unidad.value = 'ml'; return; }
     if (unidad && unidad.value === 'l') { cap.value = formatearNumero(valor / 1000, 3); } else { cap.value = formatearNumero(valor, 3); }
   }
+
   function etiquetaCapacidad(ml, unidad) {
     const valor = parseNumero(ml);
     if (valor === null) return '';
     return unidad === 'l' ? `${formatearNumero(valor / 1000, 3).replace('.', ',')} L` : `${formatearNumero(valor, 3)} ml`;
   }
+
   function configurarCapacidad() {
     const unidad = document.getElementById('capacidad_unidad');
     const cap = document.getElementById('capacidad');
@@ -210,6 +226,9 @@
     });
   }
 
+  // ==========================================
+  // GEOMETRÍA Y DIMENSIONES
+  // ==========================================
   function cambiarGeometria(tipo) {
     geometriaActual = tipo;
     document.querySelectorAll('.geo-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.geo === tipo));
@@ -669,12 +688,17 @@
   // ==========================================
   function initEscanerGlobal() {
     // 1. Inicializar la UI del escáner con los IDs del HTML
-    EscanerApp.init('reader-container-global', 'btn-escanear-global', 'btn-cerrar-camara-global');
+    EscanerApp.init(
+      'reader-container-global', 
+      'btn-escanear-global', 
+      'btn-cerrar-camara-global', 
+      'reader-global'
+    );
 
     // 2. Definir qué hacer cuando se lea un código
     EscanerApp.onScanSuccess(async (codigoEscaneado) => {
       try {
-        const response = await fetch(`${API_URL}/produccion/buscar/${encodeURIComponent(codigoEscaneado)}`, { headers: tokenHeader() });
+        const response = await fetch(`${API_URL}/escaner/buscar/${encodeURIComponent(codigoEscaneado)}`, { headers: tokenHeader() });
 
         if (response.ok) {
           const lote = await response.json();
@@ -743,11 +767,317 @@
     if (btnRegistrar) {
       btnRegistrar.addEventListener('click', async (e) => {
         e.preventDefault();
-        
-        // (Todo el bloque de recolección de datos y fetch POST se mantiene igual)
-        // ... 
-        // Como el código es muy largo, asumo que esta parte ya la tienes.
+
+        const ticket_carga = document.getElementById('ticket_carga').value.trim();
+        const planta = document.getElementById('planta').value;
+        const maquina = document.getElementById('maquina').value;
+        const turno = document.getElementById('turno').value; 
+        const grupo = document.getElementById('grupo').value.trim();
+        const linea = document.getElementById('linea').value.trim();
+        const operador = document.getElementById('operador').value.trim();
+        const orden = document.getElementById('orden').value.trim();
+        const acabado = document.getElementById('acabado').value.trim();
+        const item = document.getElementById('item').value.trim();
+        const material = document.getElementById('material')?.value?.trim() || '';
+        const tipo_boca = document.getElementById('tipo_boca')?.value?.trim() || '';
+        const molde = document.getElementById('molde').value.trim();
+        const bpp = document.getElementById('bpp').value;
+        const bpc = document.getElementById('bpc')?.value;
+        const capacidadValor = parseNumero(document.getElementById('capacidad')?.value);
+        const capacidadUnidad = unidadActual();
+        const capacidadMl = capacidadMlActual();
+        const cant = document.getElementById('cantidad').value;
+        const paletas = document.getElementById('paletas').value;
+        const cajas_producidas = document.getElementById('cajas_producidas').value;
+        const gruesas = document.getElementById('gruesas').value;
+        const gruesas_paleta = document.getElementById('gruesas_paleta').value;
+        const fecha = document.getElementById('fecha-prod').value;
+        const estatus = document.getElementById('estatus').value;
+        const observaciones = document.getElementById('obs-prod').value.trim();
+
+        const prod = obtenerProducto();
+        const cliente = obtenerCliente();
+        const juego_envases = document.getElementById('juego_envases')?.value?.trim() || null;
+        const dimensiones = obtenerDimensiones();
+        const guardarEnCatalogo = document.getElementById('guardar-en-catalogo')?.checked || false;
+
+        if (!planta) { alert('Selecciona una planta.'); return; }
+        if (!maquina) { alert('Selecciona una máquina.'); return; }
+        if (!turno) { alert('Selecciona un turno.'); return; }
+        if (!operador) { alert('Ingresa el operador.'); return; }
+        if (!molde) { alert('Ingresa el molde.'); return; }
+        if (!prod) { alert('Selecciona o crea un producto.'); return; }
+        if (!cliente) { alert('Selecciona o crea un cliente.'); return; }
+        if (!cant || parseInt(cant) <= 0) { alert('La cantidad debe ser mayor a 0.'); return; }
+        if (capacidadValor !== null && capacidadValor <= 0) { alert('El volumen debe ser mayor a 0.'); return; }
+
+        const body = {
+          ticket_carga: ticket_carga || null,
+          planta: planta,
+          maquina: maquina || null,
+          turno: turno,
+          grupo: grupo || null,
+          linea_produccion: linea || null,
+          operador: operador,
+          orden: orden || null,
+          tipo_producto: prod,
+          acabado: acabado || null,
+          material: material || null,
+          tipo_boca: tipo_boca || null,
+          item: item || null,
+          molde: molde || null,
+          bpp: bpp ? parseFloat(bpp) : null,
+          bpc: bpc ? parseInt(bpc) : null,
+          capacidad: capacidadMl,
+          capacidad_ml: capacidadMl,
+          unidad_capacidad: capacidadUnidad,
+          cantidad: parseInt(cant) || 0,
+          paletas: paletas ? parseFloat(paletas) : null,
+          cajas_producidas: cajas_producidas ? parseFloat(cajas_producidas) : null,
+          gruesas: gruesas ? parseFloat(gruesas) : null,
+          juego_envases: juego_envases,
+          tamano_muestra: dimensiones,
+          bot_por_canada: bpc ? parseInt(bpc) : null,
+          bot_por_paleta: bpp ? parseFloat(bpp) : null,
+          gruesas_por_paleta: gruesas_paleta ? parseFloat(gruesas_paleta) : null,
+          cliente: cliente,
+          estatus: estatus,
+          observaciones: observaciones || null
+        };
+
+        if (fecha) body.fecha_produccion = fecha;
+
+        try {
+          if (modoNuevoProducto && prod && guardarEnCatalogo) {
+            const productBody = { nombre: prod, item: item || null, acabado: acabado || null, capacidad_ml: capacidadMl !== null ? Math.round(capacidadMl) : null, bpp: bpp ? parseFloat(bpp) : null, bpc: bpc ? parseInt(bpc) : null, juego_envases: juego_envases || null, material: material || null, tipo_boca: tipo_boca || null, dimensiones: dimensiones || null };
+            const resProd = await fetch(`${API_URL}/productos`, { method: 'POST', headers: jsonHeader(), body: JSON.stringify(productBody) });
+            if (!resProd.ok) {
+              const err = await resProd.json().catch(() => ({}));
+              if (resProd.status === 400 || resProd.status === 409) alert(`El producto "${prod}" ya existe. Se guardará el lote igual.`);
+              else throw new Error(err.detail || `Error ${resProd.status} guardando producto`);
+            }
+          }
+
+          if (modoNuevoCliente && cliente) {
+            const resCli = await fetch(`${API_URL}/clientes`, { method: 'POST', headers: jsonHeader(), body: JSON.stringify({ nombre: cliente }) });
+            if (!resCli.ok) {
+              const err = await resCli.json().catch(() => ({}));
+              if (resCli.status === 400 || resCli.status === 409) alert(`El cliente "${cliente}" ya existe. Se guardará el lote igual.`);
+              else throw new Error(err.detail || `Error ${resCli.status} guardando cliente`);
+            }
+          }
+
+          const response = await fetch(`${API_URL}/produccion`, { method: 'POST', headers: jsonHeader(), body: JSON.stringify(body) });
+          if (!response.ok) {
+            if (response.status === 401) { window.location.href = '../public/login.html'; return; }
+            const errorData = await response.json().catch(() => ({}));
+            let errorMsg = errorData.detail || `Error ${response.status} guardando lote`;
+            if (Array.isArray(errorMsg)) errorMsg = errorMsg.map(err => `${err.loc.join('.')}: ${err.msg}`).join('\n');
+            throw new Error(errorMsg);
+          }
+
+          await cargarProductosYClientes();
+          await cargarOpcionesRegistradas();
+          await cargarProduccion(filtrosActivos);
+
+          if (modoNuevoProducto && prod) {
+            const sp = document.getElementById('producto-select');
+            if (sp) { const match = Array.from(sp.options).find(o => o.value.toUpperCase() === prod.toUpperCase()); if (match) sp.value = match.value; }
+          }
+          if (modoNuevoCliente && cliente) {
+            const sc = document.getElementById('cliente-select');
+            if (sc) { const match = Array.from(sc.options).find(o => o.value.toUpperCase() === cliente.toUpperCase()); if (match) sc.value = match.value; }
+          }
+
+          const toast = document.getElementById('toast-prod');
+          if (toast) { toast.textContent = '✅ Lote registrado correctamente'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 3000); }
+
+          document.getElementById('btn-limpiar').click();
+
+        } catch (error) {
+          logError('Error registrando producción:', error);
+          alert(error.message || 'No se pudo registrar la producción');
+        }
       });
+    }
+  }
+
+  // ==========================================
+  // LIMPIAR
+  // ==========================================
+  function initLimpiar() {
+    const btnLimpiar = document.getElementById('btn-limpiar');
+    if (!btnLimpiar) return;
+    btnLimpiar.addEventListener('click', async (e) => {
+      e.preventDefault();
+
+      const campos = ['ticket_carga', 'grupo', 'linea', 'orden', 'acabado', 'item', 'material', 'tipo_boca', 'molde', 'bpp', 'bpc', 'cantidad', 'paletas', 'cajas_producidas', 'gruesas', 'juego_envases', 'capacidad', 'dim_diametro', 'dim_altura_cil', 'dim_largo', 'dim_ancho', 'dim_alto', 'gruesas_paleta', 'obs-prod'];
+
+      campos.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      ['planta', 'maquina', 'turno'].forEach(id => { const el = document.getElementById(id); if (el) el.selectedIndex = 0; });
+
+      const unidad = document.getElementById('capacidad_unidad'); if (unidad) unidad.value = 'ml';
+      const estatusEl = document.getElementById('estatus'); if (estatusEl) estatusEl.value = '100';
+
+      const prodSelect = document.getElementById('producto-select'); if (prodSelect) prodSelect.value = '';
+      if (modoNuevoProducto) toggleNuevoProducto(false);
+
+      const cliSelect = document.getElementById('cliente-select'); if (cliSelect) cliSelect.value = '';
+      if (modoNuevoCliente) toggleNuevoCliente(false);
+
+      const chk = document.getElementById('guardar-en-catalogo'); if (chk) chk.checked = true;
+      const fechaInput = document.getElementById('fecha-prod'); if (fechaInput) fechaInput.value = new Date().toISOString().split('T')[0];
+
+      activarModoEdicionLibre(false);
+      limpiarFichaTecnica();
+      generarCodigoLoteLocal();
+      recalcularTodo();
+    });
+  }
+
+  // ==========================================
+  // CARGAR PRODUCTOS Y CLIENTES
+  // ==========================================
+  async function cargarProductosYClientes() {
+    try {
+      const resProd = await fetch(`${API_URL}/productos`, { headers: tokenHeader() });
+      const selectProd = document.getElementById('producto-select');
+      if (resProd.ok && selectProd) {
+        const productos = await resProd.json();
+        const valorActual = selectProd.value;
+        productosCache = {};
+        productos.forEach(p => { productosCache[p.nombre] = p; });
+
+        selectProd.innerHTML = '<option value="">-- Seleccione un producto --</option>';
+        productos.forEach(p => {
+          const cap = etiquetaCapacidad(p.capacidad_ml, 'ml');
+          const opt = document.createElement('option');
+          opt.value = p.nombre;
+          opt.textContent = p.nombre + (cap ? ` (${cap})` : '');
+          selectProd.appendChild(opt);
+        });
+
+        const optNuevo = document.createElement('option');
+        optNuevo.value = VALOR_NUEVO;
+        optNuevo.className = 'option-nuevo';
+        optNuevo.textContent = '➕ Registrar nuevo producto / Prototipo';
+        selectProd.appendChild(optNuevo);
+        if (valorActual) selectProd.value = valorActual;
+      }
+    } catch (e) { logError('Error de red cargando productos:', e); }
+
+    try {
+      const resCli = await fetch(`${API_URL}/clientes`, { headers: tokenHeader() });
+      const selectCli = document.getElementById('cliente-select');
+      if (resCli.ok && selectCli) {
+        const clientes = await resCli.json();
+        const valorActual = selectCli.value;
+        selectCli.innerHTML = '<option value="">-- Seleccione un cliente --</option>';
+        clientes.forEach(c => {
+          if (!c.nombre) return;
+          const opt = document.createElement('option');
+          opt.value = c.nombre;
+          opt.textContent = c.nombre;
+          selectCli.appendChild(opt);
+        });
+        const optNuevoCli = document.createElement('option');
+        optNuevoCli.value = VALOR_NUEVO;
+        optNuevoCli.className = 'option-nuevo';
+        optNuevoCli.textContent = '➕ Registrar nuevo cliente';
+        selectCli.appendChild(optNuevoCli);
+        if (valorActual) selectCli.value = valorActual;
+      }
+    } catch (e) { logError('Error de red cargando clientes:', e); }
+  }
+
+  // ==========================================
+  // FILTROS
+  // ==========================================
+  function aplicarFiltros() {
+    filtrosActivos = {
+      codigo: document.getElementById('filtro-codigo')?.value.trim() || '',
+      ticket: document.getElementById('filtro-ticket')?.value.trim() || '',
+      molde: document.getElementById('filtro-molde')?.value.trim() || '',
+      maquina: document.getElementById('filtro-maquina')?.value.trim() || '',
+      operador: document.getElementById('filtro-operador')?.value.trim() || '',
+      turno: document.getElementById('filtro-turno')?.value || '',
+      estatus: document.getElementById('filtro-estatus')?.value || '',
+      fecha_desde: document.getElementById('filtro-fecha-desde')?.value || '',
+      fecha_hasta: document.getElementById('filtro-fecha-hasta')?.value || ''
+    };
+    cargarProduccion(filtrosActivos);
+  }
+
+  function limpiarFiltros() {
+    ['filtro-codigo', 'filtro-ticket', 'filtro-molde', 'filtro-maquina', 'filtro-operador', 'filtro-fecha-desde', 'filtro-fecha-hasta', 'buscar-lote'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    ['filtro-turno', 'filtro-estatus'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.selectedIndex = 0;
+    });
+    filtrosActivos = {};
+    cargarProduccion({});
+  }
+
+  // ==========================================
+  // OPCIONES
+  // ==========================================
+  async function cargarOpcionesRegistradas() {
+    try {
+      const response = await fetch(`${API_URL}/produccion/opciones`, { headers: tokenHeader() });
+      if (!response.ok) throw new Error('Error cargando opciones');
+      const data = await response.json();
+
+      const datalists = [
+        { id: 'lista-lineas', opciones: data.lineas || [] },
+        { id: 'lista-maquinas', opciones: data.maquinas || [] },
+        { id: 'lista-operadores', opciones: data.operadores || [] },
+        { id: 'lista-items', opciones: data.items || [] },
+        { id: 'lista-moldes', opciones: data.moldes || [] },
+        { id: 'lista-acabados', opciones: data.acabados || [] },
+        { id: 'lista-grupos', opciones: data.grupos || [] },
+        { id: 'lista-ordenes', opciones: data.ordenes || [] },
+        { id: 'filtro-lista-moldes', opciones: data.moldes || [] },
+        { id: 'filtro-lista-maquinas', opciones: data.maquinas || [] },
+        { id: 'filtro-lista-operadores', opciones: data.operadores || [] }
+      ];
+
+      datalists.forEach(({ id, opciones }) => {
+        const datalist = document.getElementById(id);
+        if (!datalist) return;
+        datalist.innerHTML = '';
+        [...new Set(opciones)].sort().forEach(val => {
+          if (val) { const opt = document.createElement('option'); opt.value = val; datalist.appendChild(opt); }
+        });
+      });
+    } catch (error) { logError('Error cargando opciones registradas:', error); }
+  }
+
+  // ==========================================
+  // BUSCADOR
+  // ==========================================
+  const buscar = document.getElementById('buscar-lote');
+  if (buscar) {
+    buscar.addEventListener('input', e => {
+      clearTimeout(timeoutBusqueda);
+      timeoutBusqueda = setTimeout(() => { renderTabla(e.target.value.toLowerCase().trim()); }, 300);
+    });
+  }
+
+  // ==========================================
+  // RECARGAR Y ERROR
+  // ==========================================
+  window.recargarProduccion = function () {
+    cargarProduccion(filtrosActivos);
+    cargarOpcionesRegistradas();
+    cargarProductosYClientes();
+    generarCodigoLoteLocal();
+  };
+
+  function mostrarError() {
+    const tbody = document.getElementById('tabla-lotes');
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:2rem;color:var(--text-muted)"><i class="ti ti-alert-circle" style="font-size:1.5rem;margin-right:0.5rem"></i> Error al cargar datos. Verifica que el servidor esté corriendo en ${API_URL}</td></tr>`;
     }
   }
 
@@ -766,8 +1096,10 @@
     configurarEventosDimensiones();
     configurarModalLote();
     
-    // Iniciar Escáner
+    // Iniciar Escáner, Formulario y Limpiar
     initEscanerGlobal(); 
+    initFormularioRegistro();
+    initLimpiar();
 
     toggleNuevoProducto(false);
     toggleNuevoCliente(false);
@@ -775,6 +1107,30 @@
 
     const fechaInput = document.getElementById('fecha-prod');
     if (fechaInput) fechaInput.value = new Date().toISOString().split('T')[0];
+
+    const selectorMes = document.getElementById('selector-mes');
+    if (selectorMes) {
+      const hoy = new Date();
+      const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+      selectorMes.value = mesActual;
+    }
+
+    document.getElementById('btn-aplicar-mes')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const mes = document.getElementById('selector-mes')?.value || '';
+      if (!mes) { alert('Selecciona un mes'); return; }
+      const [year, month] = mes.split('-');
+      const ultimoDia = new Date(parseInt(year), parseInt(month), 0).getDate();
+      const desdeEl = document.getElementById('filtro-fecha-desde');
+      const hastaEl = document.getElementById('filtro-fecha-hasta');
+      if (desdeEl) desdeEl.value = `${mes}-01`;
+      if (hastaEl) hastaEl.value = `${mes}-${String(ultimoDia).padStart(2, '0')}`;
+      aplicarFiltros();
+    });
+
+    document.getElementById('btn-aplicar-filtros')?.addEventListener('click', (e) => { e.preventDefault(); aplicarFiltros(); });
+    document.getElementById('btn-limpiar-filtros')?.addEventListener('click', (e) => { e.preventDefault(); limpiarFiltros(); });
+    document.getElementById('filtro-codigo')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); aplicarFiltros(); } });
 
     cargarProduccion({});
 
@@ -784,7 +1140,6 @@
     initUserControls();
   }
 
-  // Iniciar verificación
   verificarSesion();
 
 })();
