@@ -19,13 +19,9 @@ def get_db():
 
 @router.get("/buscar/{codigo_escaneado}", response_model=ProduccionResponse)
 def buscar_lote_por_codigo(codigo_escaneado: str, db: Session = Depends(get_db)):
-    """
-    Endpoint centralizado para el escáner.
-    Puede buscar por código de lote (ej. 20261027A1002) o por ticket (ej. 05-003104461).
-    """
     codigo_limpio = codigo_escaneado.strip()
     
-    # Buscamos en la tabla de Producción
+    # Busca en producción por el código de lote O por el ticket
     produccion = db.query(Produccion).filter(
         or_(
             Produccion.codigo_lote == codigo_limpio,

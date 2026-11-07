@@ -1,14 +1,11 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v8 (Escáner con Autocompletado Total)
+   produccion.js - v9 (Autocompletado Total Real)
    ========================================== */
 
 (function () {
   'use strict';
 
-  // ==========================================
-  // CONFIGURACIÓN DINÁMICA DE API
-  // ==========================================
   const hostname = window.location.hostname;
   let API_URL;
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
@@ -58,11 +55,6 @@
   // ==========================================
   function tokenHeader() { return { 'Authorization': `Bearer ${localStorage.getItem('token')}` }; }
   function jsonHeader() { return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` }; }
-  function obtenerUrlFoto(fotoUrl) {
-    if (!fotoUrl) return null;
-    if (fotoUrl.startsWith('http')) return fotoUrl;
-    return `${API_URL}${fotoUrl}`;
-  }
   function parseNumero(valor) {
     if (valor === null || valor === undefined || valor === '') return null;
     const n = parseFloat(valor);
@@ -73,7 +65,6 @@
     return Number(n.toFixed(decimales)).toString();
   }
 
-  // Función para mostrar notificaciones elegantes en lugar de alert()
   function mostrarToast(mensaje, esError = false) {
     const toast = document.getElementById('toast-prod');
     if (toast) {
@@ -81,11 +72,8 @@
       toast.style.background = esError ? '#fee2e2' : '#d1fae5';
       toast.style.color = esError ? '#b91c1c' : '#065f46';
       toast.style.borderLeftColor = esError ? '#ef4444' : '#10b981';
-      
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 4000);
-    } else {
-      console.log(mensaje);
     }
   }
 
@@ -97,38 +85,15 @@
     if (userData) {
       try {
         const user = JSON.parse(userData);
-        let avatarHtml = '';
-        if (user.foto_url) {
-          const urlFoto = obtenerUrlFoto(user.foto_url);
-          avatarHtml = `<img src="${urlFoto}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
-        } else {
-          avatarHtml = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
-        }
-
-        const navAvatar = document.getElementById('navAvatar');
-        if (navAvatar) navAvatar.innerHTML = avatarHtml;
-        const dropdownAvatar = document.getElementById('dropdownAvatar');
-        if (dropdownAvatar) dropdownAvatar.innerHTML = avatarHtml;
-
-        ['navUsername', 'dropdownName'].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.textContent = user.nombre || 'Usuario';
-        });
-        const emailEl = document.getElementById('dropdownEmail');
-        if (emailEl) emailEl.textContent = user.correo || 'usuario@email.com';
-
+        let avatarHtml = user.foto_url ? `<img src="${API_URL}${user.foto_url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` : (user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US');
+        if (document.getElementById('navAvatar')) document.getElementById('navAvatar').innerHTML = avatarHtml;
+        if (document.getElementById('dropdownAvatar')) document.getElementById('dropdownAvatar').innerHTML = avatarHtml;
+        ['navUsername', 'dropdownName'].forEach(id => { if (document.getElementById(id)) document.getElementById(id).textContent = user.nombre || 'Usuario'; });
+        if (document.getElementById('dropdownEmail')) document.getElementById('dropdownEmail').textContent = user.correo || 'usuario@email.com';
         const operadorInput = document.getElementById('operador');
-        if (operadorInput && !operadorInput.value) {
-          operadorInput.value = user.nombre || '';
-        }
-      } catch (e) { console.error('Error cargando usuario:', e); }
+        if (operadorInput && !operadorInput.value) operadorInput.value = user.nombre || '';
+      } catch (e) { console.error(e); }
     }
-  }
-
-  function mostrarEnlaceUsuarios() {
-    const rol = parseInt(localStorage.getItem('role'));
-    const link = document.getElementById('navUsuariosLink');
-    if (link && rol === 3) link.style.display = 'flex';
   }
 
   function verificarSesion() {
@@ -136,46 +101,32 @@
     if (!token) { window.location.href = '../public/login.html'; return; }
 
     fetch(`${API_URL}/auth/verify`, { headers: tokenHeader() })
-      .then(r => { if (!r.ok) throw new Error('Token inválido - Status: ' + r.status); return r.json(); })
+      .then(r => { if (!r.ok) throw new Error('Token inválido'); return r.json(); })
       .then(() => {
         cargarUsuarioNav();
-        mostrarEnlaceUsuarios();
+        if (parseInt(localStorage.getItem('role')) === 3) {
+          const link = document.getElementById('navUsuariosLink');
+          if (link) link.style.display = 'flex';
+        }
         try { init(); } catch (e) { console.error('❌ Error en init():', e); }
       })
-      .catch((error) => {
-        if (error.message && (error.message.includes('Token') || error.message.includes('401'))) {
-          localStorage.clear();
-          window.location.href = '../public/login.html';
-        }
+      .catch(() => {
+        localStorage.clear();
+        window.location.href = '../public/login.html';
       });
   }
 
   function initUserControls() {
     const container = document.getElementById('navUserContainer');
     const dropdown = document.getElementById('userDropdown');
-    const logoutBtn = document.getElementById('dropdownLogout');
-
     if (container && dropdown) {
-      container.addEventListener('click', function (e) {
-        e.stopPropagation();
-        dropdown.classList.toggle('show');
-      });
+      container.addEventListener('click', function (e) { e.stopPropagation(); dropdown.classList.toggle('show'); });
     }
-    if (dropdown) {
-      document.addEventListener('click', () => dropdown.classList.remove('show'));
-      document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') dropdown.classList.remove('show');
-      });
-    }
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', function (e) {
-        e.preventDefault(); e.stopPropagation();
-        if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
-          localStorage.clear();
-          window.location.href = '../public/login.html';
-        }
-      });
-    }
+    document.addEventListener('click', () => { if (dropdown) dropdown.classList.remove('show'); });
+    document.getElementById('dropdownLogout')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (confirm('¿Cerrar sesión?')) { localStorage.clear(); window.location.href = '../public/login.html'; }
+    });
   }
 
   // ==========================================
@@ -184,37 +135,26 @@
   function inicializarTabs() {
     const tabs = document.querySelectorAll('.tab-btn');
     const panels = document.querySelectorAll('.tab-panel');
-
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         tabs.forEach(t => t.classList.remove('active'));
         panels.forEach(p => p.classList.remove('active'));
-
         tab.classList.add('active');
-        const targetId = tab.getAttribute('data-tab');
-        const targetPanel = document.getElementById(targetId);
+        const targetPanel = document.getElementById(tab.getAttribute('data-tab'));
         if (targetPanel) targetPanel.classList.add('active');
       });
     });
   }
 
   // ==========================================
-  // LOGS Y UTILIDADES
-  // ==========================================
-  function log(msg, d = null) { console.log(`[${new Date().toLocaleTimeString()}]  ${msg}`, d || ''); }
-  function logError(msg, e = null) { console.error(`[${new Date().toLocaleTimeString()}] ❌ ${msg}`, e || ''); }
-
-  // ==========================================
-  // CAPACIDAD
+  // CAPACIDAD Y GEOMETRÍA
   // ==========================================
   function unidadActual() { return document.getElementById('capacidad_unidad')?.value === 'l' ? 'l' : 'ml'; }
-  
   function capacidadMlActual() {
     const valor = parseNumero(document.getElementById('capacidad')?.value);
     if (valor === null) return null;
     return unidadActual() === 'l' ? parseFloat((valor * 1000).toFixed(2)) : parseFloat(valor.toFixed(2));
   }
-
   function escribirCapacidadEnMl(ml) {
     const cap = document.getElementById('capacidad');
     const unidad = document.getElementById('capacidad_unidad');
@@ -223,13 +163,11 @@
     if (valor === null) { cap.value = ''; if (unidad) unidad.value = 'ml'; return; }
     if (unidad && unidad.value === 'l') { cap.value = formatearNumero(valor / 1000, 3); } else { cap.value = formatearNumero(valor, 3); }
   }
-
   function etiquetaCapacidad(ml, unidad) {
     const valor = parseNumero(ml);
     if (valor === null) return '';
     return unidad === 'l' ? `${formatearNumero(valor / 1000, 3).replace('.', ',')} L` : `${formatearNumero(valor, 3)} ml`;
   }
-
   function configurarCapacidad() {
     const unidad = document.getElementById('capacidad_unidad');
     const cap = document.getElementById('capacidad');
@@ -241,9 +179,6 @@
     });
   }
 
-  // ==========================================
-  // GEOMETRÍA Y DIMENSIONES
-  // ==========================================
   function cambiarGeometria(tipo) {
     geometriaActual = tipo;
     document.querySelectorAll('.geo-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.geo === tipo));
@@ -253,7 +188,6 @@
     if (panelRect) panelRect.style.display = tipo === 'rectangular' ? 'block' : 'none';
     actualizarPreviewDimensiones();
   }
-
   function obtenerDimensiones() {
     if (geometriaActual === 'cilindrico') {
       const d = document.getElementById('dim_diametro')?.value?.trim() || '';
@@ -273,7 +207,6 @@
       return `L ${lFmt} × A ${aFmt} × H ${hFmt}`.trim();
     }
   }
-
   function actualizarPreviewDimensiones() {
     const preview = document.getElementById('dim-preview');
     const previewText = document.getElementById('dim-preview-text');
@@ -281,7 +214,6 @@
     const dim = obtenerDimensiones();
     if (dim) { previewText.textContent = dim; preview.style.display = 'flex'; } else { preview.style.display = 'none'; }
   }
-
   function configurarEventosDimensiones() {
     document.querySelectorAll('.geo-btn').forEach(btn => {
       btn.addEventListener('click', (e) => { e.preventDefault(); cambiarGeometria(btn.dataset.geo); });
@@ -291,7 +223,6 @@
     });
     cambiarGeometria('cilindrico');
   }
-
   function aplicarDimensionesDesdeString(dimensiones) {
     if (!dimensiones || typeof dimensiones !== 'string') return;
     const str = dimensiones.trim();
@@ -540,10 +471,7 @@
         const filtrosActivosCount = Object.values(filtros).filter(v => v).length;
         resultadoEl.textContent = filtrosActivosCount > 0 ? `🔍 Filtros aplicados: ${filtrosActivosCount} | ${data.length} resultados` : ` Mostrando ${data.length} lotes`;
       }
-    } catch (error) {
-      console.error('Error cargando producción:', error);
-      mostrarError();
-    }
+    } catch (error) { console.error(error); mostrarError(); }
   }
 
   function actualizarKPIs(lotesData) {
@@ -698,10 +626,9 @@
   };
 
   // ==========================================
-  // ESCÁNER: CONEXIÓN CON EL MÓDULO
+  // ESCÁNER: CONEXIÓN CON EL MÓDULO (AUTOCOMPLETADO TOTAL)
   // ==========================================
   function initEscanerGlobal() {
-    // 1. Inicializar la UI del escáner con los IDs del HTML
     EscanerApp.init(
       'reader-container-global', 
       'btn-escanear-global', 
@@ -709,7 +636,6 @@
       'reader-global'
     );
 
-    // 2. Definir qué hacer cuando se lea un código
     EscanerApp.onScanSuccess(async (codigoEscaneado) => {
       try {
         const response = await fetch(`${API_URL}/escaner/buscar/${encodeURIComponent(codigoEscaneado)}`, { headers: tokenHeader() });
@@ -717,12 +643,12 @@
         if (response.ok) {
           const lote = await response.json();
 
-          // Llenar Contexto
+          // 1. Pestaña Contexto
           document.getElementById('planta').value = lote.planta || '';
           document.getElementById('turno').value = lote.turno || '';
           if (lote.fecha_produccion) document.getElementById('fecha-prod').value = lote.fecha_produccion.split('T')[0];
 
-          // Llenar Producto
+          // 2. Pestaña Producto
           const prodSelect = document.getElementById('producto-select');
           if (prodSelect && lote.tipo_producto) {
             const match = Array.from(prodSelect.options).find(o => o.value.toUpperCase() === lote.tipo_producto.toUpperCase());
@@ -740,7 +666,7 @@
           document.getElementById('bpp').value = lote.bpp || '';
           document.getElementById('bpc').value = lote.bpc || lote.bot_por_canada || '';
 
-          // Llenar Trazabilidad
+          // 3. Pestaña Trazabilidad
           document.getElementById('maquina').value = lote.maquina || '';
           document.getElementById('ticket_carga').value = lote.ticket_carga || codigoEscaneado;
           document.getElementById('grupo').value = lote.grupo || '';
@@ -748,7 +674,7 @@
           document.getElementById('operador').value = lote.operador || '';
           document.getElementById('orden').value = lote.orden || '';
 
-          // Llenar Cantidades
+          // 4. Pestaña Cantidades
           document.getElementById('cantidad').value = lote.cantidad || '';
           document.getElementById('paletas').value = lote.paletas || '';
           document.getElementById('cajas_producidas').value = lote.cajas_producidas || '';
@@ -756,23 +682,33 @@
           document.getElementById('gruesas_paleta').value = lote.gruesas_por_paleta || '';
           document.getElementById('obs-prod').value = lote.observaciones || '';
 
-          // Recalcular campos dependientes
+          // 5. Disparar eventos y recalcular
           document.getElementById('maquina').dispatchEvent(new Event('change'));
           document.getElementById('fecha-prod').dispatchEvent(new Event('change'));
           recalcularTodo();
 
-          // Mover a la Pestaña 1 para ver el resultado
+          // 6. Mover al usuario a la Pestaña 1
           const tabContexto = document.querySelector('[data-tab="tab-contexto"]');
           if (tabContexto) tabContexto.click();
 
           mostrarToast(`✅ Lote ${lote.codigo_lote} encontrado y autocompletado.`);
+
         } else if (response.status === 404) {
-          // Si no existe, ponemos el ticket y vamos a la pestaña 3
+          // SI NO EXISTE: Llenar lo básico para empezar a llenar el formulario
           document.getElementById('ticket_carga').value = codigoEscaneado;
-          const tabTrazabilidad = document.querySelector('[data-tab="tab-trazabilidad"]');
-          if (tabTrazabilidad) tabTrazabilidad.click();
+          document.getElementById('fecha-prod').value = new Date().toISOString().split('T')[0];
           
-          mostrarToast(`Ticket ${codigoEscaneado} no encontrado. Complete los datos manualmente.`, true);
+          const userData = localStorage.getItem('user');
+          if (userData) {
+            const user = JSON.parse(userData);
+            document.getElementById('operador').value = user.nombre || '';
+          }
+
+          // Mover a la pestaña 2 (Producto) para que seleccione el producto
+          const tabProducto = document.querySelector('[data-tab="tab-producto"]');
+          if (tabProducto) tabProducto.click();
+
+          mostrarToast(`Ticket ${codigoEscaneado} no registrado. Complete los datos del nuevo lote.`, true);
         }
       } catch (error) {
         console.error("Error buscando lote escaneado:", error);
@@ -1116,7 +1052,6 @@
     configurarEventosDimensiones();
     configurarModalLote();
     
-    // Iniciar Escáner, Formulario y Limpiar
     initEscanerGlobal(); 
     initFormularioRegistro();
     initLimpiar();
