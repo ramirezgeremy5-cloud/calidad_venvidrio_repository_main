@@ -1,13 +1,13 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - Versión sincronizada con BD
+   produccion.js - v3 (Fix display inputs nuevos)
    ========================================== */
 
 (function () {
   'use strict';
 
   // ==========================================
-  // CONFIGURACIÓN DINÁMICA DE API (PC y Móvil)
+  // CONFIGURACIÓN DINÁMICA DE API
   // ==========================================
   const hostname = window.location.hostname;
   let API_URL;
@@ -29,7 +29,7 @@
   let productosCache = {};
 
   let geometriaActual = 'cilindrico';
-  let timeoutBusqueda = null; // Para el debounce del buscador
+  let timeoutBusqueda = null;
 
   const MAQUINA_LINEA_MAP = {
     'A1': 'Línea A', 'A2': 'Línea A', 'A3': 'Línea A', 'A4': 'Línea A',
@@ -54,7 +54,7 @@
   };
 
   // ==========================================
-  // UTILIDADES DE RED
+  // UTILIDADES
   // ==========================================
   function tokenHeader() {
     return { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
@@ -76,7 +76,7 @@
   }
 
   // ==========================================
-  // CONTROL DE SESIÓN Y USUARIO
+  // CONTROL DE SESIÓN
   // ==========================================
   function cargarUsuarioNav() {
     const userData = localStorage.getItem('user');
@@ -107,7 +107,6 @@
         if (operadorInput && !operadorInput.value) {
           operadorInput.value = user.nombre || '';
         }
-
       } catch (e) { console.error('Error cargando usuario:', e); }
     }
   }
@@ -169,7 +168,7 @@
   }
 
   // ==========================================
-  // CONTROL DE PESTAÑAS (TABS)
+  // TABS
   // ==========================================
   function inicializarTabs() {
     const tabs = document.querySelectorAll('.tab-btn');
@@ -189,7 +188,7 @@
   }
 
   // ==========================================
-  // LOGS Y UTILIDADES
+  // LOGS
   // ==========================================
   function log(msg, d = null) { console.log(`[${new Date().toLocaleTimeString()}]  ${msg}`, d || ''); }
   function logError(msg, e = null) { console.error(`[${new Date().toLocaleTimeString()}] ❌ ${msg}`, e || ''); }
@@ -207,7 +206,7 @@
   }
 
   // ==========================================
-  // CAPACIDAD (valor libre + unidad ml / L)
+  // CAPACIDAD
   // ==========================================
   function unidadActual() {
     return document.getElementById('capacidad_unidad')?.value === 'l' ? 'l' : 'ml';
@@ -257,12 +256,11 @@
       cap.value = unidad.value === 'l'
         ? formatearNumero(valor / 1000, 3)
         : formatearNumero(valor * 1000, 3);
-      log(`🍾 Unidad cambiada a ${unidad.value}: ${cap.value}`);
     });
   }
 
   // ==========================================
-  // GEOMETRÍA DE DIMENSIONES
+  // DIMENSIONES
   // ==========================================
   function cambiarGeometria(tipo) {
     geometriaActual = tipo;
@@ -353,7 +351,7 @@
   }
 
   // ==========================================
-  // MODO EDICIÓN LIBRE (Producto Nuevo)
+  // MODO EDICIÓN LIBRE
   // ==========================================
   function activarModoEdicionLibre(activo) {
     const camposTecnicos = ['item', 'acabado', 'material', 'tipo_boca', 'juego_envases', 'capacidad'];
@@ -432,7 +430,7 @@
   }
 
   // ==========================================
-  // TOGGLE NUEVO PRODUCTO / CLIENTE
+  // TOGGLE NUEVO PRODUCTO / CLIENTE (FIX VISIBILIDAD)
   // ==========================================
   function toggleNuevoProducto(forzarActivo) {
     modoNuevoProducto = (forzarActivo === true) ? true : !modoNuevoProducto;
@@ -443,7 +441,8 @@
     const hint = document.getElementById('producto-hint');
 
     if (modoNuevoProducto) {
-      if (wrapper) wrapper.style.display = 'block';
+      // 👇 MOSTRAR CON FLEX PARA QUE SE ALINEE EN UNA SOLA FILA
+      if (wrapper) wrapper.style.display = 'flex';
       if (input) { input.value = ''; input.focus(); }
       if (searchInput) searchInput.disabled = true;
       if (btn) { btn.classList.add('active'); btn.innerHTML = '<i class="ti ti-x"></i> Cancelar'; }
@@ -451,6 +450,7 @@
       activarModoEdicionLibre(true);
       document.getElementById('capacidad')?.focus();
     } else {
+      // 👇 OCULTAR CON NONE
       if (wrapper) wrapper.style.display = 'none';
       if (input) input.value = '';
       if (searchInput) { searchInput.disabled = false; searchInput.value = ''; }
@@ -469,11 +469,13 @@
     const btn = document.getElementById('btn-nuevo-cliente');
 
     if (modoNuevoCliente) {
-      if (wrapper) wrapper.style.display = 'block';
+      // 👇 MOSTRAR CON FLEX
+      if (wrapper) wrapper.style.display = 'flex';
       if (input) { input.value = ''; input.focus(); }
       if (searchInput) searchInput.disabled = true;
       if (btn) { btn.classList.add('active'); btn.innerHTML = '<i class="ti ti-x"></i> Cancelar'; }
     } else {
+      // 👇 OCULTAR CON NONE
       if (wrapper) wrapper.style.display = 'none';
       if (input) input.value = '';
       if (searchInput) { searchInput.disabled = false; searchInput.value = ''; }
@@ -559,7 +561,7 @@
   }
 
   // ==========================================
-  // GENERAR CÓDIGO DE LOTE
+  // GENERAR CÓDIGO
   // ==========================================
   function generarCodigoLoteLocal() {
     const fechaInput = document.getElementById('fecha-prod');
@@ -595,7 +597,7 @@
   }
 
   // ==========================================
-  // AUTO-CÁLCULOS
+  // CÁLCULOS
   // ==========================================
   function recalcularTodo() {
     const cantidad = parseNumero(document.getElementById('cantidad')?.value);
@@ -639,7 +641,7 @@
   }
 
   // ==========================================
-  // SKELETON / TIMESTAMP
+  // SKELETON
   // ==========================================
   function mostrarSkeleton() {
     ['cnt-lotes', 'cnt-unidades', 'cnt-eficiencia', 'cnt-rechazos'].forEach(id => {
@@ -769,7 +771,7 @@
   }
 
   // ==========================================
-  // MODAL: VISUALIZAR LOTE
+  // MODAL
   // ==========================================
   function setTexto(id, valor) {
     const el = document.getElementById(id);
@@ -884,7 +886,7 @@
   }
 
   // ==========================================
-  // RENDER TABLA
+  // TABLA
   // ==========================================
   function renderTabla(filtro = '') {
     const tbody = document.getElementById('tabla-lotes');
@@ -954,7 +956,7 @@
   }
 
   // ==========================================
-  // ELIMINAR LOTE
+  // ELIMINAR
   // ==========================================
   window.eliminarLote = async function (id) {
     if (!confirm('¿Estás seguro de eliminar este lote? Esta acción no se puede deshacer.')) return;
@@ -989,7 +991,7 @@
   };
 
   // ==========================================
-  // REGISTRAR PRODUCCIÓN
+  // REGISTRAR
   // ==========================================
   const btnRegistrar = document.getElementById('btn-registrar');
 
@@ -1177,7 +1179,7 @@
   }
 
   // ==========================================
-  // LIMPIAR FORMULARIO
+  // LIMPIAR
   // ==========================================
   const btnLimpiar = document.getElementById('btn-limpiar');
 
@@ -1332,7 +1334,7 @@
   }
 
   // ==========================================
-  // CARGAR OPCIONES REGISTRADAS (Datalists)
+  // OPCIONES
   // ==========================================
   async function cargarOpcionesRegistradas() {
     try {
@@ -1373,7 +1375,7 @@
   }
 
   // ==========================================
-  // BUSCADOR RÁPIDO (Optimizado con Debounce)
+  // BUSCADOR
   // ==========================================
   const buscar = document.getElementById('buscar-lote');
   if (buscar) {
@@ -1381,12 +1383,12 @@
       clearTimeout(timeoutBusqueda);
       timeoutBusqueda = setTimeout(() => {
         renderTabla(e.target.value.toLowerCase().trim());
-      }, 300); // Espera 300ms después de dejar de escribir
+      }, 300);
     });
   }
 
   // ==========================================
-  // RECARGAR MANUAL
+  // RECARGAR
   // ==========================================
   window.recargarProduccion = function () {
     cargarProduccion(filtrosActivos);
@@ -1396,7 +1398,7 @@
   };
 
   // ==========================================
-  // MOSTRAR ERROR
+  // ERROR
   // ==========================================
   function mostrarError() {
     const tbody = document.getElementById('tabla-lotes');
@@ -1442,6 +1444,10 @@
     configurarEventosDimensiones();
     configurarModalLote();
 
+    // 👇 FORZAR EL OCULTAMIENTO AL INICIAR LA PÁGINA
+    toggleNuevoProducto(false);
+    toggleNuevoCliente(false);
+    
     activarModoEdicionLibre(false);
 
     document.getElementById('btn-aplicar-mes')?.addEventListener('click', (e) => {
