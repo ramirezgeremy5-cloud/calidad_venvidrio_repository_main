@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v18 (Fix UI inicial y Descargas Expandidas)
+   produccion.js - v19 (Fix UI y Renderizado de PDF expandido)
    ========================================== */
 
 (function () {
@@ -531,15 +531,30 @@
     try { const d = new Date(fechaStr + 'T00:00:00'); return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (e) { return fechaStr; }
   }
 
-  // --- FUNCIONES PARA DESCARGAR IMAGEN Y PDF (EXPANDIDOS) ---
+  // --- FUNCIONES PARA DESCARGAR IMAGEN Y PDF (FORZANDO EXPANSIÓN) ---
   function descargarEtiquetaJPG() {
     const elementoCaptura = document.getElementById("ticket-para-captura");
     if (!elementoCaptura) { mostrarToast("No se encontró la etiqueta visual", true); return; }
 
-    const displayOriginal = elementoCaptura.parentElement.style.display;
-    elementoCaptura.parentElement.style.display = 'block';
+    // 1. Guardamos los estilos originales
+    const parent = elementoCaptura.parentElement;
+    const displayOriginal = parent.style.display;
+    const widthOriginal = elementoCaptura.style.width;
+    
+    // 2. Forzamos el tamaño para la captura
+    parent.style.display = 'block';
+    elementoCaptura.style.width = '1000px'; // Ancho forzado para alta resolución
+    elementoCaptura.style.padding = '40px';
+    elementoCaptura.style.backgroundColor = '#ffffff';
 
-    html2canvas(elementoCaptura, { scale: 3, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+    // 3. Capturamos
+    html2canvas(elementoCaptura, { 
+      scale: 2, 
+      useCORS: true, 
+      backgroundColor: '#ffffff',
+      width: 1000,
+      windowWidth: 1200
+    }).then(canvas => {
       const imgData = canvas.toDataURL("image/jpeg", 1.0);
       const enlace = document.createElement('a');
       enlace.href = imgData;
@@ -548,11 +563,15 @@
       enlace.click();
       document.body.removeChild(enlace);
       
-      elementoCaptura.parentElement.style.display = displayOriginal;
+      // 4. Restauramos estilos
+      parent.style.display = displayOriginal;
+      elementoCaptura.style.width = widthOriginal;
+      elementoCaptura.style.padding = '';
     }).catch(err => { 
       console.error(err); 
       mostrarToast("Error al generar la imagen", true); 
-      elementoCaptura.parentElement.style.display = displayOriginal;
+      parent.style.display = displayOriginal;
+      elementoCaptura.style.width = widthOriginal;
     });
   }
 
@@ -560,36 +579,47 @@
     const elementoCaptura = document.getElementById("ticket-para-captura");
     if (!elementoCaptura) { mostrarToast("No se encontró la etiqueta visual", true); return; }
 
-    const displayOriginal = elementoCaptura.parentElement.style.display;
-    elementoCaptura.parentElement.style.display = 'block';
+    const parent = elementoCaptura.parentElement;
+    const displayOriginal = parent.style.display;
+    const widthOriginal = elementoCaptura.style.width;
 
-    html2canvas(elementoCaptura, { scale: 3, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+    parent.style.display = 'block';
+    elementoCaptura.style.width = '1000px'; 
+    elementoCaptura.style.padding = '40px';
+    elementoCaptura.style.backgroundColor = '#ffffff';
+
+    html2canvas(elementoCaptura, { 
+      scale: 2, 
+      useCORS: true, 
+      backgroundColor: '#ffffff',
+      width: 1000,
+      windowWidth: 1200
+    }).then(canvas => {
       const imgData = canvas.toDataURL("image/jpeg", 1.0);
       const { jsPDF } = window.jspdf;
       
       const pdf = new jsPDF('p', 'mm', 'a4');
       
-      // 👇 EXPANDIMOS EL ANCHO AL 90% DE LA PÁGINA
+      // Ocupa el 90% del ancho de la hoja
       const pageWidth = pdf.internal.pageSize.getWidth();
-      const imgWidth = pageWidth - 20; // 190mm de ancho
+      const imgWidth = pageWidth - 20; // 190mm
       
       let imgHeight = (canvas.height * imgWidth) / canvas.width; 
-      
-      if (!imgHeight || !isFinite(imgHeight) || imgHeight <= 0) {
-          imgHeight = 150; 
-      }
 
-      const x = 10; // Margen izquierdo 10mm
-      const y = 15; // Margen superior 15mm
+      const x = 10; 
+      const y = 15; 
 
       pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
       pdf.save("etiqueta_lote_" + (document.getElementById("modal-lote-codigo").innerText || "sin_id") + ".pdf");
       
-      elementoCaptura.parentElement.style.display = displayOriginal;
+      parent.style.display = displayOriginal;
+      elementoCaptura.style.width = widthOriginal;
+      elementoCaptura.style.padding = '';
     }).catch(err => { 
       console.error(err); 
       mostrarToast("Error al generar el PDF", true); 
-      elementoCaptura.parentElement.style.display = displayOriginal;
+      parent.style.display = displayOriginal;
+      elementoCaptura.style.width = widthOriginal;
     });
   }
   // ---------------------------------------------
