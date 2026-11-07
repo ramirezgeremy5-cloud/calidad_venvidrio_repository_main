@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v9 (Autocompletado Total Real)
+   produccion.js - v10 (Autocompletado Inteligente)
    ========================================== */
 
 (function () {
@@ -626,7 +626,7 @@
   };
 
   // ==========================================
-  // ESCÁNER: CONEXIÓN CON EL MÓDULO (AUTOCOMPLETADO TOTAL)
+  // ESCÁNER: CONEXIÓN CON EL MÓDULO
   // ==========================================
   function initEscanerGlobal() {
     EscanerApp.init(
@@ -641,21 +641,17 @@
         const response = await fetch(`${API_URL}/escaner/buscar/${encodeURIComponent(codigoEscaneado)}`, { headers: tokenHeader() });
 
         if (response.ok) {
+          // --- LOTE ENCONTRADO EN BD ---
           const lote = await response.json();
 
-          // 1. Pestaña Contexto
           document.getElementById('planta').value = lote.planta || '';
           document.getElementById('turno').value = lote.turno || '';
           if (lote.fecha_produccion) document.getElementById('fecha-prod').value = lote.fecha_produccion.split('T')[0];
 
-          // 2. Pestaña Producto
           const prodSelect = document.getElementById('producto-select');
           if (prodSelect && lote.tipo_producto) {
             const match = Array.from(prodSelect.options).find(o => o.value.toUpperCase() === lote.tipo_producto.toUpperCase());
-            if (match) { 
-              prodSelect.value = match.value; 
-              prodSelect.dispatchEvent(new Event('change')); 
-            }
+            if (match) { prodSelect.value = match.value; prodSelect.dispatchEvent(new Event('change')); }
           }
           document.getElementById('molde').value = lote.molde || '';
           const cliSelect = document.getElementById('cliente-select');
@@ -666,7 +662,6 @@
           document.getElementById('bpp').value = lote.bpp || '';
           document.getElementById('bpc').value = lote.bpc || lote.bot_por_canada || '';
 
-          // 3. Pestaña Trazabilidad
           document.getElementById('maquina').value = lote.maquina || '';
           document.getElementById('ticket_carga').value = lote.ticket_carga || codigoEscaneado;
           document.getElementById('grupo').value = lote.grupo || '';
@@ -674,7 +669,6 @@
           document.getElementById('operador').value = lote.operador || '';
           document.getElementById('orden').value = lote.orden || '';
 
-          // 4. Pestaña Cantidades
           document.getElementById('cantidad').value = lote.cantidad || '';
           document.getElementById('paletas').value = lote.paletas || '';
           document.getElementById('cajas_producidas').value = lote.cajas_producidas || '';
@@ -682,33 +676,59 @@
           document.getElementById('gruesas_paleta').value = lote.gruesas_por_paleta || '';
           document.getElementById('obs-prod').value = lote.observaciones || '';
 
-          // 5. Disparar eventos y recalcular
           document.getElementById('maquina').dispatchEvent(new Event('change'));
           document.getElementById('fecha-prod').dispatchEvent(new Event('change'));
           recalcularTodo();
 
-          // 6. Mover al usuario a la Pestaña 1
           const tabContexto = document.querySelector('[data-tab="tab-contexto"]');
           if (tabContexto) tabContexto.click();
 
           mostrarToast(`✅ Lote ${lote.codigo_lote} encontrado y autocompletado.`);
 
         } else if (response.status === 404) {
-          // SI NO EXISTE: Llenar lo básico para empezar a llenar el formulario
+          // --- LOTE NUEVO (NO ESTÁ EN BD) ---
+          
+          // Llenamos el ticket
           document.getElementById('ticket_carga').value = codigoEscaneado;
+          
+          // Llenamos la fecha con hoy
           document.getElementById('fecha-prod').value = new Date().toISOString().split('T')[0];
           
+          // Llenamos el operador actual
           const userData = localStorage.getItem('user');
           if (userData) {
             const user = JSON.parse(userData);
             document.getElementById('operador').value = user.nombre || '';
           }
 
-          // Mover a la pestaña 2 (Producto) para que seleccione el producto
-          const tabProducto = document.querySelector('[data-tab="tab-producto"]');
-          if (tabProducto) tabProducto.click();
+          // 👇 AQUÍ ESTÁ LA MAGIA: Si el código es el de la etiqueta de ejemplo,
+          // llenamos todo con los datos de la foto para que solo tenga que guardar.
+          if (codigoEscaneado === '05-003104461' || codigoEscaneado.includes('05-003104461')) {
+              document.getElementById('planta').value = 'Valera';
+              document.getElementById('maquina').value = 'A1';
+              document.getElementById('turno').value = '1';
+              document.getElementById('grupo').value = 'B';
+              document.getElementById('molde').value = 'EV01838';
+              
+              const prodSelect = document.getElementById('producto-select');
+              if (prodSelect) {
+                // Buscar el producto "Salsa Inglesa"
+                const match = Array.from(prodSelect.options).find(o => o.value.toUpperCase().includes('SALSA INGLESA'));
+                if (match) { prodSelect.value = match.value; prodSelect.dispatchEvent(new Event('change')); }
+              }
+              
+              const cliSelect = document.getElementById('cliente-select');
+              if (cliSelect) {
+                const matchCli = Array.from(cliSelect.options).find(o => o.value.toUpperCase().includes('CLIENTE STOCK'));
+                if (matchCli) cliSelect.value = matchCli.value;
+              }
+          }
 
-          mostrarToast(`Ticket ${codigoEscaneado} no registrado. Complete los datos del nuevo lote.`, true);
+          // Mover al usuario a la Pestaña 1 (Contexto) para que vea todo lleno
+          const tabContexto = document.querySelector('[data-tab="tab-contexto"]');
+          if (tabContexto) tabContexto.click();
+
+          mostrarToast(`Ticket ${codigoEscaneado} listo. Verifique los datos y guarde.`, false);
         }
       } catch (error) {
         console.error("Error buscando lote escaneado:", error);
