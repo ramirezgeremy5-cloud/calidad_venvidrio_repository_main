@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v7 (Lógica completa restaurada)
+   produccion.js - v8 (Escáner con Autocompletado Total)
    ========================================== */
 
 (function () {
@@ -71,6 +71,22 @@
   function formatearNumero(n, decimales = 2) {
     if (n === null || n === undefined || isNaN(n)) return '';
     return Number(n.toFixed(decimales)).toString();
+  }
+
+  // Función para mostrar notificaciones elegantes en lugar de alert()
+  function mostrarToast(mensaje, esError = false) {
+    const toast = document.getElementById('toast-prod');
+    if (toast) {
+      toast.innerHTML = `<i class="ti ${esError ? 'ti-alert-circle' : 'ti-circle-check'}"></i> ${mensaje}`;
+      toast.style.background = esError ? '#fee2e2' : '#d1fae5';
+      toast.style.color = esError ? '#b91c1c' : '#065f46';
+      toast.style.borderLeftColor = esError ? '#ef4444' : '#10b981';
+      
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 4000);
+    } else {
+      console.log(mensaje);
+    }
   }
 
   // ==========================================
@@ -183,11 +199,10 @@
   }
 
   // ==========================================
-  // LOGS
+  // LOGS Y UTILIDADES
   // ==========================================
   function log(msg, d = null) { console.log(`[${new Date().toLocaleTimeString()}]  ${msg}`, d || ''); }
   function logError(msg, e = null) { console.error(`[${new Date().toLocaleTimeString()}] ❌ ${msg}`, e || ''); }
-  function logSuccess(msg, d = null) { console.log(`[${new Date().toLocaleTimeString()}] ✅ ${msg}`, d || ''); }
 
   // ==========================================
   // CAPACIDAD
@@ -678,9 +693,8 @@
       if (!response.ok) throw new Error('Error al eliminar');
       await cargarProduccion(filtrosActivos);
       generarCodigoLoteLocal();
-      const toast = document.getElementById('toast-prod');
-      if (toast) { toast.textContent = '✅ Lote eliminado'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 3000); }
-    } catch (error) { alert('No se pudo eliminar el lote'); }
+      mostrarToast('✅ Lote eliminado correctamente');
+    } catch (error) { mostrarToast('No se pudo eliminar el lote', true); }
   };
 
   // ==========================================
@@ -712,7 +726,10 @@
           const prodSelect = document.getElementById('producto-select');
           if (prodSelect && lote.tipo_producto) {
             const match = Array.from(prodSelect.options).find(o => o.value.toUpperCase() === lote.tipo_producto.toUpperCase());
-            if (match) { prodSelect.value = match.value; prodSelect.dispatchEvent(new Event('change')); }
+            if (match) { 
+              prodSelect.value = match.value; 
+              prodSelect.dispatchEvent(new Event('change')); 
+            }
           }
           document.getElementById('molde').value = lote.molde || '';
           const cliSelect = document.getElementById('cliente-select');
@@ -739,22 +756,27 @@
           document.getElementById('gruesas_paleta').value = lote.gruesas_por_paleta || '';
           document.getElementById('obs-prod').value = lote.observaciones || '';
 
+          // Recalcular campos dependientes
           document.getElementById('maquina').dispatchEvent(new Event('change'));
           document.getElementById('fecha-prod').dispatchEvent(new Event('change'));
+          recalcularTodo();
 
+          // Mover a la Pestaña 1 para ver el resultado
           const tabContexto = document.querySelector('[data-tab="tab-contexto"]');
           if (tabContexto) tabContexto.click();
 
-          alert(`✅ Lote ${lote.codigo_lote} encontrado y autocompletado.`);
+          mostrarToast(`✅ Lote ${lote.codigo_lote} encontrado y autocompletado.`);
         } else if (response.status === 404) {
+          // Si no existe, ponemos el ticket y vamos a la pestaña 3
           document.getElementById('ticket_carga').value = codigoEscaneado;
           const tabTrazabilidad = document.querySelector('[data-tab="tab-trazabilidad"]');
           if (tabTrazabilidad) tabTrazabilidad.click();
-          alert(`Ticket ${codigoEscaneado} no encontrado. Complete los datos.`);
+          
+          mostrarToast(`Ticket ${codigoEscaneado} no encontrado. Complete los datos manualmente.`, true);
         }
       } catch (error) {
         console.error("Error buscando lote escaneado:", error);
-        alert("Error de conexión al buscar el lote.");
+        mostrarToast("Error de conexión al buscar el lote.", true);
       }
     });
   }
@@ -801,15 +823,15 @@
         const dimensiones = obtenerDimensiones();
         const guardarEnCatalogo = document.getElementById('guardar-en-catalogo')?.checked || false;
 
-        if (!planta) { alert('Selecciona una planta.'); return; }
-        if (!maquina) { alert('Selecciona una máquina.'); return; }
-        if (!turno) { alert('Selecciona un turno.'); return; }
-        if (!operador) { alert('Ingresa el operador.'); return; }
-        if (!molde) { alert('Ingresa el molde.'); return; }
-        if (!prod) { alert('Selecciona o crea un producto.'); return; }
-        if (!cliente) { alert('Selecciona o crea un cliente.'); return; }
-        if (!cant || parseInt(cant) <= 0) { alert('La cantidad debe ser mayor a 0.'); return; }
-        if (capacidadValor !== null && capacidadValor <= 0) { alert('El volumen debe ser mayor a 0.'); return; }
+        if (!planta) { mostrarToast('Selecciona una planta.', true); return; }
+        if (!maquina) { mostrarToast('Selecciona una máquina.', true); return; }
+        if (!turno) { mostrarToast('Selecciona un turno.', true); return; }
+        if (!operador) { mostrarToast('Ingresa el operador.', true); return; }
+        if (!molde) { mostrarToast('Ingresa el molde.', true); return; }
+        if (!prod) { mostrarToast('Selecciona o crea un producto.', true); return; }
+        if (!cliente) { mostrarToast('Selecciona o crea un cliente.', true); return; }
+        if (!cant || parseInt(cant) <= 0) { mostrarToast('La cantidad debe ser mayor a 0.', true); return; }
+        if (capacidadValor !== null && capacidadValor <= 0) { mostrarToast('El volumen debe ser mayor a 0.', true); return; }
 
         const body = {
           ticket_carga: ticket_carga || null,
@@ -853,7 +875,7 @@
             const resProd = await fetch(`${API_URL}/productos`, { method: 'POST', headers: jsonHeader(), body: JSON.stringify(productBody) });
             if (!resProd.ok) {
               const err = await resProd.json().catch(() => ({}));
-              if (resProd.status === 400 || resProd.status === 409) alert(`El producto "${prod}" ya existe. Se guardará el lote igual.`);
+              if (resProd.status === 400 || resProd.status === 409) mostrarToast(`El producto "${prod}" ya existe. Se guardará el lote igual.`, true);
               else throw new Error(err.detail || `Error ${resProd.status} guardando producto`);
             }
           }
@@ -862,7 +884,7 @@
             const resCli = await fetch(`${API_URL}/clientes`, { method: 'POST', headers: jsonHeader(), body: JSON.stringify({ nombre: cliente }) });
             if (!resCli.ok) {
               const err = await resCli.json().catch(() => ({}));
-              if (resCli.status === 400 || resCli.status === 409) alert(`El cliente "${cliente}" ya existe. Se guardará el lote igual.`);
+              if (resCli.status === 400 || resCli.status === 409) mostrarToast(`El cliente "${cliente}" ya existe. Se guardará el lote igual.`, true);
               else throw new Error(err.detail || `Error ${resCli.status} guardando cliente`);
             }
           }
@@ -889,14 +911,12 @@
             if (sc) { const match = Array.from(sc.options).find(o => o.value.toUpperCase() === cliente.toUpperCase()); if (match) sc.value = match.value; }
           }
 
-          const toast = document.getElementById('toast-prod');
-          if (toast) { toast.textContent = '✅ Lote registrado correctamente'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 3000); }
-
+          mostrarToast('✅ Lote registrado correctamente');
           document.getElementById('btn-limpiar').click();
 
         } catch (error) {
           logError('Error registrando producción:', error);
-          alert(error.message || 'No se pudo registrar la producción');
+          mostrarToast(error.message || 'No se pudo registrar la producción', true);
         }
       });
     }
@@ -1118,7 +1138,7 @@
     document.getElementById('btn-aplicar-mes')?.addEventListener('click', (e) => {
       e.preventDefault();
       const mes = document.getElementById('selector-mes')?.value || '';
-      if (!mes) { alert('Selecciona un mes'); return; }
+      if (!mes) { mostrarToast('Selecciona un mes', true); return; }
       const [year, month] = mes.split('-');
       const ultimoDia = new Date(parseInt(year), parseInt(month), 0).getDate();
       const desdeEl = document.getElementById('filtro-fecha-desde');
