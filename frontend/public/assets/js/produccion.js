@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v19 (Fix UI y Renderizado de PDF expandido)
+   produccion.js - v20 (Fix definitivo de captura y PDF expandido)
    ========================================== */
 
 (function () {
@@ -531,96 +531,86 @@
     try { const d = new Date(fechaStr + 'T00:00:00'); return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (e) { return fechaStr; }
   }
 
-  // --- FUNCIONES PARA DESCARGAR IMAGEN Y PDF (FORZANDO EXPANSIÓN) ---
+  // --- FUNCIONES PARA DESCARGAR IMAGEN Y PDF (CORREGIDAS) ---
   function descargarEtiquetaJPG() {
     const elementoCaptura = document.getElementById("ticket-para-captura");
-    if (!elementoCaptura) { mostrarToast("No se encontró la etiqueta visual", true); return; }
+    const contenedorOculto = document.getElementById("div-oculto-para-captura");
+    if (!elementoCaptura || !contenedorOculto) { mostrarToast("No se encontró la etiqueta visual", true); return; }
 
-    // 1. Guardamos los estilos originales
-    const parent = elementoCaptura.parentElement;
-    const displayOriginal = parent.style.display;
-    const widthOriginal = elementoCaptura.style.width;
+    // 1. Hacemos visible el contenedor pero fuera de la pantalla
+    contenedorOculto.style.display = 'block';
     
-    // 2. Forzamos el tamaño para la captura
-    parent.style.display = 'block';
-    elementoCaptura.style.width = '1000px'; // Ancho forzado para alta resolución
-    elementoCaptura.style.padding = '40px';
-    elementoCaptura.style.backgroundColor = '#ffffff';
+    // 2. Forzamos dimensiones exactas para la captura
+    elementoCaptura.style.width = '700px'; 
+    elementoCaptura.style.height = 'auto'; 
 
-    // 3. Capturamos
-    html2canvas(elementoCaptura, { 
-      scale: 2, 
-      useCORS: true, 
-      backgroundColor: '#ffffff',
-      width: 1000,
-      windowWidth: 1200
-    }).then(canvas => {
-      const imgData = canvas.toDataURL("image/jpeg", 1.0);
-      const enlace = document.createElement('a');
-      enlace.href = imgData;
-      enlace.download = "etiqueta_lote_" + (document.getElementById("modal-lote-codigo").innerText || "sin_id") + ".jpg";
-      document.body.appendChild(enlace);
-      enlace.click();
-      document.body.removeChild(enlace);
-      
-      // 4. Restauramos estilos
-      parent.style.display = displayOriginal;
-      elementoCaptura.style.width = widthOriginal;
-      elementoCaptura.style.padding = '';
-    }).catch(err => { 
-      console.error(err); 
-      mostrarToast("Error al generar la imagen", true); 
-      parent.style.display = displayOriginal;
-      elementoCaptura.style.width = widthOriginal;
-    });
+    // 3. Damos tiempo al navegador para calcular los estilos
+    setTimeout(() => {
+      html2canvas(elementoCaptura, { 
+        scale: 3, 
+        useCORS: true, 
+        backgroundColor: '#ffffff',
+        width: 700,
+        windowWidth: 1000
+      }).then(canvas => {
+        const imgData = canvas.toDataURL("image/jpeg", 1.0);
+        const enlace = document.createElement('a');
+        enlace.href = imgData;
+        enlace.download = "etiqueta_lote_" + (document.getElementById("modal-lote-codigo").innerText || "sin_id") + ".jpg";
+        document.body.appendChild(enlace);
+        enlace.click();
+        document.body.removeChild(enlace);
+        
+        contenedorOculto.style.display = 'none';
+      }).catch(err => { 
+        console.error(err); 
+        mostrarToast("Error al generar la imagen", true); 
+        contenedorOculto.style.display = 'none';
+      });
+    }, 150);
   }
 
   function descargarEtiquetaPDF() {
     const elementoCaptura = document.getElementById("ticket-para-captura");
-    if (!elementoCaptura) { mostrarToast("No se encontró la etiqueta visual", true); return; }
+    const contenedorOculto = document.getElementById("div-oculto-para-captura");
+    if (!elementoCaptura || !contenedorOculto) { mostrarToast("No se encontró la etiqueta visual", true); return; }
 
-    const parent = elementoCaptura.parentElement;
-    const displayOriginal = parent.style.display;
-    const widthOriginal = elementoCaptura.style.width;
+    contenedorOculto.style.display = 'block';
+    elementoCaptura.style.width = '700px'; 
+    elementoCaptura.style.height = 'auto'; 
 
-    parent.style.display = 'block';
-    elementoCaptura.style.width = '1000px'; 
-    elementoCaptura.style.padding = '40px';
-    elementoCaptura.style.backgroundColor = '#ffffff';
+    setTimeout(() => {
+      html2canvas(elementoCaptura, { 
+        scale: 3, 
+        useCORS: true, 
+        backgroundColor: '#ffffff',
+        width: 700,
+        windowWidth: 1000
+      }).then(canvas => {
+        const imgData = canvas.toDataURL("image/jpeg", 1.0);
+        const { jsPDF } = window.jspdf;
+        
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        // Forzamos el ancho al 90% de la hoja
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const imgWidth = pageWidth - 20; // 190mm
+        
+        let imgHeight = (canvas.height * imgWidth) / canvas.width; 
 
-    html2canvas(elementoCaptura, { 
-      scale: 2, 
-      useCORS: true, 
-      backgroundColor: '#ffffff',
-      width: 1000,
-      windowWidth: 1200
-    }).then(canvas => {
-      const imgData = canvas.toDataURL("image/jpeg", 1.0);
-      const { jsPDF } = window.jspdf;
-      
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      // Ocupa el 90% del ancho de la hoja
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const imgWidth = pageWidth - 20; // 190mm
-      
-      let imgHeight = (canvas.height * imgWidth) / canvas.width; 
+        const x = 10; 
+        const y = 15; 
 
-      const x = 10; 
-      const y = 15; 
-
-      pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
-      pdf.save("etiqueta_lote_" + (document.getElementById("modal-lote-codigo").innerText || "sin_id") + ".pdf");
-      
-      parent.style.display = displayOriginal;
-      elementoCaptura.style.width = widthOriginal;
-      elementoCaptura.style.padding = '';
-    }).catch(err => { 
-      console.error(err); 
-      mostrarToast("Error al generar el PDF", true); 
-      parent.style.display = displayOriginal;
-      elementoCaptura.style.width = widthOriginal;
-    });
+        pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
+        pdf.save("etiqueta_lote_" + (document.getElementById("modal-lote-codigo").innerText || "sin_id") + ".pdf");
+        
+        contenedorOculto.style.display = 'none';
+      }).catch(err => { 
+        console.error(err); 
+        mostrarToast("Error al generar el PDF", true); 
+        contenedorOculto.style.display = 'none';
+      });
+    }, 150);
   }
   // ---------------------------------------------
 
@@ -702,7 +692,7 @@
     // ACTUALIZAR Y ENLAZAR BOTONES DE DESCARGA
     // ==========================================
     
-    // 1. Inyectar los datos en el ticket visual oculto (CON VALIDACIONES)
+    // 1. Inyectar los datos en el ticket visual oculto
     const setInText = (id, valor, defecto) => {
       const el = document.getElementById(id);
       if (el) el.innerText = valor || defecto;
@@ -725,14 +715,13 @@
     setInText("ticket-lote", lote.codigo, "20261106A1001");
     setInText("ticket-barcode-text", lote.ticket_carga, "TICKET-PRUEBA-123");
 
-    // Si usas JsBarcode en producción.js, puedes generarlo aquí:
     if (typeof JsBarcode !== 'undefined' && document.getElementById("barcode-svg")) {
         JsBarcode("#barcode-svg", lote.ticket_carga || lote.codigo, {
             format: "CODE128", lineColor: "#000", width: 2, height: 60, displayValue: false
         });
     }
 
-    // 2. Asignar eventos a los botones de descarga (eliminar anteriores para evitar duplicados)
+    // 2. Asignar eventos a los botones de descarga
     const btnJPG = document.getElementById("btn-descargar-jpg");
     const btnPDF = document.getElementById("btn-descargar-pdf");
     

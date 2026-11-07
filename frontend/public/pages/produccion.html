@@ -616,22 +616,26 @@
           </button>
         </div>
         
-        <div style="margin-top: 15px; display: none;" id="div-oculto-para-captura">
-          <!-- ETIQUETA VISUAL (Estructura para html2canvas y jsPDF) -->
-          <div class="ticket-preview-container" id="ticket-para-captura">
-            <div class="ticket-header">
-              <div class="brand">VENVIDRIO VALERA</div>
-              <div class="title" id="ticket-title-code">TICKET-PRUEBA-123</div>
+        <!-- ETIQUETA OCULTA OPTIMIZADA PARA CAPTURA -->
+        <!-- Se posiciona fuera de la pantalla en lugar de display:none para que html2canvas calcule bien el layout -->
+        <div style="position: absolute; left: -9999px; top: 0; display: block;" id="div-oculto-para-captura">
+          
+          <div class="ticket-preview-container" id="ticket-para-captura" style="width: 700px; background: #fff; padding: 30px; border: 2px solid #000; font-family: 'Courier New', Courier, monospace; color: #000; box-sizing: border-box;">
+            
+            <div class="ticket-header" style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 15px; margin-bottom: 15px;">
+              <div class="brand" style="font-weight: bold; font-size: 16px;">VENVIDRIO VALERA</div>
+              <div class="title" id="ticket-title-code" style="font-size: 22px; font-weight: bold; margin-top: 5px;">TICKET-PRUEBA-123</div>
             </div>
-            <div class="ticket-info">
-              <div class="left">
+
+            <div class="ticket-info" style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 15px; line-height: 1.6;">
+              <div class="left" style="text-align: left; font-weight: bold;">
                 <div>CLIENT / CLIENTE</div>
                 <div>ORDER / ORDEN</div>
                 <div>MACH / SHIFT / GROUP</div>
                 <div>PRODUCT / PRODUCTO</div>
                 <div>ACABADO / FINISHED</div>
               </div>
-              <div class="right">
+              <div class="right" style="text-align: right; font-weight: bold;">
                 <div id="ticket-cliente">CLIENTE STOCK</div>
                 <div id="ticket-orden">NO APLICA</div>
                 <div id="ticket-maquina">A1</div>
@@ -639,18 +643,28 @@
                 <div id="ticket-acabado">26-600-BEAD</div>
               </div>
             </div>
-            <div class="ticket-separator"></div>
-            <div class="ticket-item">ITEM <span id="ticket-item-code">V-TEST-001</span></div>
-            <div class="ticket-item">MOLD / MOLDE <span id="ticket-molde">MOLDE-PRUEBA-01</span></div>
-            <div class="ticket-item">LOT / LOTE <span id="ticket-lote">20261106A1001</span></div>
+
+            <div class="ticket-separator" style="border-top: 1px dashed #000; margin: 15px 0;"></div>
             
-            <div class="ticket-barcode">
-              <!-- Contenedor para JsBarcode (generado desde produccion.js) -->
-              <svg id="barcode-svg"></svg>
-              <div class="barcode-text" id="ticket-barcode-text">TICKET-PRUEBA-123</div>
+            <div class="ticket-item" style="font-size: 16px; margin: 12px 0; display: flex; align-items: center;">
+              <span class="label" style="font-weight: bold; width: 140px; flex-shrink: 0;">ITEM</span> 
+              <span class="value" id="ticket-item-code" style="font-weight: bold; font-size: 18px;">V-TEST-001</span>
+            </div>
+            <div class="ticket-item" style="font-size: 16px; margin: 12px 0; display: flex; align-items: center;">
+              <span class="label" style="font-weight: bold; width: 140px; flex-shrink: 0;">MOLD / MOLDE</span> 
+              <span class="value" id="ticket-molde" style="font-weight: bold; font-size: 18px;">MOLDE-PRUEBA-01</span>
+            </div>
+            <div class="ticket-item" style="font-size: 16px; margin: 12px 0; display: flex; align-items: center;">
+              <span class="label" style="font-weight: bold; width: 140px; flex-shrink: 0;">LOT / LOTE</span> 
+              <span class="value" id="ticket-lote" style="font-weight: bold; font-size: 18px;">20261106A1001</span>
             </div>
             
-            <div class="ticket-footer">
+            <div class="ticket-barcode" style="text-align: center; margin: 25px 0; padding: 15px 0; border-top: 2px solid #000; border-bottom: 2px solid #000;">
+              <svg id="barcode-svg" style="max-width: 100%; height: auto;"></svg>
+              <div class="barcode-text" id="ticket-barcode-text" style="font-size: 16px; font-weight: bold; margin-top: 10px;">TICKET-PRUEBA-123</div>
+            </div>
+            
+            <div class="ticket-footer" style="text-align: center; font-size: 11px; color: #000; margin-top: 15px; border-top: 1px dashed #000; padding-top: 10px;">
               MADE IN VENEZUELA / HECHO EN VENEZUELA
             </div>
           </div>
