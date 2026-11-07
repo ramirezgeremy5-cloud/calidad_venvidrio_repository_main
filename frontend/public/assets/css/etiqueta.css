@@ -58,7 +58,7 @@ body {
    ========================================== */
 .ticket-wrapper {
   width: 100%;
-  max-width: 500px;
+  max-width: 600px; /* Un poco más ancho para que respire el texto */
   margin-bottom: 20px;
 }
 
@@ -66,78 +66,81 @@ body {
   background: #ffffff;
   border: 2px solid #000;
   border-radius: 8px;
-  padding: 15px;
+  padding: 25px 30px;
   font-family: "Courier New", Courier, monospace;
   color: #000;
-  line-height: 1.3;
+  line-height: 1.4;
 }
 
 /* CABECERA */
 .tk-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px dashed #ccc;
-  padding-bottom: 10px;
-  margin-bottom: 10px;
+  align-items: flex-end;
+  border-bottom: 1px dashed #000;
+  padding-bottom: 15px;
+  margin-bottom: 15px;
 }
-.tk-logo img { height: 40px; max-width: 100px; object-fit: contain; }
-.tk-header-right { text-align: right; }
-.tk-planta { font-size: 12px; font-weight: bold; letter-spacing: 1px; }
-.tk-title { font-size: 18px; font-weight: bold; letter-spacing: 1px; margin-top: 5px; }
+.tk-logo img { height: 45px; max-width: 120px; object-fit: contain; }
+.tk-header-right { text-align: right; width: 100%; }
+.tk-planta { font-size: 13px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
+.tk-title { font-size: 20px; font-weight: bold; letter-spacing: 2px; margin-top: 5px; text-transform: uppercase; }
 
 /* FILAS Y COLUMNAS */
-.tk-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; }
-.tk-label { font-weight: normal; color: #333; }
-.tk-val { font-weight: bold; text-align: right; }
+.tk-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; }
+.tk-label { font-weight: normal; color: #333; text-transform: uppercase; }
+.tk-val { font-weight: bold; text-align: right; text-transform: uppercase; }
 
 .tk-top-data, .tk-mid-data, .tk-product-data, .tk-bottom-data {
-  border-bottom: 1px dashed #ccc;
-  padding-bottom: 8px;
-  margin-bottom: 8px;
+  border-bottom: 1px dashed #000;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
 }
 
 .tk-top-data { display: flex; justify-content: space-between; }
-.tk-col { width: 48%; }
+.tk-col { width: 48%; display: flex; flex-direction: column; gap: 4px; }
 
 .tk-mid-data { display: flex; justify-content: space-between; }
 .tk-col-4 { width: 48%; }
-.tk-val-large { font-size: 14px; font-weight: bold; margin-top: 2px; }
+.tk-val-large { font-size: 15px; font-weight: bold; margin-top: 4px; text-transform: uppercase; }
 
-.tk-bottom-data { display: flex; justify-content: space-between; border-bottom: none; }
-.tk-main-col { width: 70%; }
-.tk-side-col { width: 28%; text-align: right; }
+.tk-bottom-data { display: flex; justify-content: space-between; border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+.tk-main-col { width: 70%; display: flex; flex-direction: column; gap: 8px; }
+.tk-side-col { width: 28%; text-align: right; display: flex; flex-direction: column; gap: 6px; }
 
-.tk-row-large { display: flex; align-items: center; margin-bottom: 6px; font-size: 12px; }
-.tk-row-large .tk-label { width: 110px; }
-.tk-val-large-bold { font-size: 16px; font-weight: bold; }
+.tk-row-large { display: flex; align-items: center; font-size: 13px; }
+.tk-row-large .tk-label { width: 120px; flex-shrink: 0; }
+.tk-val-large-bold { font-size: 18px; font-weight: bold; text-transform: uppercase; }
 
 /* CÓDIGO DE BARRAS */
 .tk-barcode-container {
   text-align: center;
-  margin-top: 15px;
-  padding-top: 10px;
+  margin-top: 20px;
+  padding-top: 15px;
   border-top: 2px solid #000;
 }
 #barcode-svg {
   max-width: 100%;
-  height: 60px;
+  height: 70px;
+  margin: 0 auto;
 }
 .tk-barcode-text {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: bold;
-  margin-top: 5px;
+  margin-top: 8px;
   letter-spacing: 2px;
+  text-transform: uppercase;
 }
 
 .tk-footer {
   text-align: center;
-  font-size: 9px;
-  color: #555;
+  font-size: 10px;
+  color: #000;
   margin-top: 15px;
-  border-top: 1px dashed #ccc;
-  padding-top: 8px;
+  border-top: 1px dashed #000;
+  padding-top: 12px;
   letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 /* ==========================================
@@ -145,7 +148,7 @@ body {
    ========================================== */
 .acciones-descarga {
   width: 100%;
-  max-width: 500px;
+  max-width: 600px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -196,3 +199,16 @@ body {
   margin-bottom: 15px;
 }
 @keyframes spin { 100% { transform: rotate(360deg); } }
+
+/* ==========================================
+   RESPONSIVE (Para móviles)
+   ========================================== */
+@media (max-width: 600px) {
+  .ticket-border { padding: 15px; }
+  .tk-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .tk-header-right { text-align: left; }
+  .tk-top-data, .tk-mid-data, .tk-bottom-data { flex-direction: column; gap: 10px; }
+  .tk-col, .tk-col-4, .tk-main-col, .tk-side-col { width: 100%; }
+  .tk-row-large { flex-direction: column; align-items: flex-start; }
+  .tk-val-large-bold { font-size: 16px; margin-top: 4px; }
+}

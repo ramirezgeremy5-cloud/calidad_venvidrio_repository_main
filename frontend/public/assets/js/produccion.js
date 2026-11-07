@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v17 (Fix UI inicial y manejo de etiquetas)
+   produccion.js - v18 (Fix UI inicial y Descargas Expandidas)
    ========================================== */
 
 (function () {
@@ -531,7 +531,7 @@
     try { const d = new Date(fechaStr + 'T00:00:00'); return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (e) { return fechaStr; }
   }
 
-  // --- FUNCIONES PARA DESCARGAR IMAGEN Y PDF ---
+  // --- FUNCIONES PARA DESCARGAR IMAGEN Y PDF (EXPANDIDOS) ---
   function descargarEtiquetaJPG() {
     const elementoCaptura = document.getElementById("ticket-para-captura");
     if (!elementoCaptura) { mostrarToast("No se encontró la etiqueta visual", true); return; }
@@ -539,8 +539,8 @@
     const displayOriginal = elementoCaptura.parentElement.style.display;
     elementoCaptura.parentElement.style.display = 'block';
 
-    html2canvas(elementoCaptura, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
-      const imgData = canvas.toDataURL("image/jpeg", 0.9);
+    html2canvas(elementoCaptura, { scale: 3, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+      const imgData = canvas.toDataURL("image/jpeg", 1.0);
       const enlace = document.createElement('a');
       enlace.href = imgData;
       enlace.download = "etiqueta_lote_" + (document.getElementById("modal-lote-codigo").innerText || "sin_id") + ".jpg";
@@ -563,20 +563,24 @@
     const displayOriginal = elementoCaptura.parentElement.style.display;
     elementoCaptura.parentElement.style.display = 'block';
 
-    html2canvas(elementoCaptura, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
-      const imgData = canvas.toDataURL("image/jpeg", 0.9);
+    html2canvas(elementoCaptura, { scale: 3, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+      const imgData = canvas.toDataURL("image/jpeg", 1.0);
       const { jsPDF } = window.jspdf;
       
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 100; 
+      
+      // 👇 EXPANDIMOS EL ANCHO AL 90% DE LA PÁGINA
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const imgWidth = pageWidth - 20; // 190mm de ancho
+      
       let imgHeight = (canvas.height * imgWidth) / canvas.width; 
       
       if (!imgHeight || !isFinite(imgHeight) || imgHeight <= 0) {
           imgHeight = 150; 
       }
 
-      const x = (pdf.internal.pageSize.getWidth() - imgWidth) / 2;
-      const y = 20;
+      const x = 10; // Margen izquierdo 10mm
+      const y = 15; // Margen superior 15mm
 
       pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
       pdf.save("etiqueta_lote_" + (document.getElementById("modal-lote-codigo").innerText || "sin_id") + ".pdf");
