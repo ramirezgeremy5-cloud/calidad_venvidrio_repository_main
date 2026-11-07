@@ -198,7 +198,7 @@ app.include_router(dashboard.router)
 app.include_router(reportes.router)
 app.include_router(reportes_defectos.router)
 
-# 👇 REGISTRO DEL NUEVO ROUTER DE ESCÁNER
+# 👇 REGISTRO DEL ROUTER DEL ESCÁNER
 app.include_router(escaner.router)
 
 
