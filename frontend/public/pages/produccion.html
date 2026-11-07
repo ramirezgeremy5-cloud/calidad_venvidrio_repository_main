@@ -8,42 +8,13 @@
   <link rel="stylesheet" href="../assets/css/shared.css"/>
   <link rel="stylesheet" href="../assets/css/produccion.css"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
-  <script src="https://unpkg.com/html5-qrcode"></script>
   
-  <!-- LIBRERÍAS PARA GENERAR EL CÓDIGO QR, IMAGEN Y PDF -->
+  <!-- LIBRERÍAS EXTERNAS -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-  <!-- ESTILOS EMBEBIDOS PARA LA ETIQUETA (Simula la imagen que enviaste) -->
-  <style>
-    .ticket-preview-container {
-      background: #fff;
-      border: 2px solid #000;
-      border-radius: 12px;
-      padding: 20px;
-      width: 100%;
-      max-width: 400px;
-      margin: 0 auto;
-      font-family: "Courier New", Courier, monospace;
-      color: #000;
-      box-sizing: border-box;
-      text-align: left;
-    }
-    .ticket-header { text-align: center; border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 10px; }
-    .ticket-header .brand { font-weight: bold; font-size: 14px; letter-spacing: 1px; }
-    .ticket-header .title { font-size: 18px; font-weight: bold; margin-top: 5px; letter-spacing: 2px; }
-    .ticket-info { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px; line-height: 1.4; }
-    .ticket-info .left { text-align: left; }
-    .ticket-info .right { text-align: right; }
-    .ticket-separator { border-top: 1px dashed #ccc; margin: 8px 0; }
-    .ticket-item { font-size: 14px; font-weight: bold; margin: 10px 0; }
-    .ticket-item span { font-weight: normal; }
-    .ticket-barcode { text-align: center; margin: 15px 0; padding: 10px 0; border-top: 1px solid #000; border-bottom: 1px solid #000; }
-    .ticket-barcode .barcode-lines { font-size: 40px; letter-spacing: 2px; line-height: 1; font-family: 'Libre Barcode 39', 'Courier New', monospace; }
-    .ticket-barcode .barcode-text { font-size: 12px; font-weight: bold; margin-top: 5px; letter-spacing: 1px; }
-    .ticket-footer { text-align: center; font-size: 10px; color: #555; margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 8px; }
-  </style>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 </head>
 <body>
 
@@ -366,7 +337,7 @@
                 <div class="field field-auto"><label>Gruesas/Paleta</label><input type="number" id="gruesas_paleta" readonly /></div>
               </div>
 
-              <div id="guardar-en-catalogo-wrapper" class="checkbox-catalogo">
+              <div id="guardar-en-catalogo-wrapper" class="checkbox-catalogo" style="display: none;">
                 <label class="checkbox-catalogo-label">
                   <input type="checkbox" id="guardar-en-catalogo" checked /> 
                   <span>
@@ -480,7 +451,6 @@
     </div>
 
     <div class="modal-body">
-      <!-- ... Secciones de detalles anteriores ... -->
       <div class="detail-section">
         <h4 class="detail-section-title"><i class="ti ti-building-factory-2"></i> Contexto</h4>
         <div class="detail-grid">
@@ -627,7 +597,7 @@
         </div>
       </div>
 
-      <!-- 👇 NUEVA SECCIÓN DE CÓDIGO QR Y DESCARGA DE IMAGEN -->
+      <!-- 👇 SECCIÓN DE CÓDIGO QR Y DESCARGA DE IMAGEN -->
       <div class="detail-section" style="text-align: center; border-top: 1px solid var(--border); padding-top: 1.5rem;">
         <h4 class="detail-section-title" style="justify-content: center;"><i class="ti ti-qrcode"></i> Código QR del Lote</h4>
         <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
@@ -647,7 +617,7 @@
         </div>
         
         <div style="margin-top: 15px; display: none;" id="div-oculto-para-captura">
-          <!-- ETIQUETA VISUAL (Simula la imagen enviada) -->
+          <!-- ETIQUETA VISUAL (Estructura para html2canvas y jsPDF) -->
           <div class="ticket-preview-container" id="ticket-para-captura">
             <div class="ticket-header">
               <div class="brand">VENVIDRIO VALERA</div>
@@ -672,12 +642,12 @@
             <div class="ticket-separator"></div>
             <div class="ticket-item">ITEM <span id="ticket-item-code">V-TEST-001</span></div>
             <div class="ticket-item">MOLD / MOLDE <span id="ticket-molde">MOLDE-PRUEBA-01</span></div>
-            <div class="ticket-item">LOT / LOTE <span id="ticket-lote">07112026A1001</span></div>
+            <div class="ticket-item">LOT / LOTE <span id="ticket-lote">20261106A1001</span></div>
             
             <div class="ticket-barcode">
-              <!-- Simulación visual de código de barras con texto -->
-              <div class="barcode-lines">|||||||||||||||||||||||||||||||</div>
-              <div class="barcode-text" id="ticket-ticket-text">TICKET-PRUEBA-123</div>
+              <!-- Contenedor para JsBarcode (generado desde produccion.js) -->
+              <svg id="barcode-svg"></svg>
+              <div class="barcode-text" id="ticket-barcode-text">TICKET-PRUEBA-123</div>
             </div>
             
             <div class="ticket-footer">
@@ -701,119 +671,7 @@
   <p>© 2026 MoonDRAGO — Sistema de Control de Calidad para Venvidrio</p>
 </footer>
 
-<!-- SCRIPT PARA GENERACIÓN DE QR Y DESCARGA DE IMAGEN -->
-<script>
-  document.addEventListener("DOMContentLoaded", function() {
-    // Inicializar QR (apuntando a un HTML externo, no al sistema)
-    const qrContainer = document.getElementById("modal-qr-container");
-    let qrCodeInstance = null;
-
-    function generarQR(loteId) {
-      if (!qrContainer) return;
-      qrContainer.innerHTML = ""; // Limpiar QR anterior
-      
-      // Generar la URL para el archivo HTML externo. 
-      // Asumimos que se aloja en la misma carpeta 'pages' o 'etiquetas'.
-      // El operario escaneará esto y se irá a la vista de etiqueta.html?lote=XXXX
-      const urlDestino = window.location.origin + window.location.pathname.replace('produccion.html', '') + 'etiqueta.html?lote=' + loteId;
-      
-      qrCodeInstance = new QRCode(qrContainer, {
-        text: urlDestino,
-        width: 128,
-        height: 128,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-      });
-    }
-
-    // Función para descargar la etiqueta como imagen JPG
-    document.getElementById("btn-descargar-jpg").addEventListener("click", function() {
-      const elementoCaptura = document.getElementById("ticket-para-captura");
-      if (!elementoCaptura) return;
-
-      html2canvas(elementoCaptura, { scale: 2 }).then(canvas => {
-        // Convertir a JPG
-        const imgData = canvas.toDataURL("image/jpeg", 0.9);
-        
-        // Descargar
-        const enlace = document.createElement('a');
-        enlace.href = imgData;
-        enlace.download = "etiqueta_lote_" + (document.getElementById("modal-lote-codigo").innerText || "sin_id") + ".jpg";
-        document.body.appendChild(enlace);
-        enlace.click();
-        document.body.removeChild(enlace);
-      });
-    });
-
-    // Función para descargar la etiqueta como PDF (Imagen, no texto seleccionable)
-    document.getElementById("btn-descargar-pdf").addEventListener("click", function() {
-      const elementoCaptura = document.getElementById("ticket-para-captura");
-      if (!elementoCaptura) return;
-
-      html2canvas(elementoCaptura, { scale: 2 }).then(canvas => {
-        const imgData = canvas.toDataURL("image/jpeg", 0.9);
-        const { jsPDF } = window.jspdf;
-        
-        // Crear PDF tamaño A4 o Carta
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const imgWidth = 100; // Ancho de la imagen en mm
-        const imgHeight = (canvas.height * imgWidth) / canvas.width; // Proporción
-        
-        // Centrar la imagen en el PDF
-        const x = (pdf.internal.pageSize.getWidth() - imgWidth) / 2;
-        const y = 20;
-
-        // Añadir la imagen (NO TEXTO, solo la imagen renderizada)
-        pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
-        pdf.save("etiqueta_lote_" + (document.getElementById("modal-lote-codigo").innerText || "sin_id") + ".pdf");
-      });
-    });
-
-    // Función para actualizar los datos del ticket de la etiqueta
-    function actualizarTicket(loteData) {
-      document.getElementById("ticket-title-code").innerText = loteData.ticket || "TICKET-PRUEBA-123";
-      document.getElementById("ticket-cliente").innerText = loteData.cliente || "CLIENTE STOCK";
-      document.getElementById("ticket-orden").innerText = loteData.orden || "NO APLICA";
-      document.getElementById("ticket-maquina").innerText = loteData.maquina || "A1";
-      document.getElementById("ticket-producto").innerText = loteData.producto || "BOTELLA PRUEBA 500ML";
-      document.getElementById("ticket-acabado").innerText = loteData.acabado || "26-600-BEAD";
-      document.getElementById("ticket-item-code").innerText = loteData.item || "V-TEST-001";
-      document.getElementById("ticket-molde").innerText = loteData.molde || "MOLDE-PRUEBA-01";
-      document.getElementById("ticket-lote").innerText = loteData.loteId || "07112026A1001";
-      document.getElementById("ticket-ticket-text").innerText = loteData.ticket || "TICKET-PRUEBA-123";
-    }
-
-    // Simulación de carga de datos al abrir el modal
-    // Aquí deberías conectar con tu lógica real (produccion.js)
-    const botonesVer = document.querySelectorAll(".btn-ver-lote");
-    botonesVer.forEach(btn => {
-      btn.addEventListener("click", function() {
-        const loteId = this.getAttribute("data-id");
-        // Simulamos obtener los datos del lote
-        const loteData = {
-          ticket: "TICKET-" + loteId,
-          cliente: "CLIENTE STOCK",
-          orden: "NO APLICA",
-          maquina: "A1",
-          producto: "BOTELLA PRUEBA 500ML",
-          acabado: "26-600-BEAD",
-          item: "V-TEST-001",
-          molde: "MOLDE-PRUEBA-01",
-          loteId: loteId
-        };
-        
-        // Actualizar el ticket visual
-        actualizarTicket(loteData);
-        
-        // Generar el QR con la URL al HTML externo
-        generarQR(loteId);
-      });
-    });
-
-  });
-</script>
-
+<!-- SCRIPTS AL FINAL (Sin código embebido, todo desde el archivo .js) -->
 <script src="../assets/js/shared.js"></script>
 <script src="../assets/js/login_app.js"></script>
 <script src="../assets/js/escaner.js"></script>

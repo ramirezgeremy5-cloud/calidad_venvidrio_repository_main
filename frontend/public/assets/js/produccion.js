@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v15 (Fix código de lote AAAAMMDD y etiqueta completa)
+   produccion.js - v17 (Fix UI inicial y manejo de etiquetas)
    ========================================== */
 
 (function () {
@@ -269,11 +269,11 @@
       if (activo) {
         el.removeAttribute('readonly');
         el.style.background = '#ffffff'; 
-        if (el.getAttribute('placeholder') === 'Se carga del producto') el.setAttribute('placeholder', ''); 
+        el.removeAttribute('placeholder'); 
       } else {
         el.setAttribute('readonly', 'readonly');
         el.style.background = ''; 
-        el.setAttribute('placeholder', 'Se carga del producto'); 
+        el.setAttribute('placeholder', 'SE CARGA DEL PRODUCTO'); 
       }
     });
     const fieldDim = document.getElementById('field-dimensiones');
@@ -392,7 +392,6 @@
   // GENERACIÓN DE CÓDIGO Y CÁLCULOS
   // ==========================================
   
-  // 👇 FIX: Genera el código en formato AAAAMMDD correctamente
   function generarCodigoLoteLocal() {
     const fechaInput = document.getElementById('fecha-prod');
     const maquinaInput = document.getElementById('maquina');
@@ -400,7 +399,7 @@
     
     if (!fechaInput || !maquinaInput || !loteInput) return;
     
-    const fechaVal = fechaInput.value; // Viene como YYYY-MM-DD
+    const fechaVal = fechaInput.value; 
     const maquina = (maquinaInput.value || '').trim();
     
     if (!fechaVal || !maquina) { 
@@ -408,7 +407,6 @@
       return; 
     }
     
-    // El formato HTML5 date ya es YYYY-MM-DD, solo quitamos guiones
     loteInput.value = `${fechaVal.replace(/-/g, '')}${maquina.replace(/\s+/g, '').toUpperCase()}`;
   }
 
@@ -670,26 +668,31 @@
     // ACTUALIZAR Y ENLAZAR BOTONES DE DESCARGA
     // ==========================================
     
-    // 1. Inyectar los datos en el ticket visual oculto
-    document.getElementById("ticket-title-code").innerText = lote.ticket_carga || "TICKET-PRUEBA-123";
-    document.getElementById("ticket-cliente").innerText = lote.cliente || "CLIENTE STOCK";
-    document.getElementById("ticket-orden").innerText = lote.orden || "NO APLICA";
-    
-    // 👇 FIX: Agregamos fecha, bpp y capacidad al ticket visual
-    document.getElementById("ticket-fecha").innerText = formatearFechaProd(lote.fecha_prod);
-    document.getElementById("ticket-bpp").innerText = lote.bpp || "—";
-    document.getElementById("ticket-cap").innerText = etiquetaCapacidad(lote.capacidad_ml, lote.unidad_capacidad) || "—";
+    // 1. Inyectar los datos en el ticket visual oculto (CON VALIDACIONES)
+    const setInText = (id, valor, defecto) => {
+      const el = document.getElementById(id);
+      if (el) el.innerText = valor || defecto;
+    };
 
-    document.getElementById("ticket-maquina").innerText = `${lote.maquina || "A1"}    ${lote.turno || "1"}    ${lote.grupo || "A"}`;
-    document.getElementById("ticket-producto").innerText = lote.prod || "BOTELLA PRUEBA 500ML";
-    document.getElementById("ticket-acabado").innerText = lote.acabado || "26-600-BEAD";
-    document.getElementById("ticket-item-code").innerText = lote.item || "V-TEST-001";
-    document.getElementById("ticket-molde").innerText = lote.molde || "MOLDE-PRUEBA-01";
-    document.getElementById("ticket-lote").innerText = lote.codigo || "20261106A1001";
-    document.getElementById("ticket-barcode-text").innerText = lote.ticket_carga || "TICKET-PRUEBA-123";
+    setInText("ticket-title-code", lote.ticket_carga, "TICKET-PRUEBA-123");
+    setInText("ticket-cliente", lote.cliente, "CLIENTE STOCK");
+    setInText("ticket-orden", lote.orden, "NO APLICA");
+    
+    setInText("ticket-fecha", formatearFechaProd(lote.fecha_prod), "06/11/2026");
+    setInText("ticket-bpp", lote.bpp, "—");
+    setInText("ticket-cap", etiquetaCapacidad(lote.capacidad_ml, lote.unidad_capacidad), "—");
+
+    const maquinaStr = `${lote.maquina || "A1"}    ${lote.turno || "1"}    ${lote.grupo || "A"}`;
+    setInText("ticket-maquina", maquinaStr, "A1    1    A");
+    setInText("ticket-producto", lote.prod, "BOTELLA PRUEBA 500ML");
+    setInText("ticket-acabado", lote.acabado, "26-600-BEAD");
+    setInText("ticket-item-code", lote.item, "V-TEST-001");
+    setInText("ticket-molde", lote.molde, "MOLDE-PRUEBA-01");
+    setInText("ticket-lote", lote.codigo, "20261106A1001");
+    setInText("ticket-barcode-text", lote.ticket_carga, "TICKET-PRUEBA-123");
 
     // Si usas JsBarcode en producción.js, puedes generarlo aquí:
-    if (typeof JsBarcode !== 'undefined') {
+    if (typeof JsBarcode !== 'undefined' && document.getElementById("barcode-svg")) {
         JsBarcode("#barcode-svg", lote.ticket_carga || lote.codigo, {
             format: "CODE128", lineColor: "#000", width: 2, height: 60, displayValue: false
         });
