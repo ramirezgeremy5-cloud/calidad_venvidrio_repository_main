@@ -36,14 +36,16 @@ from app.routes import dashboard
 from app.routes import reportes
 from app.routes import reportes_defectos
 from app.routes import cargos
-from app.routes import escaner # 👈 NUEVO IMPORT
+from app.routes import escaner
 
 
 # =========================
 # SCHEDULER: LIMPIEZA DE SESIONES EXPIRADAS
 # =========================
 
-TIEMPO_INACTIVIDAD_MINUTOS = 4
+# 👇 AUMENTADO A 8 HORAS (480 minutos) PARA CUBRIR UN TURNO COMPLETO
+TIEMPO_INACTIVIDAD_MINUTOS = 480 
+
 scheduler = BackgroundScheduler()
 
 
@@ -90,12 +92,12 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(
         limpiar_sesiones_expiradas,
         "interval",
-        minutes=1,
+        minutes=5, # Lo revisamos cada 5 min en lugar de 1, para no saturar
         id="limpiar_sesiones",
         replace_existing=True
     )
     scheduler.start()
-    print("🧹 Scheduler de limpieza de sesiones iniciado (cada 1 min)")
+    print("🧹 Scheduler de limpieza de sesiones iniciado (cada 5 min)")
 
     print("=" * 60)
     print("🌐 CORS habilitado para puertos locales y Render")
@@ -257,7 +259,7 @@ def health_check():
         "database": "conectada" if engine else "desconectada",
         "session": {
             "inactividad_minutos": TIEMPO_INACTIVIDAD_MINUTOS,
-            "scheduler": "activo (limpieza cada 1 min)"
+            "scheduler": "activo (limpieza cada 5 min)"
         }
     }
 
