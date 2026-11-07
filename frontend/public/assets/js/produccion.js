@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v10 (Autocompletado Inteligente)
+   produccion.js - v11 (QR en Modal de Detalle)
    ========================================== */
 
 (function () {
@@ -564,6 +564,30 @@
     if (lote.estatus === '200' || lote.estatus === '300') estadoAuditoria = 'Evaluado por Calidad';
     setTexto('detail-estado-auditoria', estadoAuditoria);
     setTexto('detail-observaciones', lote.observaciones);
+
+    // ==========================================
+    // GENERAR CÓDIGO QR PARA LA ETIQUETA
+    // ==========================================
+    const qrContainer = document.getElementById('modal-qr-container');
+    if (qrContainer) {
+      qrContainer.innerHTML = ''; // Limpiar QR anterior
+      
+      const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+      const urlEtiqueta = `${baseUrl}/etiquetas.html?lote=${encodeURIComponent(lote.codigo)}`;
+
+      if (typeof QRCode !== 'undefined') {
+        new QRCode(qrContainer, {
+          text: urlEtiqueta,
+          width: 128,
+          height: 128,
+          colorDark : "#1e3a8a", 
+          colorLight : "#ffffff",
+          correctLevel : QRCode.CorrectLevel.H
+        });
+      } else {
+        qrContainer.innerHTML = '<span style="font-size:12px;color:#ef4444;">Error: Librería QR no cargada.</span>';
+      }
+    }
 
     document.getElementById('modal-ver-lote').style.display = 'flex';
   };
