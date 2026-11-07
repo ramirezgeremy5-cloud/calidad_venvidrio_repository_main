@@ -1,17 +1,16 @@
 /* ==========================================================
    PRODUCCIÓN — VENVIDRIO
-   produccion.css — v4 (Diseño Limpio y Moderno)
+   produccion.css — v5 (Fix inputs nuevo + Diseño Limpio)
    ========================================================== */
 
 /* ================= VARIABLES DE MARCA ================= */
 :root {
-  --brand-1: #1e3a8a; /* Azul profundo elegante */
-  --brand-2: #3b82f6; /* Azul brillante para acentos */
+  --brand-1: #1e3a8a;
+  --brand-2: #3b82f6;
   --brand-3: #60a5fa;
   --brand-soft: #eff6ff;
   --brand-line: #dbeafe;
 
-  /* Alias heredados */
   --navy: var(--brand-1);
   --navy-dark: #172554;
   --off-white: #f8fafc;
@@ -28,7 +27,7 @@
   --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
   --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'SF Mono', 'Monaco', 'Cascadia Code', 'Consolas', 'Courier New', monospace;
-  --tap-min: 40px; /* Altura estándar para toques */
+  --tap-min: 40px;
 }
 
 /* ================= FONDO GENERAL ================= */
@@ -113,7 +112,6 @@ body {
 .card-body { padding: 1.25rem 1.5rem; }
 @media (min-width: 768px) { .card-body { padding: 1.5rem; } }
 
-/* Animación sutil de entrada */
 .anim-card {
   opacity: 0;
   transform: translateY(10px);
@@ -233,8 +231,6 @@ body {
   display: flex; align-items: center; gap: 4px; font-size: 12px;
 }
 .btn-refresh:hover { color: var(--brand-1); background: var(--off-white); }
-.btn-refresh.loading i { animation: spin 1s linear infinite; }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 /* ================= LAYOUT FORMULARIO ================= */
 .prod-layout {
@@ -264,9 +260,6 @@ body {
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label {
   font-size: 12px; font-weight: 600; color: var(--text-muted);
-}
-.label-optional {
-  font-weight: 400; color: var(--text-hint); font-size: 11px;
 }
 
 .field input, .field select, .field textarea {
@@ -361,7 +354,8 @@ body {
 .btn-new.active { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
 
 /* ================= INPUT NUEVO ================= */
-.input-nuevo-wrapper { display: flex; flex-direction: row; gap: 8px; margin-top: 8px; }
+/* Oculto por defecto. El JS lo mostrará cambiando el display a flex */
+.input-nuevo-wrapper { display: none; flex-direction: row; gap: 8px; margin-top: 8px; }
 
 .input-nuevo {
   flex: 1; padding: 10px 12px; border: 1px solid var(--brand-2); border-radius: var(--radius-sm);
@@ -594,16 +588,23 @@ body {
   color: var(--text-hint); font-size: 12px;
 }
 
-/* ================= RELOJ (NUEVO) ================= */
-#reloj-real {
-  font-family: var(--font-mono);
+/* ================= RELOJ ================= */
+.nav-reloj {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   background: var(--brand-1);
   color: #fff;
   padding: 6px 12px;
   border-radius: 8px;
-  font-size: 16px;
+  font-family: var(--font-mono);
+  font-size: 14px;
   font-weight: 600;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.nav-reloj i {
+  font-size: 16px;
+  opacity: 0.8;
 }
 
 /* ================= ACCESIBILIDAD ================= */

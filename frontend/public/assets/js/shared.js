@@ -110,6 +110,36 @@
   document.addEventListener('DOMContentLoaded', function () {
 
     // =============================================
+    // 0. RELOJ EN TIEMPO REAL (12 Horas + Fecha)
+    // =============================================
+    var reloj = document.getElementById('reloj-real');
+    if (reloj) {
+      var actualizarHora = function() {
+        var ahora = new Date();
+        
+        // Formato de fecha: "Jueves, 6 de Nov"
+        var opcionesFecha = { weekday: 'long', day: 'numeric', month: 'short' };
+        var fechaStr = ahora.toLocaleDateString('es-VE', opcionesFecha);
+        
+        // Formato de hora: "03:45:10 PM"
+        var horaStr = ahora.toLocaleTimeString('es-VE', { 
+          hour12: true, 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          second: '2-digit' 
+        });
+
+        // Capitalizar la primera letra del día
+        var fechaCapitalizada = fechaStr.charAt(0).toUpperCase() + fechaStr.slice(1);
+        
+        reloj.textContent = fechaCapitalizada + ' | ' + horaStr;
+      };
+      
+      actualizarHora();
+      setInterval(actualizarHora, 1000);
+    }
+
+    // =============================================
     // 1. MENÚ HAMBURGUESA (RESPONSIVE)
     // =============================================
     const navbar = document.querySelector('.navbar');
@@ -324,6 +354,6 @@
       });
     }
 
-    console.log("✅ Navbar, Dropdown y Modal (cascarón) inicializados con animaciones.");
+    console.log("✅ Navbar, Dropdown, Reloj y Modal inicializados con animaciones.");
   });
 })();

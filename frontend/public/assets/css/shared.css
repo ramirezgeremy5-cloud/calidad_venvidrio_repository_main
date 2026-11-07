@@ -1,9 +1,7 @@
 /* =============================================
    SHARED — VENVIDRIO
    Estilos globales: Fondo, Navbar, Contenedor, Modales y Utilidades
-   v3 — Mobile-first real + layout móvil optimizado
-        (Hamburguesa a la derecha, avatar al extremo,
-         dropdown fijo, safe-area, modo claro forzado)
+   v4 — Mobile-first real + Reloj en Navbar
    ============================================= */
 
 /* ================= VARIABLES GLOBALES ================= */
@@ -105,6 +103,27 @@ body {
   max-width: 100%;
   object-fit: contain;
   filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.1));
+}
+
+/* ---------- RELOJ EN NAVBAR ---------- */
+.nav-reloj {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(26, 35, 126, 0.08); /* Fondo azul muy suave y elegante */
+  color: var(--navy);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-family: 'SF Mono', 'Consolas', monospace; /* Fuente monoespaciada para que no "baile" */
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid rgba(26, 35, 126, 0.15);
+  white-space: nowrap;
+  letter-spacing: -0.02em;
+}
+.nav-reloj i {
+  font-size: 16px;
+  opacity: 0.8;
 }
 
 /* ---------- HAMBURGUESA (solo móvil) ---------- */
@@ -235,7 +254,6 @@ body {
   font-size: 12px;
   flex-shrink: 0;
   transition: background 0.2s ease;
-  /* Anillo blanco para resaltar sobre navbar blanca */
   box-shadow: 0 2px 8px rgba(26, 35, 126, 0.2), 0 0 0 2px #fff;
   overflow: hidden;
 }
@@ -260,7 +278,6 @@ body {
   border: 1px solid var(--border);
   box-shadow: 0 12px 40px rgba(0,0,0,0.12);
 
-  /* Estado inicial oculto */
   opacity: 0;
   visibility: hidden;
   transform: translateY(-8px);
@@ -270,7 +287,6 @@ body {
   overflow: hidden;
 }
 
-/* Cuando el JS le agrega la clase 'show' */
 .user-dropdown.show {
   opacity: 1;
   visibility: visible;
@@ -515,7 +531,6 @@ body {
 @media (min-width: 768px) {
   .modal-footer { padding: 0.85rem 1.5rem; }
 }
-/* En móvil: botones del footer a ancho completo, uno debajo del otro */
 @media (max-width: 599px) {
   .modal-footer {
     flex-direction: column;
@@ -544,7 +559,7 @@ body {
   padding: 10px 12px;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
-  font-size: 16px;               /* Evita zoom en iOS */
+  font-size: 16px;
   font-family: var(--font-body);
   color: var(--text-main);
   background: #fff;
@@ -584,7 +599,6 @@ body {
 /* =========== RESPONSIVE NAVBAR =============== */
 /* ============================================= */
 
-/* Tablet / móvil grande */
 @media (max-width: 900px) {
   .navbar {
     padding: 0.6rem 1rem;
@@ -594,16 +608,14 @@ body {
     justify-content: space-between;
   }
 
-  /* =============== ORDEN MÓVIL ===============
-     [LOGO]  ........  [☰]  [AVATAR]
-     - Logo (order 1)
-     - Hamburguesa (order 2): zona natural del pulgar derecho
-     - Avatar (order 3): al extremo derecho, donde se abre el dropdown
-     - Menú desplegable (order 4): fila completa debajo
-     ============================================ */
   .nav-brand {
     order: 1;
     flex: 1 1 auto;
+  }
+
+  /* En móvil, el reloj se oculta si no cabe, o se ajusta */
+  .nav-reloj {
+    display: none; /* Ocultamos el reloj en móvil para no saturar la barra */
   }
 
   .nav-toggle {
@@ -624,7 +636,6 @@ body {
     white-space: nowrap;
   }
 
-  /* Menú de pestañas en móviles */
   .nav-links {
     display: none;
     order: 4;
@@ -654,10 +665,6 @@ body {
     min-height: var(--tap-min);
   }
 
-  /* ==========================================
-     DROPDOWN DE PERFIL — POSICIÓN MÓVIL
-     (fijo, bajo la navbar, sin salirse de pantalla)
-     ========================================== */
   .user-dropdown {
     position: fixed;
     top: calc(70px + env(safe-area-inset-top));
@@ -692,7 +699,6 @@ body {
   }
 }
 
-/* Móvil pequeño */
 @media (max-width: 480px) {
   .nav-brand img { height: 32px; }
 
@@ -702,7 +708,6 @@ body {
     font-size: 11px;
   }
 
-  /* Username al lado del avatar: se oculta para no romper el layout */
   .nav-user .nav-username {
     display: none;
   }
@@ -714,7 +719,6 @@ body {
     justify-content: center;
   }
 
-  /* Dropdown con márgenes laterales */
   .user-dropdown {
     right: 8px;
     left: 8px;
@@ -727,7 +731,6 @@ body {
   }
 }
 
-/* Ultra chico (<360px): logo y botones más compactos */
 @media (max-width: 360px) {
   .nav-brand img { height: 28px; }
   .nav-toggle { min-width: 40px; min-height: 40px; font-size: 1.3rem; }

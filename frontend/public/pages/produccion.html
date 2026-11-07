@@ -4,18 +4,29 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Producción — MoonDRAGO</title>
+  
+  <!-- Estilos y Fuentes -->
   <link rel="stylesheet" href="../assets/css/shared.css"/>
   <link rel="stylesheet" href="../assets/css/produccion.css"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
-  <!-- Librería para la cámara -->
+  
+  <!-- Librería para el escáner -->
   <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 <body>
 
 <!-- NAVBAR -->
 <nav class="navbar">
-  <div class="nav-brand">
-    <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
+  <div style="display: flex; align-items: center; gap: 20px;">
+    <div class="nav-brand">
+      <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
+    </div>
+    
+    <!-- RELOJ EN EL NAVBAR -->
+    <div class="nav-reloj">
+      <i class="ti ti-clock"></i>
+      <span id="reloj-real">--:--:--</span>
+    </div>
   </div>
 
   <ul class="nav-links" id="navLinks">
@@ -52,16 +63,9 @@
 <!-- CONTENIDO -->
 <main class="page">
 
-  <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-    <div>
-      <h1>Registro de la Producción</h1>
-      <p>Complete los pasos en orden. Los campos con <strong>(auto)</strong> se calculan o autocompletan automáticamente.</p>
-    </div>
-    <!-- Reloj en Tiempo Real -->
-    <div style="background: #fff; padding: 8px 16px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 8px;">
-      <i class="ti ti-clock" style="color: #3b82f6; font-size: 20px;"></i>
-      <span id="reloj-real" style="font-family: 'SF Mono', 'Consolas', monospace; font-size: 18px; font-weight: 700; color: #0f172a;">--:--:--</span>
-    </div>
+  <div class="page-header">
+    <h1>Registro de la Producción</h1>
+    <p>Complete los pasos en orden. Los campos con <strong>(auto)</strong> se calculan o autocompletan automáticamente.</p>
   </div>
 
   <div class="ultima-actualizacion">
@@ -103,9 +107,25 @@
 
     <!-- FORMULARIO NUEVO LOTE (CON PESTAÑAS) -->
     <div class="card anim-card">
-      <div class="card-header">
+      
+      <!-- CABECERA CON BOTÓN DE ESCANEO GLOBAL -->
+      <div class="card-header" style="flex-wrap: wrap;">
         <div class="card-title"><i class="ti ti-file-description"></i> Registro de Lote</div>
-        <span class="badge badge-info">Nuevo</span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button type="button" id="btn-escanear-global" class="btn btn-primary" style="min-height: 36px; padding: 0 12px; font-size: 13px;">
+            <i class="ti ti-scan"></i> Escanear Etiqueta
+          </button>
+          <span class="badge badge-info">Nuevo</span>
+        </div>
+      </div>
+
+      <!-- CONTENEDOR DE LA CÁMARA (Oculto por defecto) -->
+      <div id="reader-container-global" style="display: none; padding: 15px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+        <p style="font-size: 13px; margin-bottom: 10px; font-weight: 600; color: var(--brand-1);"><i class="ti ti-camera"></i> Apunte la cámara al código de barras de la etiqueta</p>
+        <div id="reader-global" style="width: 100%; max-width: 400px; margin: 0 auto; border-radius: 8px; overflow: hidden;"></div>
+        <button type="button" id="btn-cerrar-camara-global" class="btn btn-outline" style="width: 100%; max-width: 400px; margin: 10px auto 0; display: block; color: #ef4444; border-color: #fecaca;">
+          <i class="ti ti-x"></i> Cancelar Escaneo
+        </button>
       </div>
       
       <div class="card-body">
@@ -176,10 +196,10 @@
                     <button type="button" class="btn-new" id="btn-nuevo-producto" style="width:auto; flex-shrink:0;"><i class="ti ti-plus"></i> Nuevo</button>
                   </div>
                   
-                  <!-- Input para nuevo producto (ahora en línea con su botón) -->
-                  <div class="input-nuevo-wrapper" id="producto-nuevo-wrapper" style="flex-direction: row; display: none;">
-                    <input type="text" id="producto-nuevo" class="input-nuevo" placeholder="Escriba el nombre..." style="flex:1;" />
-                    <button type="button" class="btn-clear-input" id="btn-cancelar-producto" style="width:auto; flex-shrink:0;"><i class="ti ti-x"></i></button>
+                  <!-- Input para nuevo producto (oculto por defecto) -->
+                  <div class="input-nuevo-wrapper" id="producto-nuevo-wrapper" style="display: none;">
+                    <input type="text" id="producto-nuevo" class="input-nuevo" placeholder="Escriba el nombre..." />
+                    <button type="button" class="btn-clear-input" id="btn-cancelar-producto"><i class="ti ti-x"></i></button>
                   </div>
                   
                   <small class="field-hint" id="producto-hint">Seleccione un producto o cree uno nuevo</small>
@@ -257,9 +277,9 @@
                     <select id="cliente-select" style="flex:1;"><option value="">-- Seleccione --</option></select>
                     <button type="button" class="btn-new" id="btn-nuevo-cliente" style="width:auto; flex-shrink:0;"><i class="ti ti-plus"></i> Nuevo</button>
                   </div>
-                  <div class="input-nuevo-wrapper" id="cliente-nuevo-wrapper" style="flex-direction: row; display: none; margin-top: 6px;">
-                    <input type="text" id="cliente-nuevo" placeholder="Nombre del cliente..." style="flex:1;" />
-                    <button type="button" class="btn-clear-input" id="btn-cancelar-cliente" style="width:auto; flex-shrink:0;"><i class="ti ti-x"></i></button>
+                  <div class="input-nuevo-wrapper" id="cliente-nuevo-wrapper" style="display: none;">
+                    <input type="text" id="cliente-nuevo" placeholder="Nombre del cliente..." />
+                    <button type="button" class="btn-clear-input" id="btn-cancelar-cliente"><i class="ti ti-x"></i></button>
                   </div>
                 </div>
 
@@ -285,23 +305,10 @@
                   <input type="text" id="lote-id" readonly class="input-lote-auto" />
                 </div>
                 
-                <!-- INPUT DE TICKET CON BOTÓN DE ESCÁNER -->
+                <!-- INPUT DE TICKET (EL BOTÓN SE QUITÓ DE AQUÍ) -->
                 <div class="field field-full-width">
-                  <label>Nº Ticket / Escanear</label>
-                  <div style="display: flex; gap: 8px;">
-                    <input type="text" id="ticket_carga" style="flex: 1;" />
-                    <button type="button" id="btn-escanear-prod" class="btn btn-primary" style="width: 44px; padding: 0;" title="Escanear Código de Barras">
-                      <i class="ti ti-scan" style="font-size: 20px;"></i>
-                    </button>
-                  </div>
-                  
-                  <!-- Contenedor de la cámara (oculto por defecto) -->
-                  <div id="reader-container-prod" style="display: none; margin-top: 12px; border: 2px dashed #cbd5e1; border-radius: 8px; padding: 10px; background: #f8fafc;">
-                    <div id="reader-prod" style="width: 100%; border-radius: 8px; overflow: hidden;"></div>
-                    <button type="button" id="btn-cerrar-camara-prod" class="btn btn-outline btn-sm" style="width: 100%; margin-top: 10px; color: #ef4444; border-color: #ef4444;">
-                      <i class="ti ti-x"></i> Cancelar Escaneo
-                    </button>
-                  </div>
+                  <label>Nº Ticket</label>
+                  <input type="text" id="ticket_carga" />
                 </div>
 
                 <div class="field field-auto">
@@ -628,6 +635,8 @@
 <!-- Scripts -->
 <script src="../assets/js/shared.js"></script>
 <script src="../assets/js/login_app.js"></script>
+<!-- 👇 IMPORTANTE: Cargar escaner.js ANTES de produccion.js -->
+<script src="../assets/js/escaner.js"></script>
 <script src="../assets/js/produccion.js" defer></script>
 
 </body>

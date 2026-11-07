@@ -36,6 +36,7 @@ from app.routes import dashboard
 from app.routes import reportes
 from app.routes import reportes_defectos
 from app.routes import cargos
+from app.routes import escaner # 👈 NUEVO IMPORT
 
 
 # =========================
@@ -134,7 +135,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
 # =========================
-# CORS FRONTEND (MODIFICADO)
+# CORS FRONTEND
 # =========================
 
 origins = [
@@ -151,7 +152,7 @@ origins = [
     "http://localhost:8000",
     "http://127.0.0.1:3000",
     "http://localhost:3000",
-    "https://venvidrio-calidad.onrender.com", # <-- FRONTEND EN RENDER
+    "https://venvidrio-calidad.onrender.com",
 ]
 
 app.add_middleware(
@@ -196,6 +197,9 @@ app.include_router(dashboard.router)
 
 app.include_router(reportes.router)
 app.include_router(reportes_defectos.router)
+
+# 👇 REGISTRO DEL NUEVO ROUTER DE ESCÁNER
+app.include_router(escaner.router)
 
 
 # =========================
