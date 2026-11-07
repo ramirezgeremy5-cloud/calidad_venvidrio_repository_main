@@ -20,27 +20,18 @@ body {
   color: #1e293b;
 }
 
-/* ==========================================
-   HEADER
-   ========================================== */
+/* HEADER DE LA PÁGINA */
 .header-acciones {
   width: 100%;
-  max-width: 420px;
+  max-width: 500px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
+.header-acciones h1 { font-size: 18px; font-weight: 700; color: #1e3a8a; }
 
-.header-acciones h1 {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1e3a8a;
-}
-
-/* ==========================================
-   BOTONES
-   ========================================== */
+/* BOTONES */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -55,176 +46,134 @@ body {
   transition: all 0.2s;
   font-family: inherit;
 }
-
-.btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
+.btn:disabled { opacity: 0.7; cursor: not-allowed; }
 .btn-primary { background: #1e3a8a; color: #fff; }
-.btn-primary:hover { background: #1e40af; }
-
 .btn-jpg { background: #0f766e; color: #fff; }
-.btn-jpg:hover { background: #0d9488; }
-
 .btn-pdf { background: #dc2626; color: #fff; }
-.btn-pdf:hover { background: #b91c1c; }
-
-.btn-outline {
-  background: transparent;
-  border: 2px solid #cbd5e1;
-  color: #475569;
-}
+.btn-outline { background: transparent; border: 2px solid #cbd5e1; color: #475569; }
 .btn-outline:hover { background: #f1f5f9; }
 
 /* ==========================================
-   ETIQUETA
+   DISEÑO DE LA ETIQUETA (TICKET)
    ========================================== */
-.ticket-preview-container {
-  background: #fff;
-  border: 2px solid #000;
-  border-radius: 12px;
-  padding: 20px;
+.ticket-wrapper {
   width: 100%;
-  max-width: 420px;
-  font-family: "Courier New", Courier, monospace;
-  color: #000;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  max-width: 500px;
   margin-bottom: 20px;
 }
 
-.ticket-header {
-  text-align: center;
+.ticket-border {
+  background: #ffffff;
+  border: 2px solid #000;
+  border-radius: 8px;
+  padding: 15px;
+  font-family: "Courier New", Courier, monospace;
+  color: #000;
+  line-height: 1.3;
+}
+
+/* CABECERA */
+.tk-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   border-bottom: 1px dashed #ccc;
   padding-bottom: 10px;
   margin-bottom: 10px;
 }
+.tk-logo img { height: 40px; max-width: 100px; object-fit: contain; }
+.tk-header-right { text-align: right; }
+.tk-planta { font-size: 12px; font-weight: bold; letter-spacing: 1px; }
+.tk-title { font-size: 18px; font-weight: bold; letter-spacing: 1px; margin-top: 5px; }
 
-.ticket-header .brand {
-  font-weight: bold;
-  font-size: 14px;
-  letter-spacing: 1px;
+/* FILAS Y COLUMNAS */
+.tk-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; }
+.tk-label { font-weight: normal; color: #333; }
+.tk-val { font-weight: bold; text-align: right; }
+
+.tk-top-data, .tk-mid-data, .tk-product-data, .tk-bottom-data {
+  border-bottom: 1px dashed #ccc;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
 }
 
-.ticket-header .title {
-  font-size: 18px;
+.tk-top-data { display: flex; justify-content: space-between; }
+.tk-col { width: 48%; }
+
+.tk-mid-data { display: flex; justify-content: space-between; }
+.tk-col-4 { width: 48%; }
+.tk-val-large { font-size: 14px; font-weight: bold; margin-top: 2px; }
+
+.tk-bottom-data { display: flex; justify-content: space-between; border-bottom: none; }
+.tk-main-col { width: 70%; }
+.tk-side-col { width: 28%; text-align: right; }
+
+.tk-row-large { display: flex; align-items: center; margin-bottom: 6px; font-size: 12px; }
+.tk-row-large .tk-label { width: 110px; }
+.tk-val-large-bold { font-size: 16px; font-weight: bold; }
+
+/* CÓDIGO DE BARRAS */
+.tk-barcode-container {
+  text-align: center;
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 2px solid #000;
+}
+#barcode-svg {
+  max-width: 100%;
+  height: 60px;
+}
+.tk-barcode-text {
+  font-size: 14px;
   font-weight: bold;
   margin-top: 5px;
   letter-spacing: 2px;
 }
 
-.ticket-info {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  margin-bottom: 5px;
-  line-height: 1.4;
-}
-
-.ticket-info .left { text-align: left; }
-.ticket-info .right { text-align: right; font-weight: bold; }
-
-.ticket-separator {
-  border-top: 1px dashed #ccc;
-  margin: 8px 0;
-}
-
-.ticket-item {
-  font-size: 14px;
-  font-weight: bold;
-  margin: 10px 0;
-}
-
-.ticket-item span { font-weight: normal; }
-
-.ticket-barcode {
+.tk-footer {
   text-align: center;
-  margin: 15px 0;
-  padding: 10px 0;
-  border-top: 1px solid #000;
-  border-bottom: 1px solid #000;
-}
-
-.ticket-barcode .barcode-lines {
-  font-size: 40px;
-  letter-spacing: 2px;
-  line-height: 1;
-  font-family: 'Libre Barcode 39', 'Courier New', monospace;
-}
-
-.ticket-barcode .barcode-text {
-  font-size: 12px;
-  font-weight: bold;
-  margin-top: 5px;
-  letter-spacing: 1px;
-}
-
-.ticket-footer {
-  text-align: center;
-  font-size: 10px;
+  font-size: 9px;
   color: #555;
   margin-top: 15px;
   border-top: 1px dashed #ccc;
   padding-top: 8px;
+  letter-spacing: 1px;
 }
 
 /* ==========================================
-   ACCIONES DE DESCARGA
+   ACCIONES Y OTROS
    ========================================== */
 .acciones-descarga {
   width: 100%;
-  max-width: 420px;
+  max-width: 500px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
-
-.acciones-descarga .btn {
-  width: 100%;
-  padding: 14px;
-  font-size: 15px;
-}
+.acciones-descarga .btn { width: 100%; padding: 14px; font-size: 15px; }
 
 .nota {
   font-size: 12px;
   color: #64748b;
   text-align: center;
-  max-width: 420px;
-  margin-bottom: 20px;
+  max-width: 500px;
   line-height: 1.5;
 }
 
-/* ==========================================
-   ERROR
-   ========================================== */
 .error-container {
   width: 100%;
-  max-width: 420px;
+  max-width: 500px;
   background: #fee2e2;
   border: 2px solid #ef4444;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 20px;
   text-align: center;
   color: #991b1b;
   margin-bottom: 20px;
 }
+.error-container i { font-size: 32px; display: block; margin-bottom: 10px; }
 
-.error-container i {
-  font-size: 32px;
-  display: block;
-  margin-bottom: 10px;
-}
-
-.error-container p {
-  font-size: 14px;
-  margin-bottom: 15px;
-  font-weight: 600;
-}
-
-/* ==========================================
-   LOADING OVERLAY
-   ========================================== */
 #loading {
   position: fixed;
   inset: 0;
@@ -238,15 +187,12 @@ body {
   color: #1e3a8a;
   font-weight: bold;
 }
-
 .spinner {
-  width: 40px;
-  height: 40px;
+  width: 40px; height: 40px;
   border: 4px solid #cbd5e1;
   border-top: 4px solid #1e3a8a;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 15px;
 }
-
 @keyframes spin { 100% { transform: rotate(360deg); } }

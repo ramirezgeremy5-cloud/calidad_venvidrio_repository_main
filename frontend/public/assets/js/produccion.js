@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v12 (QR a HTML externo + Descarga JPG/PDF)
+   produccion.js - v13 (Fix Descargas JPG/PDF y Avatar)
    ========================================== */
 
 (function () {
@@ -85,7 +85,15 @@
     if (userData) {
       try {
         const user = JSON.parse(userData);
-        let avatarHtml = user.foto_url ? `<img src="${API_URL}${user.foto_url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` : (user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US');
+        // 👇 FIX: Verifica si la URL de la foto ya es absoluta para no duplicar el dominio
+        let avatarHtml = 'US';
+        if (user.foto_url) {
+          const fullUrl = user.foto_url.startsWith('http') ? user.foto_url : `${API_URL}${user.foto_url}`;
+          avatarHtml = `<img src="${fullUrl}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
+        } else if (user.nombre) {
+          avatarHtml = user.nombre.substring(0, 2).toUpperCase();
+        }
+
         if (document.getElementById('navAvatar')) document.getElementById('navAvatar').innerHTML = avatarHtml;
         if (document.getElementById('dropdownAvatar')) document.getElementById('dropdownAvatar').innerHTML = avatarHtml;
         ['navUsername', 'dropdownName'].forEach(id => { if (document.getElementById(id)) document.getElementById(id).textContent = user.nombre || 'Usuario'; });
@@ -520,7 +528,11 @@
     const elementoCaptura = document.getElementById("ticket-para-captura");
     if (!elementoCaptura) { mostrarToast("No se encontró la etiqueta visual", true); return; }
 
-    html2canvas(elementoCaptura, { scale: 2 }).then(canvas => {
+    // Forzamos la visibilidad para que html2canvas calcule bien el tamaño
+    const displayOriginal = elementoCaptura.parentElement.style.display;
+    elementoCaptura.parentElement.style.display = 'block'; // o 'flex' según tu CSS
+
+    html2canvas(elementoCaptura, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
       const imgData = canvas.toDataURL("image/jpeg", 0.9);
       const enlace = document.createElement('a');
       enlace.href = imgData;
@@ -528,26 +540,48 @@
       document.body.appendChild(enlace);
       enlace.click();
       document.body.removeChild(enlace);
-    }).catch(err => { console.error(err); mostrarToast("Error al generar la imagen", true); });
+      
+      // Restauramos el estado original
+      elementoCaptura.parentElement.style.display = displayOriginal;
+    }).catch(err => { 
+      console.error(err); 
+      mostrarToast("Error al generar la imagen", true); 
+      elementoCaptura.parentElement.style.display = displayOriginal;
+    });
   }
 
   function descargarEtiquetaPDF() {
     const elementoCaptura = document.getElementById("ticket-para-captura");
     if (!elementoCaptura) { mostrarToast("No se encontró la etiqueta visual", true); return; }
 
-    html2canvas(elementoCaptura, { scale: 2 }).then(canvas => {
+    const displayOriginal = elementoCaptura.parentElement.style.display;
+    elementoCaptura.parentElement.style.display = 'block';
+
+    html2canvas(elementoCaptura, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
       const imgData = canvas.toDataURL("image/jpeg", 0.9);
       const { jsPDF } = window.jspdf;
       
       const pdf = new jsPDF('p', 'mm', 'a4');
       const imgWidth = 100; 
-      const imgHeight = (canvas.height * imgWidth) / canvas.width; 
+      let imgHeight = (canvas.height * imgWidth) / canvas.width; 
+      
+      // 👇 FIX: Validación para evitar el error de jsPDF.scale
+      if (!imgHeight || !isFinite(imgHeight) || imgHeight <= 0) {
+          imgHeight = 150; // Altura por defecto segura
+      }
+
       const x = (pdf.internal.pageSize.getWidth() - imgWidth) / 2;
       const y = 20;
 
       pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
       pdf.save("etiqueta_lote_" + (document.getElementById("modal-lote-codigo").innerText || "sin_id") + ".pdf");
-    }).catch(err => { console.error(err); mostrarToast("Error al generar el PDF", true); });
+      
+      elementoCaptura.parentElement.style.display = displayOriginal;
+    }).catch(err => { 
+      console.error(err); 
+      mostrarToast("Error al generar el PDF", true); 
+      elementoCaptura.parentElement.style.display = displayOriginal;
+    });
   }
   // ---------------------------------------------
 

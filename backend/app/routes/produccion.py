@@ -27,9 +27,9 @@ def get_db():
 
 
 # =========================
-# GENERADOR DE CÓDIGO DE LOTE (CORREGIDO A DD/MM/AAAA)
-# Formato: DDMMAAAA + Máquina + XXX
-# Ejemplo: 08102026A1001
+# GENERADOR DE CÓDIGO DE LOTE (FORMATO AAAAMMDD)
+# Formato: AAAAMMDD + Máquina + XXX
+# Ejemplo: 20261106A1001
 # =========================
 def _generar_codigo_lote(
     db: Session,
@@ -37,17 +37,17 @@ def _generar_codigo_lote(
     maquina: Optional[str] = None
 ) -> str:
     """
-    Genera un código de lote con formato DDMMAAAA + Máquina + XXX.
-    - DDMMAAAA  = fecha de producción (ej: 08102026 para 8 de Octubre)
+    Genera un código de lote con formato AAAAMMDD + Máquina + XXX.
+    - AAAAMMDD  = fecha de producción (ej: 20261106 para 6 de Noviembre de 2026)
     - Máquina   = código de máquina en mayúsculas (ej: A1)
     - XXX       = consecutivo de 3 dígitos (001, 002, ...)
-    Ejemplo: 08102026A1001
+    Ejemplo: 20261106A1001
     """
     if fecha is None:
         fecha = date.today()
 
-    # 👇 CORRECCIÓN DE FECHA: Día, Mes, Año
-    fecha_str = fecha.strftime("%d%m%Y") 
+    # 👇 CORRECCIÓN DE FECHA: Año, Mes, Día
+    fecha_str = fecha.strftime("%Y%m%d") 
     maquina_limpia = (maquina or "XX").replace(" ", "").upper()
     prefijo = f"{fecha_str}{maquina_limpia}"
 
@@ -138,7 +138,6 @@ def buscar_lote_por_codigo(codigo_escaneado: str, db: Session = Depends(get_db))
     Endpoint para el escáner de la cámara interna.
     Busca un lote comparando el código escaneado con el 'codigo_lote' o con el 'ticket_carga'.
     """
-    # Limpiamos posibles espacios en blanco del escáner
     codigo_limpio = codigo_escaneado.strip()
     
     produccion = db.query(Produccion).filter(
@@ -155,7 +154,7 @@ def buscar_lote_por_codigo(codigo_escaneado: str, db: Session = Depends(get_db))
 
 
 # =========================
-# 👇 NUEVO: BUSCAR POR CÓDIGO PÚBLICO (SIN AUTH)
+# BUSCAR POR CÓDIGO PÚBLICO (SIN AUTH)
 # =========================
 @router.get("/publico/{codigo_escaneado}", response_model=ProduccionResponse)
 def buscar_lote_publico(codigo_escaneado: str, db: Session = Depends(get_db)):
@@ -389,7 +388,7 @@ def obtener_produccion(produccion_id: int, db: Session = Depends(get_db)):
 def crear_produccion(datos: ProduccionCreate, db: Session = Depends(get_db)):
     """
     Crea un nuevo lote.
-    El código se genera como DDMMAAAA + Máquina + XXX (ej: 08102026A1001).
+    El código se genera como AAAAMMDD + Máquina + XXX (ej: 20261106A1001).
     """
     fecha_ref = datos.fecha_produccion if datos.fecha_produccion else date.today()
     if isinstance(fecha_ref, datetime):
