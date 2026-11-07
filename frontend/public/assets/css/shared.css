@@ -1,12 +1,12 @@
 /* =============================================
    SHARED — VENVIDRIO
    Estilos globales: Fondo, Navbar, Contenedor, Modales y Utilidades
-   v4 — Mobile-first real + Reloj en Navbar
+   v5 — Reloj integrado y limpio en Navbar
    ============================================= */
 
 /* ================= VARIABLES GLOBALES ================= */
 :root {
-  color-scheme: light;              /* Fuerza modo claro siempre */
+  color-scheme: light;
   --navy: #1a237e;
   --navy-dark: #0d1b52;
   --off-white: #f8fafc;
@@ -43,7 +43,6 @@ body {
   padding: 0;
   font-family: var(--font-body);
   color: var(--text-main);
-  /* Safe area iPhone */
   padding-bottom: env(safe-area-inset-bottom);
   min-height: 100vh;
   min-height: 100dvh;
@@ -88,7 +87,14 @@ body {
 
 .navbar a, .navbar span, .navbar .nav-brand { color: #1a237e; }
 
-/* ---------- LOGO ---------- */
+/* ---------- CONTENEDOR IZQUIERDO (LOGO + RELOJ) ---------- */
+.nav-left-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
 .nav-brand {
   display: flex;
   align-items: center;
@@ -105,25 +111,22 @@ body {
   filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.1));
 }
 
-/* ---------- RELOJ EN NAVBAR ---------- */
+/* ---------- RELOJ INTEGRADO ---------- */
 .nav-reloj {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(26, 35, 126, 0.08); /* Fondo azul muy suave y elegante */
   color: var(--navy);
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  font-family: 'SF Mono', 'Consolas', monospace; /* Fuente monoespaciada para que no "baile" */
+  font-family: var(--font-body); /* Fuente normal, no monoespaciada */
   font-size: 13px;
-  font-weight: 600;
-  border: 1px solid rgba(26, 35, 126, 0.15);
+  font-weight: 500;
   white-space: nowrap;
-  letter-spacing: -0.02em;
+  opacity: 0.85; /* Un toque sutil para que no compita con el logo */
+  padding: 4px 0;
 }
 .nav-reloj i {
-  font-size: 16px;
-  opacity: 0.8;
+  font-size: 15px;
+  opacity: 0.7;
 }
 
 /* ---------- HAMBURGUESA (solo móvil) ---------- */
@@ -149,7 +152,6 @@ body {
 .nav-toggle:hover { background: rgba(26, 35, 126, 0.12); }
 .nav-toggle:active { transform: scale(0.92); }
 
-/* Estado abierto: fondo azul, ícono gira */
 .nav-toggle[aria-expanded="true"] {
   background: var(--navy);
   color: #fff;
@@ -234,7 +236,6 @@ body {
 }
 .nav-user:hover { background: rgba(0, 0, 0, 0.06); }
 
-/* Cuando el dropdown está abierto, el avatar recibe un anillo azul */
 .nav-user.is-open {
   background: rgba(26, 35, 126, 0.08);
   box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.15);
@@ -277,12 +278,10 @@ body {
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   box-shadow: 0 12px 40px rgba(0,0,0,0.12);
-
   opacity: 0;
   visibility: hidden;
   transform: translateY(-8px);
   transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
-
   z-index: 1100 !important;
   overflow: hidden;
 }
@@ -599,6 +598,13 @@ body {
 /* =========== RESPONSIVE NAVBAR =============== */
 /* ============================================= */
 
+@media (max-width: 1100px) {
+  /* Ocultamos la fecha en pantallas medianas para que quepa la hora */
+  .nav-reloj .reloj-fecha {
+    display: none;
+  }
+}
+
 @media (max-width: 900px) {
   .navbar {
     padding: 0.6rem 1rem;
@@ -608,15 +614,18 @@ body {
     justify-content: space-between;
   }
 
-  .nav-brand {
+  .nav-left-group {
     order: 1;
     flex: 1 1 auto;
+    gap: 10px;
   }
 
-  /* En móvil, el reloj se oculta si no cabe, o se ajusta */
+  /* En móvil, ajustamos el reloj para que se vea bien y no ocupe mucho */
   .nav-reloj {
-    display: none; /* Ocultamos el reloj en móvil para no saturar la barra */
+    font-size: 12px;
+    padding: 2px 0;
   }
+  .nav-reloj i { font-size: 14px; }
 
   .nav-toggle {
     display: inline-flex;
