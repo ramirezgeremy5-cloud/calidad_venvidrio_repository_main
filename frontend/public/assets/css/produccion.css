@@ -1,6 +1,6 @@
 /* ==========================================================
    PRODUCCIÓN — VENVIDRIO
-   produccion.css — v5 (Fix inputs nuevo + Diseño Limpio)
+   produccion.css — v6 (QR Modal + Limpieza)
    ========================================================== */
 
 /* ================= VARIABLES DE MARCA ================= */
@@ -354,7 +354,6 @@ body {
 .btn-new.active { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
 
 /* ================= INPUT NUEVO ================= */
-/* Oculto por defecto. El JS lo mostrará cambiando el display a flex */
 .input-nuevo-wrapper { display: none; flex-direction: row; gap: 8px; margin-top: 8px; }
 
 .input-nuevo {
@@ -588,23 +587,22 @@ body {
   color: var(--text-hint); font-size: 12px;
 }
 
-/* ================= RELOJ ================= */
-.nav-reloj {
+/* ================= CONTENEDOR DEL QR ================= */
+#modal-qr-container {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--brand-1);
-  color: #fff;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-family: var(--font-mono);
-  font-size: 14px;
-  font-weight: 600;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  justify-content: center;
+  padding: 15px;
+  background: #fff;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  width: fit-content;
+  margin: 0 auto;
+  box-shadow: inset 0 1px 4px rgba(0,0,0,0.02);
 }
-.nav-reloj i {
-  font-size: 16px;
-  opacity: 0.8;
+
+/* Ajuste del contenedor del código de barras al imprimir (si aplica) */
+#barcode {
+  max-width: 100%;
 }
 
 /* ================= ACCESIBILIDAD ================= */
