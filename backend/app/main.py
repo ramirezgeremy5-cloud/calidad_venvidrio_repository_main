@@ -160,7 +160,8 @@ origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"http://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+):[0-9]{4,5}",
+    # 👇 REGEX AMPLIADO: Acepta IPs locales 192.168.x.x y 10.x.x.x (redes corporativas)
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+):[0-9]{4,5}",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

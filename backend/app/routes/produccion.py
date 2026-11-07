@@ -130,15 +130,39 @@ def listar_produccion(
 
 
 # =========================
-# BUSCAR POR CÓDIGO ESCANEADO (NUEVO)
+# BUSCAR POR CÓDIGO ESCANEADO (CON AUTH)
 # =========================
 @router.get("/buscar/{codigo_escaneado}", response_model=ProduccionResponse)
 def buscar_lote_por_codigo(codigo_escaneado: str, db: Session = Depends(get_db)):
     """
-    Endpoint para el escáner de la cámara.
+    Endpoint para el escáner de la cámara interna.
     Busca un lote comparando el código escaneado con el 'codigo_lote' o con el 'ticket_carga'.
     """
     # Limpiamos posibles espacios en blanco del escáner
+    codigo_limpio = codigo_escaneado.strip()
+    
+    produccion = db.query(Produccion).filter(
+        or_(
+            Produccion.codigo_lote == codigo_limpio,
+            Produccion.ticket_carga == codigo_limpio
+        )
+    ).first()
+
+    if not produccion:
+        raise HTTPException(status_code=404, detail="No se encontró ningún lote con ese código o ticket.")
+    
+    return produccion
+
+
+# =========================
+# 👇 NUEVO: BUSCAR POR CÓDIGO PÚBLICO (SIN AUTH)
+# =========================
+@router.get("/publico/{codigo_escaneado}", response_model=ProduccionResponse)
+def buscar_lote_publico(codigo_escaneado: str, db: Session = Depends(get_db)):
+    """
+    Endpoint público (sin autenticación) para que los operarios puedan
+    consultar un lote escaneando el QR desde su móvil.
+    """
     codigo_limpio = codigo_escaneado.strip()
     
     produccion = db.query(Produccion).filter(
@@ -345,7 +369,9 @@ def debug_schema(db: Session = Depends(get_db)):
 
 
 # =========================
-# OBTENER UNA PRODUCCIÓN
+# OBTENER UNA PRODUCCIÓN POR ID
+# ⚠️ IMPORTANTE: Esta ruta dinámica debe ir al final de todas las rutas GET
+# para no interceptar rutas como /publico, /buscar, /opciones, etc.
 # =========================
 @router.get("/{produccion_id}", response_model=ProduccionResponse)
 def obtener_produccion(produccion_id: int, db: Session = Depends(get_db)):

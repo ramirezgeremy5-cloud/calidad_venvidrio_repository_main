@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Etiqueta de Lote — MoonDRAGO</title>
+  
+  <!-- Librerías para generar imagen y PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  
+  <!-- CSS externo -->
+  <link rel="stylesheet" href="../assets/css/etiqueta.css">
+</head>
+<body>
+
+<!-- OVERLAY DE CARGA -->
+<div id="loading">
+  <div class="spinner"></div>
+  <span id="loading-text">Cargando etiqueta...</span>
+</div>
+
+<!-- HEADER -->
+<div class="header-acciones">
+  <h1><i class="ti ti-qrcode"></i> Etiqueta del Lote</h1>
+  <button class="btn btn-outline" onclick="window.close()" title="Cerrar">
+    <i class="ti ti-x"></i>
+  </button>
+</div>
+
+<!-- MENSAJE DE ERROR (oculto por defecto) -->
+<div id="error-container" class="error-container" style="display: none;">
+  <i class="ti ti-alert-circle"></i>
+  <p id="error-message">No se pudo cargar la etiqueta.</p>
+  <button class="btn btn-primary" onclick="window.location.reload()">
+    <i class="ti ti-refresh"></i> Reintentar
+  </button>
+</div>
+
+<!-- ETIQUETA VISUAL -->
+<div class="ticket-preview-container" id="ticket-para-captura" style="display: none;">
+  <div class="ticket-header">
+    <div class="brand" id="ticket-planta">VENVIDRIO VALERA</div>
+    <div class="title" id="ticket-title-code">TICKET-</div>
+  </div>
+  
+  <div class="ticket-info">
+    <div class="left">
+      <div>CLIENT / CLIENTE</div>
+      <div>ORDER / ORDEN</div>
+      <div>MACH / SHIFT / GROUP</div>
+      <div>PRODUCT / PRODUCTO</div>
+      <div>ACABADO / FINISHED</div>
+    </div>
+    <div class="right">
+      <div id="ticket-cliente">—</div>
+      <div id="ticket-orden">—</div>
+      <div id="ticket-maquina">—</div>
+      <div id="ticket-producto">—</div>
+      <div id="ticket-acabado">—</div>
+    </div>
+  </div>
+
+  <div class="ticket-separator"></div>
+
+  <div class="ticket-item">ITEM <span id="ticket-item-code">—</span></div>
+  <div class="ticket-item">MOLD / MOLDE <span id="ticket-molde">—</span></div>
+  <div class="ticket-item">LOT / LOTE <span id="ticket-lote">—</span></div>
+  
+  <div class="ticket-barcode">
+    <div class="barcode-lines">|||||||||||||||||||||||||||||||</div>
+    <div class="barcode-text" id="ticket-ticket-text">—</div>
+  </div>
+  
+  <div class="ticket-footer">
+    MADE IN VENEZUELA / HECHO EN VENEZUELA
+  </div>
+</div>
+
+<!-- BOTONES DE DESCARGA -->
+<div class="acciones-descarga" id="acciones-descarga" style="display: none;">
+  <button class="btn btn-jpg" id="btn-descargar-jpg">
+    <i class="ti ti-download"></i> Descargar Imagen JPG
+  </button>
+  <button class="btn btn-pdf" id="btn-descargar-pdf">
+    <i class="ti ti-file-type-pdf"></i> Descargar PDF
+  </button>
+</div>
+
+<p class="nota" id="nota-info" style="display: none;">
+  <i class="ti ti-info-circle"></i> Los archivos se generan como imagen estática. Ideal para imprimir o enviar por WhatsApp sin perder el formato original.
+</p>
+
+<!-- JS externo -->
+<script src="../assets/js/etiqueta.js"></script>
+
+</body>
+</html>

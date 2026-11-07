@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v11 (QR en Modal de Detalle)
+   produccion.js - v12 (QR a HTML externo + Descarga JPG/PDF)
    ========================================== */
 
 (function () {
@@ -515,6 +515,42 @@
     try { const d = new Date(fechaStr + 'T00:00:00'); return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (e) { return fechaStr; }
   }
 
+  // --- FUNCIONES PARA DESCARGAR IMAGEN Y PDF ---
+  function descargarEtiquetaJPG() {
+    const elementoCaptura = document.getElementById("ticket-para-captura");
+    if (!elementoCaptura) { mostrarToast("No se encontró la etiqueta visual", true); return; }
+
+    html2canvas(elementoCaptura, { scale: 2 }).then(canvas => {
+      const imgData = canvas.toDataURL("image/jpeg", 0.9);
+      const enlace = document.createElement('a');
+      enlace.href = imgData;
+      enlace.download = "etiqueta_lote_" + (document.getElementById("modal-lote-codigo").innerText || "sin_id") + ".jpg";
+      document.body.appendChild(enlace);
+      enlace.click();
+      document.body.removeChild(enlace);
+    }).catch(err => { console.error(err); mostrarToast("Error al generar la imagen", true); });
+  }
+
+  function descargarEtiquetaPDF() {
+    const elementoCaptura = document.getElementById("ticket-para-captura");
+    if (!elementoCaptura) { mostrarToast("No se encontró la etiqueta visual", true); return; }
+
+    html2canvas(elementoCaptura, { scale: 2 }).then(canvas => {
+      const imgData = canvas.toDataURL("image/jpeg", 0.9);
+      const { jsPDF } = window.jspdf;
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 100; 
+      const imgHeight = (canvas.height * imgWidth) / canvas.width; 
+      const x = (pdf.internal.pageSize.getWidth() - imgWidth) / 2;
+      const y = 20;
+
+      pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
+      pdf.save("etiqueta_lote_" + (document.getElementById("modal-lote-codigo").innerText || "sin_id") + ".pdf");
+    }).catch(err => { console.error(err); mostrarToast("Error al generar el PDF", true); });
+  }
+  // ---------------------------------------------
+
   window.verLote = function (id) {
     const lote = lotes.find(l => l.id === id);
     if (!lote) return;
@@ -566,14 +602,15 @@
     setTexto('detail-observaciones', lote.observaciones);
 
     // ==========================================
-    // GENERAR CÓDIGO QR PARA LA ETIQUETA
+    // GENERAR CÓDIGO QR PARA LA ETIQUETA EXTERNA
     // ==========================================
     const qrContainer = document.getElementById('modal-qr-container');
     if (qrContainer) {
-      qrContainer.innerHTML = ''; // Limpiar QR anterior
+      qrContainer.innerHTML = ''; 
       
+      // Construimos la URL apuntando a etiqueta.html (Página independiente)
       const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-      const urlEtiqueta = `${baseUrl}/etiquetas.html?lote=${encodeURIComponent(lote.codigo)}`;
+      const urlEtiqueta = `${baseUrl}/etiqueta.html?lote=${encodeURIComponent(lote.codigo)}`;
 
       if (typeof QRCode !== 'undefined') {
         new QRCode(qrContainer, {
@@ -587,6 +624,37 @@
       } else {
         qrContainer.innerHTML = '<span style="font-size:12px;color:#ef4444;">Error: Librería QR no cargada.</span>';
       }
+    }
+
+    // ==========================================
+    // ACTUALIZAR Y ENLAZAR BOTONES DE DESCARGA
+    // ==========================================
+    
+    // 1. Inyectar los datos en el ticket visual oculto
+    document.getElementById("ticket-title-code").innerText = lote.ticket_carga || "TICKET-PRUEBA-123";
+    document.getElementById("ticket-cliente").innerText = lote.cliente || "CLIENTE STOCK";
+    document.getElementById("ticket-orden").innerText = lote.orden || "NO APLICA";
+    document.getElementById("ticket-maquina").innerText = lote.maquina || "A1";
+    document.getElementById("ticket-producto").innerText = lote.prod || "BOTELLA PRUEBA 500ML";
+    document.getElementById("ticket-acabado").innerText = lote.acabado || "26-600-BEAD";
+    document.getElementById("ticket-item-code").innerText = lote.item || "V-TEST-001";
+    document.getElementById("ticket-molde").innerText = lote.molde || "MOLDE-PRUEBA-01";
+    document.getElementById("ticket-lote").innerText = lote.codigo || "07112026A1001";
+    document.getElementById("ticket-ticket-text").innerText = lote.ticket_carga || "TICKET-PRUEBA-123";
+
+    // 2. Asignar eventos a los botones de descarga (eliminar anteriores para evitar duplicados)
+    const btnJPG = document.getElementById("btn-descargar-jpg");
+    const btnPDF = document.getElementById("btn-descargar-pdf");
+    
+    if (btnJPG) {
+      const nuevoBtnJPG = btnJPG.cloneNode(true);
+      btnJPG.parentNode.replaceChild(nuevoBtnJPG, btnJPG);
+      nuevoBtnJPG.addEventListener("click", descargarEtiquetaJPG);
+    }
+    if (btnPDF) {
+      const nuevoBtnPDF = btnPDF.cloneNode(true);
+      btnPDF.parentNode.replaceChild(nuevoBtnPDF, btnPDF);
+      nuevoBtnPDF.addEventListener("click", descargarEtiquetaPDF);
     }
 
     document.getElementById('modal-ver-lote').style.display = 'flex';
@@ -712,21 +780,15 @@
         } else if (response.status === 404) {
           // --- LOTE NUEVO (NO ESTÁ EN BD) ---
           
-          // Llenamos el ticket
           document.getElementById('ticket_carga').value = codigoEscaneado;
-          
-          // Llenamos la fecha con hoy
           document.getElementById('fecha-prod').value = new Date().toISOString().split('T')[0];
           
-          // Llenamos el operador actual
           const userData = localStorage.getItem('user');
           if (userData) {
             const user = JSON.parse(userData);
             document.getElementById('operador').value = user.nombre || '';
           }
 
-          // 👇 AQUÍ ESTÁ LA MAGIA: Si el código es el de la etiqueta de ejemplo,
-          // llenamos todo con los datos de la foto para que solo tenga que guardar.
           if (codigoEscaneado === '05-003104461' || codigoEscaneado.includes('05-003104461')) {
               document.getElementById('planta').value = 'Valera';
               document.getElementById('maquina').value = 'A1';
@@ -736,7 +798,6 @@
               
               const prodSelect = document.getElementById('producto-select');
               if (prodSelect) {
-                // Buscar el producto "Salsa Inglesa"
                 const match = Array.from(prodSelect.options).find(o => o.value.toUpperCase().includes('SALSA INGLESA'));
                 if (match) { prodSelect.value = match.value; prodSelect.dispatchEvent(new Event('change')); }
               }
@@ -748,7 +809,6 @@
               }
           }
 
-          // Mover al usuario a la Pestaña 1 (Contexto) para que vea todo lleno
           const tabContexto = document.querySelector('[data-tab="tab-contexto"]');
           if (tabContexto) tabContexto.click();
 
