@@ -1,7 +1,7 @@
 /* =============================================
    Venvidrio — Sistema de Control de Calidad
    login_app.js (Login + Control Global de Perfil)
-   v2 — Mobile-first, modal perfil animado, foto validada
+   v3 — Mobile-first, sesión 8h, fix foto
    ============================================= */
 
 (function () {
@@ -16,12 +16,12 @@
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     API_URL = 'http://127.0.0.1:8000';
   } else {
-    // En producción usamos la URL segura de Render
     API_URL = 'https://calidad-venvidrio-repository-main.onrender.com';
   }
 
-  var TIEMPO_ALERTA_MS      = 3.5 * 60 * 1000;
-  var TIEMPO_INACTIVIDAD_MS = 4 * 60 * 1000;
+  // 👇 SESIÓN: 8 HORAS (480 minutos) para cubrir un turno completo
+  var TIEMPO_ALERTA_MS      = 470 * 60 * 1000; // Avisar a los 7h 50m
+  var TIEMPO_INACTIVIDAD_MS = 480 * 60 * 1000; // Cerrar a las 8h
   var INTERVALO_HEARTBEAT_MS = 60000;
 
   var heartbeatInterval = null;
@@ -45,6 +45,24 @@
   var esPaginaLogin = !!(usernameInput && passwordInput && submitBtn);
 
   // =========================
+  // FUNCIÓN CORREGIDA: Normaliza la URL de la foto
+  // =========================
+  function obtenerUrlFoto(fotoUrl) {
+    if (!fotoUrl) return null;
+    
+    // 1. Arreglar el error de tipeo "https//" o "http//"
+    let urlLimpia = fotoUrl.replace(/^(https?)\/\//, '$1://');
+    
+    // 2. Si ya es una URL completa y válida, devolverla
+    if (urlLimpia.startsWith('http://') || urlLimpia.startsWith('https://')) {
+      return urlLimpia;
+    }
+    
+    // 3. Si es una ruta relativa, pegarla a la API
+    return `${API_URL}${urlLimpia}`;
+  }
+
+  // =========================
   // 1. ACTUALIZAR NAVBAR (con foto)
   // =========================
   function actualizarNavbar() {
@@ -59,7 +77,7 @@
         var dropdownAvatar = document.getElementById('dropdownAvatar');
 
         var avatarHtml = usuario.foto_url
-          ? '<img src="' + usuario.foto_url + '?t=' + Date.now() + '" alt="" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">'
+          ? '<img src="' + obtenerUrlFoto(usuario.foto_url) + '?t=' + Date.now() + '" alt="" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">'
           : (usuario.nombre ? usuario.nombre.substring(0, 2).toUpperCase() : 'US');
 
         if (navAvatar) navAvatar.innerHTML = avatarHtml;
@@ -515,8 +533,6 @@
     if (btnPerfil.dataset.initialized === 'true') return;
     btnPerfil.dataset.initialized = 'true';
 
-    // ---------- REDISEÑO ESTRUCTURAL DEL MODAL ----------
-    // Reestructuramos el cuerpo del modal para agrupar en secciones
     reestructurarModalPerfil();
 
     // ---------- ABRIR MODAL ----------
@@ -548,10 +564,7 @@
       setVal('miPerfil-nombre', u.nombre || '');
       setVal('miPerfil-cedula', u.cedula || '');
       setVal('miPerfil-correo', u.correo || '');
-      
-      // 👇 CORRECCIÓN: El turno se muestra como número o vacío
       setVal('miPerfil-turno', u.turno ? String(u.turno) : '');
-      
       setVal('miPerfil-cargo', u.cargo || 'No asignado');
       setVal('miPerfil-fecha-ingreso', u.fecha_ingreso || '');
       setVal('miPerfil-fecha-nacimiento', u.fecha_nacimiento || '');
@@ -562,7 +575,7 @@
       var icono = document.getElementById('miPerfil-icono-camara');
 
       if (u.foto_url) {
-        if (preview) { preview.src = u.foto_url + '?t=' + Date.now(); preview.style.display = 'block'; }
+        if (preview) { preview.src = obtenerUrlFoto(u.foto_url) + '?t=' + Date.now(); preview.style.display = 'block'; }
         if (icono) icono.style.display = 'none';
       } else {
         if (preview) { preview.removeAttribute('src'); preview.style.display = 'none'; }
@@ -690,7 +703,6 @@
         }
 
         // 2. Actualizar datos
-        // 👇 CORRECCIÓN: Convertimos el turno a número (parseInt) o null si está vacío
         var turnoVal = document.getElementById('miPerfil-turno').value;
         var turnoNum = turnoVal ? parseInt(turnoVal, 10) : null;
         if (isNaN(turnoNum)) turnoNum = null;
@@ -698,7 +710,7 @@
         var payload = {
           nombre: nombre,
           cedula: (document.getElementById('miPerfil-cedula').value || '').trim() || null,
-          turno: turnoNum, // 👈 Enviamos el número o null
+          turno: turnoNum,
           fecha_ingreso: document.getElementById('miPerfil-fecha-ingreso').value || null,
           fecha_nacimiento: document.getElementById('miPerfil-fecha-nacimiento').value || null,
           foto_url: fotoUrlFinal
@@ -734,7 +746,6 @@
               alert('Perfil actualizado correctamente');
             }
           } else {
-            // Si falla, mostramos el detalle del error del backend
             var errorData = await res.json().catch(() => ({}));
             mostrarErrorPerfil(errorData.detail || 'Error al actualizar el perfil.');
           }
@@ -784,7 +795,6 @@
 
     body.dataset.redesigned = 'true';
 
-    // Guardar referencias a los inputs existentes
     var existing = {
       nombre: document.getElementById('miPerfil-nombre'),
       cedula: document.getElementById('miPerfil-cedula'),
@@ -800,14 +810,12 @@
       error: document.getElementById('miPerfil-error')
     };
 
-    // Reconstruir el body con la nueva estructura
     body.innerHTML = '';
 
-    // Avatar
     var avatarWrap = document.createElement('div');
     avatarWrap.id = 'miPerfil-avatar-wrap';
     if (existing.avatarContainer) avatarWrap.appendChild(existing.avatarContainer);
-    if (existing.preview) avatarWrap.appendChild(existing.preview); // por si no estaba dentro
+    if (existing.preview) avatarWrap.appendChild(existing.preview);
     if (existing.inputFile) avatarWrap.appendChild(existing.inputFile);
     var hint = document.createElement('div');
     hint.id = 'miPerfil-avatar-hint';
@@ -815,20 +823,16 @@
     avatarWrap.appendChild(hint);
     body.appendChild(avatarWrap);
 
-    // Sección: Datos personales
     var secPersonal = document.createElement('div');
     secPersonal.className = 'perfil-section';
     secPersonal.innerHTML = '<div class="perfil-section-title"><i class="ti ti-user"></i> Datos personales</div>';
     var grid1 = document.createElement('div');
     grid1.className = 'grid-2';
-    var fNombre = crearField('Nombre Completo *', existing.nombre);
-    var fCedula = crearField('Cédula', existing.cedula);
-    grid1.appendChild(fNombre);
-    grid1.appendChild(fCedula);
+    grid1.appendChild(crearField('Nombre Completo *', existing.nombre));
+    grid1.appendChild(crearField('Cédula', existing.cedula));
     secPersonal.appendChild(grid1);
     body.appendChild(secPersonal);
 
-    // Sección: Contacto
     var secContacto = document.createElement('div');
     secContacto.className = 'perfil-section';
     secContacto.innerHTML = '<div class="perfil-section-title"><i class="ti ti-mail"></i> Contacto</div>';
@@ -843,7 +847,6 @@
     secContacto.appendChild(fCorreo);
     body.appendChild(secContacto);
 
-    // Sección: Información laboral
     var secLaboral = document.createElement('div');
     secLaboral.className = 'perfil-section';
     secLaboral.innerHTML = '<div class="perfil-section-title"><i class="ti ti-briefcase"></i> Información laboral</div>';
@@ -854,7 +857,6 @@
     secLaboral.appendChild(grid2);
     body.appendChild(secLaboral);
 
-    // Sección: Fechas
     var secFechas = document.createElement('div');
     secFechas.className = 'perfil-section';
     secFechas.innerHTML = '<div class="perfil-section-title"><i class="ti ti-calendar"></i> Fechas</div>';
@@ -865,17 +867,14 @@
     secFechas.appendChild(grid3);
     body.appendChild(secFechas);
 
-    // Error
     if (existing.error) {
       existing.error.style.display = 'none';
       body.appendChild(existing.error);
     }
 
-    // Reinsertar el avatar container en el wrap (por si innerHTML lo desconectó)
     if (existing.avatarContainer && !avatarWrap.contains(existing.avatarContainer)) {
       avatarWrap.insertBefore(existing.avatarContainer, hint);
     }
-    // Asegurar que preview e icono estén dentro del container
     if (existing.avatarContainer) {
       if (existing.preview && !existing.avatarContainer.contains(existing.preview))
         existing.avatarContainer.appendChild(existing.preview);
@@ -899,7 +898,7 @@
   }
 
   // =========================
-  // SESIÓN
+  // SESIÓN (HEARTBEAT Y EXPIRACIÓN)
   // =========================
   function startHeartbeat() {
     if (heartbeatInterval) return;
@@ -913,14 +912,18 @@
         headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' }
       })
       .then(function (response) {
-        if (response.status === 401 || response.status === 403) {
+        // SOLO cerramos sesión si el servidor dice explícitamente 401 (No autorizado)
+        if (response.status === 401) {
           clearInterval(heartbeatInterval);
           localStorage.clear();
-          alert('Tu sesión ha finalizado (expirada o iniciada en otro dispositivo).');
+          alert('Tu sesión ha finalizado (expirada).');
           window.location.href = '../public/login.html';
         }
       })
-      .catch(function (error) { console.warn('Heartbeat falló:', error); });
+      .catch(function (error) { 
+        // Si falla la red, NO cerramos sesión, solo avisamos en consola
+        console.warn('Heartbeat falló (posible problema de red):', error); 
+      });
     }, INTERVALO_HEARTBEAT_MS);
   }
 
@@ -966,6 +969,7 @@
         localStorage.setItem('lastActivity', Date.now());
       }
 
+      // Revisar inactividad cada minuto
       setInterval(function () {
         var lastActivity = parseInt(localStorage.getItem('lastActivity') || '0', 10);
         var inactividad = Date.now() - lastActivity;
@@ -974,7 +978,7 @@
           if (!alertaMostrada) { mostrarAlertaInactividad(); alertaMostrada = true; }
         }
         if (inactividad >= TIEMPO_INACTIVIDAD_MS) { cerrarSesionPorInactividad(); }
-      }, 5000);
+      }, 60000); // Cada 1 minuto
 
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () {
