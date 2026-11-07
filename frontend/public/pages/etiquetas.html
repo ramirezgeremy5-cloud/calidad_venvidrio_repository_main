@@ -17,10 +17,18 @@
 
 <!-- ================= NAVBAR ================= -->
 <nav class="navbar">
-  <div class="nav-brand">
-    <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
+  <div class="nav-left-group">
+    <div class="nav-brand">
+      <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
+    </div>
+    
+    <!-- RELOJ EN EL NAVBAR -->
+    <div class="nav-reloj">
+      <i class="ti ti-clock"></i>
+      <span id="reloj-real">--:--:--</span>
+    </div>
   </div>
-  
+
   <ul class="nav-links" id="navLinks">
     <li><a href="../public/dashboard.html"><i class="ti ti-layout-dashboard"></i> Panel Principal</a></li>
     <li><a href="../pages/produccion.html"><i class="ti ti-building-factory-2"></i> Producción</a></li>
@@ -28,7 +36,7 @@
     <li><a href="../pages/etiquetas.html" class="active"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
     <li><a href="../pages/auditoria_interna.html"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a></li>
     <li><a href="../pages/auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
-    <li id="navUsuariosLink" style="display:none;">
+    <li id="navUsuariosLink" class="nav-hidden">
       <a href="../pages/usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
     </li>
   </ul>
@@ -45,9 +53,9 @@
         </div>
       </div>
       <div class="dropdown-divider"></div>
-      <a class="dropdown-item dropdown-danger" id="dropdownLogout">
-        <i class="ti ti-logout"></i> Cerrar Sesión
-      </a>
+      <a class="dropdown-item" id="dropdownPerfil"><i class="ti ti-user-circle"></i> Mi Perfil</a>
+      <div class="dropdown-divider"></div>
+      <a class="dropdown-item dropdown-danger" id="dropdownLogout"><i class="ti ti-logout"></i> Cerrar Sesión</a>
     </div>
   </div>
 </nav>
@@ -227,7 +235,6 @@
 <script src="../assets/js/login_app.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="../assets/js/etiquetas.js"></script>
-
 
 </body>
 </html>

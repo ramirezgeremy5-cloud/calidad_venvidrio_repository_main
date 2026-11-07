@@ -1,14 +1,18 @@
 /* ==========================================
    VENVIDRIO - ETIQUETAS Y TRAZABILIDAD
-   etiquetas.js — v5 (Impresión como Imagen con borde y estiramiento)
+   etiquetas.js — v6 (Conexión Real + Sin Simulación)
    ========================================== */
 
 document.addEventListener('DOMContentLoaded', function () {
 
-  // Detectar la URL de la API
-  var API_URL = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
-    ? "http://127.0.0.1:8000"
-    : "http://" + window.location.hostname + ":8000";
+  // Detectar la URL de la API correctamente (igual que en produccion.js)
+  const hostname = window.location.hostname;
+  let API_URL;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    API_URL = 'http://127.0.0.1:8000';
+  } else {
+    API_URL = 'https://calidad-venvidrio-repository-main.onrender.com';
+  }
 
   // Referencias al DOM
   var btnBuscar     = document.getElementById('btn-buscar-lote');
@@ -28,7 +32,6 @@ document.addEventListener('DOMContentLoaded', function () {
   // UTILIDADES
   // =========================
 
-  // Animación de spin (por si shared.css no la define)
   if (!document.getElementById('spin-keyframes')) {
     var st = document.createElement('style');
     st.id = 'spin-keyframes';
@@ -164,7 +167,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // =========================
-  // CARGAR LOTE
+  // CARGAR LOTE (CONEXIÓN REAL)
   // =========================
   function cargarLote() {
     if (cargando) return;
@@ -182,6 +185,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var token = localStorage.getItem('token');
 
+    // Hacemos la petición al endpoint de etiquetas
     fetch(API_URL + '/produccion/lote/' + lote, {
       method: 'GET',
       headers: {
@@ -191,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function () {
     })
     .then(function (res) {
       if (!res.ok) {
-        if (res.status === 404) throw new Error('El lote no existe en la base de datos.');
+        if (res.status === 404) throw new Error('El lote no existe en la base de datos. Verifique el código.');
         if (res.status === 401) throw new Error('Sesión expirada. Vuelva a iniciar sesión.');
         throw new Error('Error al consultar el lote.');
       }
@@ -200,35 +204,15 @@ document.addEventListener('DOMContentLoaded', function () {
     .then(function (data) {
       var loteData = Array.isArray(data) ? data[0] : data;
       if (!loteData) throw new Error('No se encontraron datos para este lote.');
+      
       llenarEtiqueta(loteData);
     })
     .catch(function (error) {
-      console.warn('Fallo la API real, usando simulación:', error.message);
-
-      // MODO SIMULACIÓN (permite probar con cualquier código)
-      setTimeout(function () {
-        var dataSimulada = {
-          planta: 'VALERA',
-          ticket_carga: '05-003104461',
-          cliente: 'CLIENTE STOCK',
-          orden: 'S/O',
-          obs_produccion: 'NO APLICA',
-          maquina: 'A1',
-          turno: '1',
-          grupo: 'B',
-          fecha_produccion: '2026-08-10',
-          tipo_producto: 'SALSA INGLESA STOCK 300CC',
-          acabado: '24-490-405-ESP.BEAD"I-C"',
-          item: 'V-0002753',
-          bpp: '2.898',
-          capacidad: 300,
-          molde: 'EV01838',
-          codigo_lote: lote // usa el código que escribiste
-        };
-        llenarEtiqueta(dataSimulada);
-      }, 600);
+      // SI HAY ERROR, MOSTRAMOS EL MENSAJE REAL (Ya no hay simulación falsa)
+      console.error('Error cargando lote:', error.message);
+      mostrarError(error.message);
     })
-    .then(function () {
+    .finally(function () {
       cargando = false;
       setLoadingBtn(false);
     });
@@ -243,21 +227,18 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
 
-    // UI de carga en el botón
     var textoOriginal = btnImprimir.innerHTML;
     btnImprimir.disabled = true;
     btnImprimir.innerHTML = '<i class="ti ti-loader-2" style="display:inline-block;animation:spin 1s linear infinite;"></i> Preparando...';
 
-    // Usamos html2canvas para convertir el div en una imagen en alta resolución
     html2canvas(ticketPreview, {
-      scale: 3, // Alta resolución (300 DPI aprox) para que el texto no se vea borroso
+      scale: 3,
       useCORS: true,
       backgroundColor: '#ffffff',
       logging: false
     }).then(function (canvas) {
       var imgData = canvas.toDataURL('image/png');
 
-      // Crear iframe oculto para forzar la impresión de solo la imagen
       var iframe = document.createElement('iframe');
       iframe.style.position = 'absolute';
       iframe.style.width = '0px';
@@ -268,14 +249,13 @@ document.addEventListener('DOMContentLoaded', function () {
       var doc = iframe.contentWindow.document;
       doc.open();
       
-      // Inyectamos la imagen con tamaño exacto para etiqueta térmica
       doc.write(`
         <html>
           <head>
             <title>Imprimir Etiqueta</title>
             <style>
               @page {
-                size: 100mm 150mm; /* Tamaño físico de la etiqueta */
+                size: 100mm 150mm;
                 margin: 0; 
               }
               body {
@@ -291,8 +271,8 @@ document.addEventListener('DOMContentLoaded', function () {
               img {
                 width: 100%;
                 height: 100%;
-                object-fit: fill; /* ESTIRA LA IMAGEN PARA QUE LLENE TODA LA ETIQUETA */
-                border: 2px solid #000; /* BORDE NEGRO PARA QUE SE VEA COMO EN LA FOTO */
+                object-fit: fill;
+                border: 2px solid #000;
                 box-sizing: border-box;
               }
             </style>
@@ -304,7 +284,6 @@ document.addEventListener('DOMContentLoaded', function () {
       `);
       doc.close();
 
-      // Restaurar botón
       btnImprimir.innerHTML = textoOriginal;
       btnImprimir.disabled = false;
       
@@ -333,7 +312,6 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   if (btnImprimir) {
-    // Cambiamos el evento para que use la nueva función de imagen
     btnImprimir.addEventListener('click', imprimirEtiquetaComoImagen);
   }
 
