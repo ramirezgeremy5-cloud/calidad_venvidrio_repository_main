@@ -2,49 +2,52 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="color-scheme" content="light" />
+  <meta name="description" content="Auditoría Interna de Calidad — Evaluación del desempeño del personal — Venvidrio CQ" />
   <title>Auditoría Interna de Calidad — Venvidrio CQ</title>
-  
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
   <link rel="stylesheet" href="../assets/css/shared.css" />
   <link rel="stylesheet" href="../assets/css/auditoria.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
 </head>
 <body>
 
 <!-- ================= NAVBAR ================= -->
-<nav class="navbar">
+<nav class="navbar" aria-label="Navegación principal">
   <div class="nav-left-group">
     <div class="nav-brand">
-      <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
+      <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio" width="120" height="32" />
     </div>
-    
-    <!-- RELOJ EN EL NAVBAR -->
-    <div class="nav-reloj">
-      <i class="ti ti-clock"></i>
+
+    <div class="nav-reloj" aria-label="Hora actual">
+      <i class="ti ti-clock" aria-hidden="true"></i>
       <span id="reloj-real">--:--:--</span>
     </div>
   </div>
 
   <ul class="nav-links" id="navLinks">
-    <li><a href="../public/dashboard.html"><i class="ti ti-layout-dashboard"></i> Panel Principal</a></li>
-    <li><a href="../pages/produccion.html"><i class="ti ti-building-factory-2"></i> Producción</a></li>
-    <li><a href="../pages/defectos.html"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
-    <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
+    <li><a href="../public/dashboard.html"><i class="ti ti-layout-dashboard" aria-hidden="true"></i> Panel Principal</a></li>
+    <li><a href="../pages/produccion.html"><i class="ti ti-building-factory-2" aria-hidden="true"></i> Producción</a></li>
+    <li><a href="../pages/defectos.html"><i class="ti ti-alert-triangle" aria-hidden="true"></i> Defectos</a></li>
+    <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode" aria-hidden="true"></i> Etiquetas y QR</a></li>
 
-    <!-- 👇 IDs CLAVE PARA shared.js -->
     <li id="navAuditoriaInternaLink">
-      <a href="../pages/auditoria_interna.html" class="active"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a>
+      <a href="../pages/auditoria_interna.html" class="active" aria-current="page">
+        <i class="ti ti-clipboard-check" aria-hidden="true"></i> Auditoría Interna
+      </a>
     </li>
     <li id="navAuditoriaProductoLink">
-      <a href="../pages/auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a>
+      <a href="../pages/auditoria_producto.html"><i class="ti ti-file-search" aria-hidden="true"></i> Aud. Producto</a>
     </li>
 
     <li id="navUsuariosLink">
-      <a href="../pages/usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
+      <a href="../pages/usuarios.html"><i class="ti ti-users" aria-hidden="true"></i> Usuarios</a>
     </li>
   </ul>
 
-  <div class="nav-user" id="navUserContainer">
+  <div class="nav-user" id="navUserContainer" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false">
     <div class="nav-avatar-circle" id="navAvatar">US</div>
     <span class="nav-username" id="navUsername">Cargando...</span>
 
@@ -58,11 +61,11 @@
       </div>
       <div class="dropdown-divider"></div>
       <a class="dropdown-item" id="dropdownPerfil" style="cursor:pointer;">
-        <i class="ti ti-user-circle"></i> Mi Perfil
+        <i class="ti ti-user-circle" aria-hidden="true"></i> Mi Perfil
       </a>
       <div class="dropdown-divider"></div>
       <a class="dropdown-item dropdown-danger" id="dropdownLogout">
-        <i class="ti ti-logout"></i> Cerrar Sesión
+        <i class="ti ti-logout" aria-hidden="true"></i> Cerrar Sesión
       </a>
     </div>
   </div>
@@ -71,58 +74,58 @@
 <main class="page">
 
   <!-- ================= HEADER ================= -->
-  <div class="page-header">
+  <header class="page-header">
     <h1>Auditoría Interna de Calidad</h1>
     <p>Evaluación del desempeño del personal del departamento de calidad</p>
-  </div>
+  </header>
 
   <!-- ================= KPIs ================= -->
-  <div class="stats-grid">
+  <section class="stats-grid" aria-label="Indicadores clave">
     <div class="stat-card">
       <div class="stat-label">Evaluaciones del Mes</div>
-      <div class="stat-value" id="kpi-evaluaciones">0</div>
+      <div class="stat-value" id="kpi-evaluaciones" aria-live="polite">0</div>
       <div class="stat-sub" id="kpi-evaluaciones-sub">Cargando...</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Cumplimiento Promedio</div>
-      <div class="stat-value success" id="kpi-promedio">0%</div>
+      <div class="stat-value success" id="kpi-promedio" aria-live="polite">0%</div>
       <div class="stat-sub" id="kpi-promedio-sub">Cargando...</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Personal Evaluado</div>
-      <div class="stat-value" id="kpi-personas">0</div>
+      <div class="stat-value" id="kpi-personas" aria-live="polite">0</div>
       <div class="stat-sub" id="kpi-personas-sub">Cargando...</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Planes de Mejora Activos</div>
-      <div class="stat-value warning" id="kpi-planes">0</div>
+      <div class="stat-value warning" id="kpi-planes" aria-live="polite">0</div>
       <div class="stat-sub" id="kpi-planes-sub">Cargando...</div>
     </div>
-  </div>
+  </section>
 
   <div class="aud-layout">
 
     <!-- ================= EVALUACIÓN INDIVIDUAL ================= -->
-    <div class="card anim-card">
-      <div class="card-header">
-        <div class="card-title">
-          <i class="ti ti-user-check"></i> Evaluación de Desempeño
+    <section class="card anim-card" aria-labelledby="eval-title">
+      <header class="card-header">
+        <div class="card-title" id="eval-title">
+          <i class="ti ti-user-check" aria-hidden="true"></i> Evaluación de Desempeño
         </div>
-        <span class="badge badge-info" id="badge-progreso">0 / 10</span>
-      </div>
+        <span class="badge badge-info" id="badge-progreso" aria-live="polite">0 / 10</span>
+      </header>
 
       <div class="card-body">
 
         <div class="grid-2" style="margin-bottom:1rem;">
           <div class="field">
-            <label for="evaluado">Personal de Calidad a Evaluar *</label>
-            <select id="evaluado">
+            <label for="evaluado" class="label-required">Personal de Calidad a Evaluar</label>
+            <select id="evaluado" aria-describedby="evaluado-hint">
               <option value="">-- Seleccione un miembro del personal --</option>
             </select>
-            <small class="field-hint">Solo personal adscrito al departamento de calidad</small>
+            <small class="field-hint" id="evaluado-hint">Solo personal adscrito al departamento de calidad</small>
           </div>
           <div class="field">
-            <label for="periodo">Periodo de Evaluación *</label>
+            <label for="periodo" class="label-required">Periodo de Evaluación</label>
             <select id="periodo">
               <option value="mensual">Mensual</option>
               <option value="trimestral">Trimestral</option>
@@ -138,90 +141,98 @@
             <div class="ficha-info">
               <div class="ficha-nombre" id="ficha-nombre">—</div>
               <div class="ficha-detalle">
-                <span><i class="ti ti-briefcase"></i> <span id="ficha-cargo">—</span></span>
-                <span><i class="ti ti-clock"></i> Turno <span id="ficha-turno">—</span></span>
-                <span><i class="ti ti-calendar"></i> Ingreso <span id="ficha-ingreso">—</span></span>
+                <span><i class="ti ti-briefcase" aria-hidden="true"></i> <span id="ficha-cargo">—</span></span>
+                <span><i class="ti ti-clock" aria-hidden="true"></i> Turno <span id="ficha-turno">—</span></span>
+                <span><i class="ti ti-calendar" aria-hidden="true"></i> Ingreso <span id="ficha-ingreso">—</span></span>
               </div>
             </div>
           </div>
         </div>
 
         <div style="margin:1rem 0 0.5rem;">
-          <div class="aud-progress-track">
+          <div class="aud-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="aud-progress-track">
             <div class="aud-progress-fill" id="aud-progress-fill" style="width:0%"></div>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-hint);margin-top:4px">
+          <div class="progress-meta">
             <span>Avance de la evaluación</span>
             <span id="pct-label">0%</span>
           </div>
         </div>
 
         <!-- Lista de criterios con scroll táctil -->
-        <div class="checklist-body" id="checklist-body">
+        <div class="checklist-body" id="checklist-body" role="group" aria-label="Criterios de evaluación">
           <!-- generado por JS -->
         </div>
 
         <div class="field" style="margin-top:1rem;">
           <label for="obs-eval">Observaciones Generales</label>
-          <textarea id="obs-eval" placeholder="Comentarios del evaluador sobre el desempeño global del evaluado..." rows="3"></textarea>
+          <textarea
+            id="obs-eval"
+            placeholder="Comentarios del evaluador sobre el desempeño global del evaluado..."
+            rows="3"
+            maxlength="1500"
+          ></textarea>
+          <small class="field-hint">
+            <span id="obs-eval-count">0</span>/1500 caracteres
+          </small>
         </div>
 
       </div>
 
       <div class="card-footer-row">
-        <button class="btn btn-outline btn-sm" id="btn-reset-eval">
-          <i class="ti ti-refresh"></i> Reiniciar
+        <button type="button" class="btn btn-outline btn-sm" id="btn-reset-eval">
+          <i class="ti ti-refresh" aria-hidden="true"></i> Reiniciar
         </button>
-        <button class="btn btn-primary" id="btn-guardar-eval">
-          <i class="ti ti-device-floppy"></i> Guardar Evaluación
+        <button type="button" class="btn btn-primary" id="btn-guardar-eval">
+          <i class="ti ti-device-floppy" aria-hidden="true"></i> Guardar Evaluación
         </button>
       </div>
-    </div>
+    </section>
 
     <!-- ================= PANEL DERECHO ================= -->
-    <div class="aud-right">
+    <aside class="aud-right">
 
-      <div class="card anim-card">
-        <div class="card-header">
-          <div class="card-title">
-            <i class="ti ti-target-arrow"></i> Planes de Mejora
+      <section class="card anim-card" aria-labelledby="planes-title">
+        <header class="card-header">
+          <div class="card-title" id="planes-title">
+            <i class="ti ti-target-arrow" aria-hidden="true"></i> Planes de Mejora
           </div>
-          <span class="badge badge-warning" id="badge-planes">0</span>
-        </div>
-        <div id="lista-planes" style="padding:0">
+          <span class="badge badge-warning" id="badge-planes" aria-live="polite">0</span>
+        </header>
+        <div id="lista-planes" class="panel-scroll" style="padding:0">
           <!-- generado por JS -->
         </div>
-      </div>
+      </section>
 
-      <div class="card anim-card" style="margin-top:1rem;">
-        <div class="card-header">
-          <div class="card-title">
-            <i class="ti ti-history"></i> Historial del Evaluado
+      <section class="card anim-card" style="margin-top:1rem;" aria-labelledby="hist-title">
+        <header class="card-header">
+          <div class="card-title" id="hist-title">
+            <i class="ti ti-history" aria-hidden="true"></i> Historial del Evaluado
           </div>
-        </div>
-        <div id="historial-evaluado" style="padding:0">
+        </header>
+        <div id="historial-evaluado" class="panel-scroll" style="padding:0">
           <!-- generado por JS -->
         </div>
-      </div>
+      </section>
 
-    </div>
+    </aside>
   </div>
 
   <!-- ================= HISTORIAL GENERAL ================= -->
-  <div class="card anim-card" style="margin-top:1.5rem;">
-    <div class="card-header">
-      <div class="card-title">
-        <i class="ti ti-table-options"></i> Historial de Evaluaciones
+  <section class="card anim-card" style="margin-top:1.5rem;" aria-labelledby="hist-general-title">
+    <header class="card-header">
+      <div class="card-title" id="hist-general-title">
+        <i class="ti ti-table-options" aria-hidden="true"></i> Historial de Evaluaciones
       </div>
-      <div class="flex gap-2" style="flex-wrap:wrap;">
-        <button class="btn btn-outline btn-sm" id="btn-export-word-global">
-          <i class="ti ti-file-type-doc"></i> Word
+      <div class="flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-outline btn-sm" id="btn-export-word-global">
+          <i class="ti ti-file-type-doc" aria-hidden="true"></i> Word
         </button>
-        <button class="btn btn-danger btn-sm" id="btn-export-pdf-global">
-          <i class="ti ti-file-type-pdf"></i> PDF
+        <button type="button" class="btn btn-danger btn-sm" id="btn-export-pdf-global">
+          <i class="ti ti-file-type-pdf" aria-hidden="true"></i> PDF
         </button>
       </div>
-    </div>
+    </header>
 
     <div class="filtros-bar">
       <div class="filtros-grid">
@@ -266,22 +277,22 @@
           <input type="date" id="f-hasta" class="input-filtro" />
         </div>
         <div class="filtros-botones">
-          <button class="btn btn-primary btn-sm" id="btn-aplicar-filtros">
-            <i class="ti ti-search"></i> Filtrar
+          <button type="button" class="btn btn-primary btn-sm" id="btn-aplicar-filtros">
+            <i class="ti ti-search" aria-hidden="true"></i> Filtrar
           </button>
-          <button class="btn btn-outline btn-sm" id="btn-limpiar-filtros">
-            <i class="ti ti-x"></i>
+          <button type="button" class="btn btn-outline btn-sm" id="btn-limpiar-filtros" aria-label="Limpiar filtros">
+            <i class="ti ti-x" aria-hidden="true"></i>
           </button>
         </div>
       </div>
       <div class="filtro-resultados">
-        <span id="filtro-resultados">📋 Mostrando todas las evaluaciones</span>
+        <span id="filtro-resultados" aria-live="polite">📋 Mostrando todas las evaluaciones</span>
       </div>
     </div>
 
     <!-- Tabla con scroll táctil en móviles -->
     <div class="table-wrap">
-      <table>
+      <table aria-label="Historial de evaluaciones de desempeño">
         <thead>
           <tr>
             <th>Evaluado</th>
@@ -300,38 +311,63 @@
         </tbody>
       </table>
     </div>
-  </div>
+  </section>
 
 </main>
 
 <!-- ================= MODAL: VER DETALLE DE EVALUACIÓN ================= -->
-<div class="modal-overlay" id="modal-ver-eval" style="display:none;">
+<div
+  class="modal-overlay"
+  id="modal-ver-eval"
+  style="display:none;"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="modal-eval-title"
+>
   <div class="modal-container" style="max-width: 650px;">
     <div class="modal-header">
-      <div class="modal-title"><i class="ti ti-eye"></i> Detalle de Evaluación</div>
-      <button class="modal-close" id="modal-eval-close"><i class="ti ti-x"></i></button>
+      <div class="modal-title" id="modal-eval-title">
+        <i class="ti ti-eye" aria-hidden="true"></i> Detalle de Evaluación
+      </div>
+      <button type="button" class="modal-close" id="modal-eval-close" aria-label="Cerrar">
+        <i class="ti ti-x" aria-hidden="true"></i>
+      </button>
     </div>
     <div class="modal-body" id="modal-eval-body">
       <!-- Se llena por JS -->
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline" id="modal-eval-cerrar-footer">Cerrar</button>
+      <button type="button" class="btn btn-outline" id="modal-eval-cerrar-footer">Cerrar</button>
     </div>
   </div>
 </div>
 
 <!-- ================= MODAL: CONFIRMAR ELIMINAR EVALUACIÓN ================= -->
-<div class="modal-overlay" id="modal-eliminar-eval" style="display:none;">
+<div
+  class="modal-overlay"
+  id="modal-eliminar-eval"
+  style="display:none;"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="modal-eliminar-title"
+>
   <div class="modal-container" style="max-width: 420px;">
-    <div class="modal-header" style="background:linear-gradient(135deg, #dc3545 0%, #b71c1c 100%);">
-      <div class="modal-title" style="color:#fff;"><i class="ti ti-alert-triangle"></i> Eliminar Evaluación</div>
-      <button class="modal-close" id="modal-eliminar-close" style="color:#fff; border-color:rgba(255,255,255,0.3);"><i class="ti ti-x"></i></button>
+    <div class="modal-header modal-header-danger">
+      <div class="modal-title" id="modal-eliminar-title" style="color:#fff;">
+        <i class="ti ti-alert-triangle" aria-hidden="true"></i> Eliminar Evaluación
+      </div>
+      <button type="button" class="modal-close modal-close-light" id="modal-eliminar-close" aria-label="Cerrar">
+        <i class="ti ti-x" aria-hidden="true"></i>
+      </button>
     </div>
     <div class="modal-body">
       <p style="font-size:14px;color:var(--text-main);margin-bottom:1rem;">
         ¿Estás seguro de que deseas eliminar esta evaluación?
       </p>
-      <p style="font-size:16px;font-weight:600;color:var(--danger);text-align:center;padding:1rem;background:#fef2f2;border-radius:8px;" id="eliminar-eval-nombre">
+      <p
+        style="font-size:16px;font-weight:600;color:var(--danger);text-align:center;padding:1rem;background:#fef2f2;border-radius:8px;"
+        id="eliminar-eval-nombre"
+      >
         Nombre del evaluado
       </p>
       <p style="font-size:12px;color:var(--text-muted);margin-top:1rem;text-align:center;">
@@ -339,13 +375,26 @@
       </p>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline" id="modal-eliminar-cancelar">Cancelar</button>
-      <button class="btn btn-danger" id="modal-eliminar-confirmar">
-        <i class="ti ti-trash"></i> Eliminar
+      <button type="button" class="btn btn-outline" id="modal-eliminar-cancelar">Cancelar</button>
+      <button type="button" class="btn btn-danger" id="modal-eliminar-confirmar">
+        <i class="ti ti-trash" aria-hidden="true"></i> Eliminar
       </button>
     </div>
   </div>
 </div>
+
+<!-- ================= TOAST GLOBAL ================= -->
+<div class="toast-success" id="toast-auditoria" role="status" aria-live="polite">
+  <i class="ti ti-circle-check" aria-hidden="true"></i>
+  <span>Operación realizada correctamente</span>
+</div>
+
+<!-- ================= NOSCRIPT ================= -->
+<noscript>
+  <div class="noscript-warning">
+    <strong>JavaScript deshabilitado.</strong> Esta página requiere JavaScript para funcionar correctamente.
+  </div>
+</noscript>
 
 <!-- ================= SCRIPTS ================= -->
 <script src="../assets/js/shared.js"></script>

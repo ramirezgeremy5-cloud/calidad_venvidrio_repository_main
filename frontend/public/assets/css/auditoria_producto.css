@@ -1,56 +1,183 @@
 /* ==========================================================
    VENVIDRIO — AUDITORÍA DE PRODUCTO NO CONFORME
-   Estilos específicos para el módulo de auditoría de producto
+   auditoria_producto.css — v2 (Completo)
+   Cubre: stepper, select-search, file-upload, checklist
+   de defectos, glosario, toast, noscript, fieldset,
+   estados de validación, responsive profundo
    ========================================================== */
 
-/* ================= LAYOUT PRINCIPAL ================= */
+/* ==========================================================
+   0. VARIABLES LOCALES (fallback si shared.css no las define)
+   ========================================================== */
+:root {
+  --brand-1: var(--navy, #1e3a8a);
+  --brand-2: var(--navy-accent, #3b82f6);
+  --brand-soft: #eff6ff;
+  --brand-line: #dbeafe;
+
+  --success: #10b981;
+  --success-soft: #ecfdf5;
+  --success-line: #a7f3d0;
+  --warning: #f59e0b;
+  --warning-soft: #fffbeb;
+  --danger: #ef4444;
+  --danger-soft: #fef2f2;
+  --danger-line: #fecaca;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --tap-min: 42px;
+
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+}
+
+/* ==========================================================
+   1. LAYOUT PRINCIPAL
+   ========================================================== */
 .aud-layout {
   display: grid;
-  grid-template-columns: 2fr 1fr; /* Formulario a la izquierda, glosario a la derecha */
+  grid-template-columns: 1fr;
   gap: 1.5rem;
   align-items: start;
+  margin-bottom: 1.5rem;
+}
+@media (min-width: 1024px) {
+  .aud-layout { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
 }
 
-/* ================= TARJETAS BASE ================= */
+.aud-aside {
+  height: fit-content;
+  position: sticky;
+  top: 1rem;
+}
+@media (max-width: 1023px) { .aud-aside { position: static; } }
+
+/* ==========================================================
+   2. STEPPER DE PROGRESO
+   ========================================================== */
+.aud-stepper {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem;
+}
+.aud-stepper .step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  font-size: 11.5px;
+  color: var(--text-muted, #475569);
+  text-align: center;
+  font-weight: 500;
+}
+.aud-stepper .step::before {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--border, #e2e8f0);
+  z-index: 0;
+  transition: background var(--transition);
+}
+.aud-stepper .step:last-child::before { display: none; }
+
+.step-dot {
+  position: relative;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 2px solid var(--border, #e2e8f0);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-muted, #475569);
+  transition: all var(--transition);
+}
+.step-label {
+  font-weight: 600;
+  font-size: 11.5px;
+  color: var(--text-muted, #475569);
+  transition: color var(--transition);
+}
+
+.aud-stepper .step.is-active .step-dot {
+  background: var(--brand-1);
+  color: #fff;
+  border-color: var(--brand-1);
+  box-shadow: 0 0 0 4px rgba(30, 58, 138, 0.15);
+}
+.aud-stepper .step.is-active .step-label { color: var(--brand-1); font-weight: 700; }
+
+.aud-stepper .step.is-done .step-dot {
+  background: var(--success);
+  color: #fff;
+  border-color: var(--success);
+}
+.aud-stepper .step.is-done .step-label { color: #065f46; }
+.aud-stepper .step.is-done::before { background: var(--success); }
+
+/* ==========================================================
+   3. TARJETAS
+   ========================================================== */
 .card {
   background: #fff;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border, #e2e8f0);
   border-radius: var(--radius-lg);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow var(--transition);
 }
-
-.card:hover {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-}
+.card:hover { box-shadow: var(--shadow-hover); }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
   padding: 1rem 1.5rem;
-  background: var(--off-white);
-  border-bottom: 1px solid var(--border);
+  background: var(--off-white, #f8fafc);
+  border-bottom: 1px solid var(--border, #e2e8f0);
 }
-
 .card-title {
   font-size: 14px;
   font-weight: 700;
-  color: var(--navy);
+  color: var(--brand-1);
   display: flex;
   align-items: center;
   gap: 8px;
 }
+.card-title i { color: var(--brand-2); font-size: 1.15rem; }
+.card-body { padding: 1.5rem; }
 
-.card-body {
-  padding: 1.5rem;
+/* ==========================================================
+   4. FIELDSET / SECCIONES DEL FORMULARIO
+   ========================================================== */
+fieldset.form-section {
+  border: 0;
+  padding: 0;
+  margin: 0 0 1.5rem;
+  min-width: 0;
 }
-
-/* ================= FORMULARIO ================= */
-.form-section {
-  margin-bottom: 1.5rem;
+fieldset.form-section + fieldset.form-section {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border, #e2e8f0);
 }
+fieldset.form-section:last-of-type { margin-bottom: 0; }
 
 .form-section-title {
   display: flex;
@@ -58,37 +185,49 @@
   gap: 10px;
   font-size: 14px;
   font-weight: 700;
-  color: var(--navy);
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1.5px solid var(--border);
+  color: var(--brand-1);
+  margin: 0 0 1rem;
+  padding: 0;
+  width: 100%;
 }
-
 .step-number {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  background: var(--navy);
-  color: white;
+  width: 26px;
+  height: 26px;
+  background: var(--brand-1);
+  color: #fff;
   border-radius: 50%;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
+  flex-shrink: 0;
 }
 
-/* Campos de entrada */
+/* ==========================================================
+   5. CAMPOS (FIELD / LABEL / INPUT / SELECT / TEXTAREA)
+   ========================================================== */
 .field {
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin-bottom: 1rem;
+  min-width: 0;
 }
+.field-full-width { grid-column: 1 / -1; }
 
 .field label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-main);
+  color: var(--text-main, #0f172a);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.label-required::after {
+  content: ' *';
+  color: var(--danger);
+  font-weight: 700;
 }
 
 .field input,
@@ -96,125 +235,418 @@
 .field textarea {
   width: 100%;
   padding: 9px 12px;
-  border: 1.5px solid var(--border);
+  border: 1.5px solid var(--border, #e2e8f0);
   border-radius: var(--radius-sm);
   font-size: 13px;
-  font-family: var(--font-body);
-  color: var(--text-main);
-  background: white;
+  font-family: inherit;
+  color: var(--text-main, #0f172a);
+  background: #fff;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  min-height: var(--tap-min);
+  transition: border-color var(--transition), box-shadow var(--transition);
 }
-
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
-  border-color: var(--navy);
-  box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.08);
+  border-color: var(--brand-1);
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12);
+}
+.field textarea {
+  resize: vertical;
+  min-height: 90px;
+  line-height: 1.5;
 }
 
-/* Inputs de solo lectura (auto) */
-.field input[readonly] {
-  background: #f8fafc;
-  color: var(--text-muted);
-  border-style: dashed;
-  cursor: not-allowed;
+/* Estado válido / inválido (si JS añade clases) */
+.field.is-invalid input,
+.field.is-invalid select,
+.field.is-invalid textarea {
+  border-color: var(--danger);
+  background: #fff;
 }
-
-.field-hint {
+.field.is-invalid input:focus,
+.field.is-invalid select:focus,
+.field.is-invalid textarea:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+.field-error {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 11px;
-  color: var(--text-hint);
+  color: var(--danger);
   margin-top: 2px;
 }
 
-/* ================= SELECTOR DE DEFECTOS ================= */
-#defectos {
-  border: 1.5px solid var(--border);
+/* Inputs readonly y auto */
+.input-readonly,
+.field input[readonly] {
+  background: #f8fafc !important;
+  color: var(--text-muted, #475569) !important;
+  border-style: dashed;
+  cursor: not-allowed;
+}
+.input-auto,
+.field input.input-auto {
+  background: var(--brand-soft) !important;
+  color: var(--brand-1) !important;
+  font-weight: 700;
+  border-color: var(--brand-line) !important;
+  border-style: solid;
+}
+
+.field-hint {
+  font-size: 11.5px;
+  color: var(--text-hint, #94a3b8);
+  margin-top: 2px;
+  line-height: 1.4;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.field-hint i { font-size: 12px; }
+
+/* Badge "auto" */
+.badge-auto {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--brand-soft);
+  color: var(--brand-1);
+  border: 1px solid var(--brand-line);
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-left: 6px;
+}
+.badge-auto i { font-size: 10px; }
+
+/* ==========================================================
+   6. SELECT CON BÚSQUEDA
+   ========================================================== */
+.select-search {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.select-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border, #e2e8f0);
   border-radius: var(--radius-sm);
-  background: #fff;
-  padding: 8px;
   font-size: 13px;
   outline: none;
-  color: var(--text-main);
+  min-height: 38px;
+  font-family: inherit;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.select-search-input:focus {
+  border-color: var(--brand-2);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+.select-search-native {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  min-height: var(--tap-min);
+  background: #fff;
+  font-family: inherit;
+  cursor: pointer;
+}
+.select-search-native:focus {
+  border-color: var(--brand-1);
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12);
+}
+.select-search-native:disabled {
+  background: #f8fafc;
+  color: var(--text-hint);
+  cursor: not-allowed;
 }
 
-#defectos:focus {
-  border-color: var(--navy);
+/* ==========================================================
+   7. FILE UPLOAD CON PREVIEW
+   ========================================================== */
+.file-upload {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-
-#defectos option {
-  padding: 6px 10px;
-  border-radius: 4px;
-  margin-bottom: 2px;
+.file-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
 }
-
-#defectos option:checked {
-  background: #e8f0fe;
-  color: #1967d2;
+.file-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  background: #fff;
+  border: 1.5px dashed var(--border-dark, #cbd5e1);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-main, #0f172a);
+  min-height: var(--tap-min);
+  transition: all var(--transition);
+  flex: 1;
+  justify-content: center;
+}
+.file-upload-btn:hover {
+  border-color: var(--brand-2);
+  color: var(--brand-2);
+  background: var(--brand-soft);
+}
+.file-upload-btn i { font-size: 16px; }
+.file-upload-btn.has-file {
+  border-style: solid;
+  border-color: var(--success-line);
+  background: var(--success-soft);
+  color: #065f46;
   font-weight: 600;
 }
 
-/* ================= BOTONES DE ACCIÓN ================= */
+.file-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid var(--danger-line);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition);
+}
+.file-clear-btn:hover { background: var(--danger); color: #fff; }
+.file-clear-btn i { font-size: 15px; }
+
+.file-preview {
+  margin-top: 10px;
+  padding: 8px;
+  background: #f8fafc;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  display: flex;
+  justify-content: center;
+}
+.file-preview img {
+  max-width: 100%;
+  max-height: 180px;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+}
+
+/* ==========================================================
+   8. CHECKLIST DE DEFECTOS
+   ========================================================== */
+.defecto-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  background: #fff;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.defecto-search:focus-within {
+  border-color: var(--brand-2);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+.defecto-search i {
+  color: var(--text-hint);
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.defecto-search input {
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  min-height: 26px;
+  padding: 0;
+  color: var(--text-main);
+  font-family: inherit;
+}
+
+.defecto-checklist {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 10px;
+  background: #f8fafc;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: var(--radius-sm);
+}
+
+.defecto-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #fff;
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-main);
+  transition: all var(--transition);
+  min-height: 38px;
+  user-select: none;
+}
+.defecto-chip:hover {
+  border-color: var(--brand-2);
+  background: var(--brand-soft);
+}
+.defecto-chip input { display: none; }
+.defecto-chip:has(input:checked) {
+  background: var(--brand-soft);
+  border-color: var(--brand-1);
+  box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.12);
+}
+.defecto-chip:has(input:checked) span {
+  color: var(--brand-1);
+  font-weight: 700;
+}
+.defecto-chip:has(input:checked)::before {
+  content: '✓';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--brand-1);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+  animation: popCheck 0.2s ease;
+}
+@keyframes popCheck {
+  0% { transform: scale(0); }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+/* Ocultar chips filtrados */
+.defecto-chip[hidden] { display: none; }
+
+.defecto-resumen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ==========================================================
+   9. BADGES
+   ========================================================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 99px;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.badge-info { background: var(--brand-soft); color: var(--brand-1); border-color: var(--brand-line); }
+.badge-success { background: var(--success-soft); color: #065f46; border-color: var(--success-line); }
+.badge-danger { background: var(--danger-soft); color: #991b1b; border-color: var(--danger-line); }
+.badge-warning { background: var(--warning-soft); color: #92400e; border-color: #fde68a; }
+
+/* ==========================================================
+   10. BOTONES
+   ========================================================== */
 .form-actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
   padding-top: 1.5rem;
-  border-top: 1.5px solid var(--border);
+  border-top: 1.5px solid var(--border, #e2e8f0);
   margin-top: 1rem;
+  flex-wrap: wrap;
 }
 
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 10px 20px;
   border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition);
   border: 1.5px solid transparent;
+  min-height: var(--tap-min);
+  font-family: inherit;
+  white-space: nowrap;
 }
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
 .btn-primary {
-  background: var(--navy);
-  color: white;
+  background: var(--brand-1);
+  color: #fff;
+  border-color: var(--brand-1);
 }
-
 .btn-primary:hover:not(:disabled) {
   background: #0d1b52;
+  border-color: #0d1b52;
 }
 
 .btn-outline {
   background: transparent;
-  border-color: var(--border);
-  color: var(--text-muted);
+  border-color: var(--border, #e2e8f0);
+  color: var(--text-muted, #475569);
+}
+.btn-outline:hover:not(:disabled) {
+  border-color: var(--brand-1);
+  color: var(--brand-1);
+  background: var(--off-white, #f8fafc);
 }
 
-.btn-outline:hover {
-  border-color: var(--navy);
-  color: var(--navy);
-  background: var(--off-white);
-}
+.btn-sm { padding: 6px 12px; font-size: 12px; min-height: 32px; }
 
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* ================= PANEL DE AYUDA / GLOSARIO ================= */
+/* ==========================================================
+   11. GLOSARIO
+   ========================================================== */
 .glosario-card {
   background: #f8fafc;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border, #e2e8f0);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
 }
-
 .glosario-title {
   font-size: 13px;
   font-weight: 700;
-  color: var(--navy);
+  color: var(--brand-1);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -222,12 +654,17 @@
   border-bottom: 1px solid var(--border);
   padding-bottom: 8px;
 }
-
 .glosario-list {
   list-style: none;
   padding: 0;
   margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted, #475569);
 }
+.glosario-list li { margin-bottom: 8px; }
+.glosario-list li:last-child { margin-bottom: 0; }
+.glosario-list strong { color: var(--text-main, #0f172a); }
 
 .glosario-item {
   font-size: 12px;
@@ -238,11 +675,7 @@
   align-items: flex-start;
   gap: 8px;
 }
-
-.glosario-item strong {
-  color: var(--text-main);
-  font-weight: 700;
-}
+.glosario-item strong { color: var(--text-main); font-weight: 700; }
 
 .glosario-badge {
   display: inline-block;
@@ -253,47 +686,212 @@
   color: white;
   margin-right: 4px;
 }
-
-/* Colores de los badges de estatus */
 .bg-100 { background: #1967d2; }
 .bg-200 { background: #2e7d32; }
 .bg-300 { background: #dc3545; }
 .bg-950 { background: #f57c00; }
 
-/* ================= ANIMACIONES ================= */
+.divider {
+  border: 0;
+  border-top: 1px solid var(--border, #e2e8f0);
+  margin: 12px 0;
+}
+
+.nota-glosa {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11.5px;
+  margin: 0;
+  padding: 10px;
+  background: var(--warning-soft);
+  border: 1px solid #fde68a;
+  border-radius: var(--radius-sm);
+  color: #78350f;
+  line-height: 1.5;
+}
+.nota-glosa i {
+  color: var(--warning);
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ==========================================================
+   12. TOAST
+   ========================================================== */
+.toast-success {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(120%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #065f46;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  font-size: 13.5px;
+  font-weight: 500;
+  z-index: 10000;
+  max-width: calc(100vw - 32px);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s;
+}
+.toast-success.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+.toast-success i { font-size: 1.2rem; flex-shrink: 0; }
+.toast-success.error { background: #991b1b; }
+.toast-success.warning { background: #92400e; }
+
+/* ==========================================================
+   13. NOSCRIPT
+   ========================================================== */
+.noscript-warning {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: #fef2f2;
+  color: #991b1b;
+  font-family: sans-serif;
+  font-size: 15px;
+  z-index: 99999;
+  text-align: center;
+}
+
+/* ==========================================================
+   14. UTILIDADES
+   ========================================================== */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0 16px;
+}
+@media (min-width: 640px) {
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+}
+
+/* Scrollbar estilizado para checklist y preview */
+.defecto-checklist::-webkit-scrollbar,
+.file-preview::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.defecto-checklist::-webkit-scrollbar-track,
+.file-preview::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+.defecto-checklist::-webkit-scrollbar-thumb,
+.file-preview::-webkit-scrollbar-thumb {
+  background: var(--border-dark, #cbd5e1);
+  border-radius: 4px;
+}
+.defecto-checklist::-webkit-scrollbar-thumb:hover,
+.file-preview::-webkit-scrollbar-thumb:hover {
+  background: var(--text-hint);
+}
+
+/* ==========================================================
+   15. ANIMACIONES
+   ========================================================== */
 .anim-card {
   animation: fadeInUp 0.4s ease forwards;
 }
-
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* ================= RESPONSIVE ================= */
+/* ==========================================================
+   16. RESPONSIVE
+   ========================================================== */
+@media (max-width: 1023px) {
+  .aud-layout { grid-template-columns: 1fr; }
+  .aud-aside { position: static; }
+}
+
 @media (max-width: 900px) {
-  .aud-layout {
-    grid-template-columns: 1fr; /* En móvil, el glosario baja debajo del formulario */
+  .aud-layout { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 767px) {
+  .card-body { padding: 1.25rem; }
+  .card-header { padding: 0.9rem 1.25rem; }
+
+  .aud-stepper { gap: 4px; }
+  .step-dot { width: 28px; height: 28px; font-size: 12px; }
+  .step-label { font-size: 10.5px; }
+
+  .defecto-checklist {
+    grid-template-columns: 1fr 1fr;
+    max-height: 300px;
   }
+
+  .form-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  .form-actions .btn { width: 100%; }
+
+  .toast-success { font-size: 12.5px; padding: 10px 16px; bottom: 16px; }
 }
 
 @media (max-width: 600px) {
-  .grid-2 {
-    grid-template-columns: 1fr; /* Inputs a lo ancho */
+  .grid-2 { grid-template-columns: 1fr; }
+
+  .defecto-checklist { grid-template-columns: 1fr; }
+
+  .aud-stepper .step-label { display: none; }
+  .aud-stepper .step::before { top: 15px; }
+
+  .file-upload { flex-wrap: wrap; }
+  .file-upload-btn { width: 100%; }
+
+  .field-full-width { grid-column: auto; }
+}
+
+@media (max-width: 480px) {
+  .card-body { padding: 1rem; }
+  .card-header { padding: 0.75rem 1rem; }
+
+  .form-section-title { font-size: 13px; }
+  .step-number { width: 22px; height: 22px; font-size: 11px; }
+
+  .btn { font-size: 12.5px; padding: 9px 16px; }
+
+  .aud-stepper { margin-bottom: 1rem; }
+  .step-dot { width: 26px; height: 26px; font-size: 11px; }
+}
+
+/* ==========================================================
+   17. IMPRESIÓN
+   ========================================================== */
+@media print {
+  .navbar,
+  .footer,
+  .form-actions,
+  .aud-stepper,
+  .toast-success,
+  .file-upload,
+  .defecto-search,
+  .noscript-warning {
+    display: none !important;
   }
-  
-  .form-actions {
-    flex-direction: column;
+  body { background: #fff; }
+  .card {
+    box-shadow: none;
+    border: 1px solid #ccc;
+    page-break-inside: avoid;
   }
-  
-  .btn {
-    width: 100%;
-    justify-content: center;
-  }
+  .aud-layout { grid-template-columns: 1fr; }
+  .aud-aside { position: static; }
 }
