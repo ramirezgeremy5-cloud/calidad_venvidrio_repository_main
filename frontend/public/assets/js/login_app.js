@@ -1,7 +1,7 @@
 /* =============================================
    Venvidrio — Sistema de Control de Calidad
    login_app.js (Login + Alertas Elegantes + Sesión 1h)
-   v9 — Permisos de cargo + Anti-bloqueo de sesión
+   v10 — Login flexible (Usuario o Correo) + Anti-bloqueo
    ============================================= */
 
 (function () {
@@ -989,14 +989,22 @@
         return;
       }
 
-      var prefijo = usernameInput.value.trim();
-      var correo = prefijo + '@venvidrio.com';
+      var inputUsuario = usernameInput.value.trim();
       var password = passwordInput.value.trim();
+      var correo = "";
 
-      var prefijoRegex = /^[a-zA-Z0-9._%+-]+$/;
-      if (!prefijoRegex.test(prefijo)) {
+      // 👇 NUEVA LÓGICA: Detecta si es usuario o correo completo
+      if (inputUsuario.includes('@')) {
+        correo = inputUsuario;
+      } else {
+        correo = inputUsuario + '@venvidrio.com';
+      }
+
+      // Validación del formato final (previene inyecciones o errores)
+      var emailRegex = /^[a-zA-Z0-9._%+-]+@venvidrio\.com$/;
+      if (!emailRegex.test(correo)) {
         if (usernameInput) usernameInput.classList.add('error');
-        window.mostrarAlertaPersonalizada('El usuario no puede contener espacios ni caracteres especiales', 'error');
+        window.mostrarAlertaPersonalizada('Formato de usuario o correo inválido', 'error');
         if (usernameInput) usernameInput.focus();
         return;
       }

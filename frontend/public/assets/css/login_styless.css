@@ -1,6 +1,6 @@
 /* =============================================
    Venvidrio — Sistema de Control de Calidad
-   Login_styless.css (Con Logo Real)
+   Login_styles.css (v2 - Optimizado)
    ============================================= */
 
 *, *::before, *::after {
@@ -178,9 +178,9 @@ body {
   transform: translateY(10px);
 }
 
+/* Asignamos retrasos individuales a cada campo */
 .field-group:nth-child(1) { animation-delay: 0.3s; }
 .field-group:nth-child(2) { animation-delay: 0.4s; }
-.field-group:nth-child(3) { animation-delay: 0.5s; }
 
 .field-label {
   font-size: 11px;
@@ -199,6 +199,8 @@ body {
 
 .field-wrapper {
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .field-icon {
@@ -221,7 +223,7 @@ body {
   background: #f8fafc;
   border: 1.5px solid #e2e8f0;
   border-radius: 10px;
-  padding: 11px 14px 11px 42px;
+  padding: 11px 14px 11px 42px; /* Padding para dejar espacio al icono */
   font-size: 14px;
   font-family: 'DM Sans', sans-serif;
   color: #0f172a;
@@ -241,6 +243,7 @@ body {
   box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
 }
 
+/* Ajuste específico para el input de contraseña (espacio para el ojo) */
 #password {
   padding-right: 42px;
 }
@@ -330,7 +333,6 @@ body {
   cursor: pointer;
 }
 
-/* Enlace "¿Olvidaste tu contraseña?" */
 .forgot-link {
   font-size: 12.5px;
   font-weight: 500;
@@ -420,6 +422,9 @@ body {
 
 .submit-btn:disabled {
   cursor: not-allowed;
+  opacity: 0.7;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-content {
@@ -527,7 +532,6 @@ body {
    (Recuperar contraseña / Nueva contraseña / Aviso)
    ============================================= */
 
-/* ---- Encabezado dentro de la card ---- */
 .auth-header {
   text-align: center;
   margin-bottom: 1.5rem;
@@ -553,7 +557,6 @@ body {
   margin: 0 auto;
 }
 
-/* ---- Pie con enlaces dentro de la card ---- */
 .auth-footer {
   text-align: center;
   margin-top: 1.25rem;
@@ -600,13 +603,7 @@ body {
   font-size: 18px;
 }
 
-/* ---- Estado deshabilitado extra del botón (auth) ---- */
-.submit-btn:disabled {
-  opacity: 0.7;
-  transform: none;
-}
-
-/* ---- Bloque de fortaleza de contraseña (para nueva-password) ---- */
+/* ---- Bloque de fortaleza de contraseña ---- */
 .password-rules {
   list-style: none;
   margin: 8px 0 14px;
