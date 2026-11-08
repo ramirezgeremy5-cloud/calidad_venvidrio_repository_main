@@ -41,7 +41,7 @@ body {
   margin: 0;
   padding: 0;
   color: var(--text-main);
-  -webkit-tap-highlight-color: transparent; /* Mejora experiencia táctil en Android */
+  -webkit-tap-highlight-color: transparent;
 }
 
 .page { max-width: 1400px; margin: 0 auto; padding: 1.25rem 1rem 0; }
@@ -92,7 +92,7 @@ body {
   border-radius: 12px;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
   border: 1px solid #d1d9e6;
-  overflow-x: auto; /* Scroll horizontal en móviles muy estrechos */
+  overflow-x: auto;
   scrollbar-width: none;
 }
 .filtros-grupo::-webkit-scrollbar { display: none; }
@@ -108,7 +108,7 @@ body {
   color: var(--text-muted);
   transition: all 0.15s ease;
   white-space: nowrap;
-  min-height: 38px; /* Tamaño táctil mínimo */
+  min-height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -243,7 +243,15 @@ body {
   margin-bottom: 1.5rem;
 }
 
-/* ================= KPI GRID (Nuevos Estilos) ================= */
+/* 🔧 Reemplaza los style="margin-top:1.5rem;" que quitamos del HTML */
+.dashboard-layout + .dashboard-layout,
+.dashboard-layout-2col + .dashboard-layout,
+.dashboard-layout + .dashboard-layout-2col,
+.dashboard-layout-2col + .dashboard-layout-2col {
+  margin-top: 1.5rem;
+}
+
+/* ================= KPI GRID ================= */
 .kpi-grid, .kpi-grid-5, .kpi-grid-6 {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -261,7 +269,6 @@ body {
   .kpi-grid-5 { grid-template-columns: repeat(5, 1fr); }
 }
 
-/* Estilos base para la tarjeta KPI */
 .kpi-card {
   background: #fff;
   border: 1px solid var(--border);
@@ -275,7 +282,7 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  text-decoration: none; /* Para cuando es un enlace */
+  text-decoration: none;
   color: inherit;
 }
 
@@ -284,7 +291,6 @@ body {
   transform: translateY(-2px);
 }
 
-/* Íconos de fondo (Se inyectan desde el HTML) */
 .kpi-card .kpi-bg-icon {
   position: absolute;
   right: -15px;
@@ -299,7 +305,6 @@ body {
   opacity: 0.08;
 }
 
-/* Gradientes específicos para cada KPI */
 .kpi-card.produccion { background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); border-left: 4px solid #22c55e; }
 .kpi-card.lotes { background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%); border-left: 4px solid #3b82f6; }
 .kpi-card.pendientes { background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%); border-left: 4px solid #f59e0b; }
@@ -307,7 +312,6 @@ body {
 .kpi-card.rechazo { background: linear-gradient(135deg, #ffffff 0%, #fdf2f8 100%); border-left: 4px solid #ec4899; }
 .kpi-card.eficiencia { background: linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%); border-left: 4px solid #8b5cf6; }
 
-/* Enlace dentro de la tarjeta KPI */
 .kpi-card a {
   display: block;
   text-decoration: none;
@@ -401,6 +405,25 @@ body {
   text-align: center;
 }
 
+/* 🔧 NUEVAS clases que reemplazan los style="..." inline de los canvas */
+.chart-production {
+  width: 100% !important;
+  max-height: 280px;
+  cursor: pointer;
+}
+.chart-pie {
+  cursor: pointer;
+}
+.chart-lineas {
+  width: 100% !important;
+  max-height: 200px;
+}
+.chart-eficiencia {
+  width: 100% !important;
+  max-height: 200px;
+}
+
+/* Compatibilidad con reglas antiguas basadas en ID */
 #productionChart,
 #lineasChart,
 #eficienciaChart {
@@ -409,6 +432,26 @@ body {
 }
 @media (min-width: 768px) {
   #productionChart, #lineasChart, #eficienciaChart { max-height: 260px; }
+}
+
+/* 🔧 NUEVAS clases que reemplazan los style="padding:..." inline */
+.pie-chart-body {
+  padding: 1rem 1.5rem 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.placeholder-body {
+  padding: 0.5rem 1.5rem 1rem;
+}
+
+.placeholder-body-tall {
+  padding: 1rem 1.5rem;
+}
+
+.placeholder-body-alerts {
+  padding: 0.5rem 1.5rem;
 }
 
 /* ================= CARDS ================= */
@@ -508,6 +551,7 @@ body {
   white-space: nowrap;
   letter-spacing: 0.2px;
 }
+.badge i { font-size: 10px; } /* 🔧 Reemplaza los style="font-size:10px;" inline */
 .badge-success { background: #e8f5e9; color: #1b5e20; }
 .badge-danger  { background: #ffebee; color: #b71c1c; }
 .badge-info    { background: #e3f2fd; color: #0d47a1; }
@@ -657,13 +701,20 @@ body {
 }
 .alert-item-desc { font-size: 10.5px; color: var(--text-muted); line-height: 1.4; }
 
+/* 🔧 NUEVO: reemplaza el style="..." inline del li de "Cargando alertas..." */
+.alert-loading {
+  padding: 10px 0;
+  color: var(--text-muted);
+  text-align: center;
+}
+
 /* ================= TABLA ================= */
 .table-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   width: 100%;
 }
-.table-wrap table {
+.table-wrap table, .table-dash {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
@@ -681,15 +732,35 @@ body {
   background: #f8fafc;
   white-space: nowrap;
 }
-.table-wrap tbody td {
+.table-wrap tbody td, .table-dash tbody td {
   padding: 11px 12px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
   white-space: nowrap;
 }
-.table-wrap tbody tr { transition: background-color 0.15s ease; }
-.table-wrap tbody tr:hover { background: #f5f7ff; }
-.table-wrap tbody tr:last-child td { border-bottom: none; }
+.table-wrap tbody tr, .table-dash tbody tr { transition: background-color 0.15s ease; }
+.table-wrap tbody tr:hover, .table-dash tbody tr:hover { background: #f5f7ff; }
+.table-wrap tbody tr:last-child td, .table-dash tbody tr:last-child td { border-bottom: none; }
+
+/* 🔧 NUEVO: reemplaza el style="..." inline de la fila "Cargando registros..." */
+.table-loading {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+}
+
+/* ================= FOOTER ================= */
+.footer {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  margin-top: 1.5rem;
+}
+.footer p {
+  font-size: 12px;
+  margin: 0;
+}
 
 /* ================= ESTADO DE ERROR ================= */
 .error-state {
@@ -849,7 +920,7 @@ body {
 
 @media (max-width: 768px) {
   .btn-primary, .btn-primary-modal {
-    min-height: 44px; /* Tamaño táctil óptimo en Android */
+    min-height: 44px;
     font-size: 14px;
   }
 
@@ -894,9 +965,8 @@ body {
   .modal-content { padding: 1.5rem 1.25rem; }
   .modal-icon { width: 60px; height: 60px; font-size: 2rem; }
 
-  .table-wrap table { min-width: 560px; }
+  .table-wrap table, .table-dash { min-width: 560px; }
 
-  /* Selector de planta en móvil */
   .selector-planta {
     width: 100%;
     margin-bottom: 8px;

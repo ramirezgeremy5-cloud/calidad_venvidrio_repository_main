@@ -19,7 +19,7 @@
       <img src="./assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
     </div>
 
-    <!-- RELOJ EN EL NAVBAR (Se actualiza con shared.js) -->
+    <!-- RELOJ EN EL NAVBAR (estilos en shared.css, lógica en shared.js) -->
     <div class="nav-reloj">
       <i class="ti ti-clock"></i>
       <span id="reloj-real">--:--:--</span>
@@ -33,7 +33,7 @@
     <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
     <li><a href="../pages/auditoria_interna.html"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a></li>
     <li><a href="../pages/auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
-    <li id="navUsuariosLink" style="display:none;">
+    <li id="navUsuariosLink" class="nav-hidden">
       <a href="../pages/usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
     </li>
   </ul>
@@ -158,12 +158,12 @@
             <button class="btn-sm filtro-grafico" data-filtro="lotes">Lotes</button>
           </div>
           <span class="badge badge-success" title="Los datos se actualizan automáticamente">
-            <i class="ti ti-circle-dot" style="font-size:10px;"></i> Actualizado
+            <i class="ti ti-circle-dot"></i> Actualizado
           </span>
         </div>
       </div>
-      <div class="card-body" style="padding:1rem 1.5rem 1.5rem;">
-        <canvas id="productionChart" style="max-height:280px;width:100%;cursor:pointer;"></canvas>
+      <div class="card-body pie-chart-body">
+        <canvas id="productionChart" class="chart-production"></canvas>
       </div>
     </div>
 
@@ -172,23 +172,23 @@
         <div class="card-title"><i class="ti ti-chart-pie"></i> Defectos por Clasificación</div>
         <span class="badge badge-danger" id="total-defectos-badge">Total: 0</span>
       </div>
-      <div class="card-body" style="padding:1rem 1.5rem 1.5rem;display:flex;justify-content:center;align-items:center;">
+      <div class="card-body pie-chart-body">
         <div class="pie-chart-wrapper">
-          <canvas id="defectosChart" style="cursor:pointer;"></canvas>
+          <canvas id="defectosChart" class="chart-pie"></canvas>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="dashboard-layout dashboard-layout-2col" style="margin-top:1.5rem;">
+  <section class="dashboard-layout dashboard-layout-2col">
     <div class="card anim-card">
       <div class="card-header">
         <div class="card-title"><i class="ti ti-circle-check"></i> APTO vs RETENIDO</div>
-        <span class="badge badge-info"><i class="ti ti-checkbox" style="font-size:10px;"></i> Estado de lotes</span>
+        <span class="badge badge-info"><i class="ti ti-checkbox"></i> Estado de lotes</span>
       </div>
-      <div class="card-body" style="padding:1rem 1.5rem 1.5rem;display:flex;justify-content:center;align-items:center;">
+      <div class="card-body pie-chart-body">
         <div class="pie-chart-wrapper">
-          <canvas id="aptoChart" style="cursor:pointer;"></canvas>
+          <canvas id="aptoChart" class="chart-pie"></canvas>
         </div>
       </div>
     </div>
@@ -196,21 +196,21 @@
     <div class="card anim-card">
       <div class="card-header">
         <div class="card-title"><i class="ti ti-building-factory-2"></i> Producción por Línea</div>
-        <span class="badge badge-info"><i class="ti ti-chart-bar" style="font-size:10px;"></i> Comparativa</span>
+        <span class="badge badge-info"><i class="ti ti-chart-bar"></i> Comparativa</span>
       </div>
-      <div class="card-body" style="padding:1rem 1.5rem 1.5rem;">
-        <canvas id="lineasChart" style="max-height:200px;width:100%;"></canvas>
+      <div class="card-body pie-chart-body">
+        <canvas id="lineasChart" class="chart-lineas"></canvas>
       </div>
     </div>
   </section>
 
-  <section class="dashboard-layout dashboard-layout-2col" style="margin-top:1.5rem;">
+  <section class="dashboard-layout dashboard-layout-2col">
     <div class="card anim-card">
       <div class="card-header">
         <div class="card-title"><i class="ti ti-box-seam"></i> Top Productos Más Producidos</div>
-        <span class="badge badge-info"><i class="ti ti-trophy" style="font-size:10px;"></i> Por unidades</span>
+        <span class="badge badge-info"><i class="ti ti-trophy"></i> Por unidades</span>
       </div>
-      <div class="card-body" id="top-productos" style="padding:0.5rem 1.5rem 1rem;">
+      <div class="card-body placeholder-body" id="top-productos">
         <div class="loading-placeholder"><i class="ti ti-loader-2 loading-spinner"></i> Cargando datos...</div>
       </div>
     </div>
@@ -218,43 +218,43 @@
     <div class="card anim-card">
       <div class="card-header">
         <div class="card-title"><i class="ti ti-alert-triangle"></i> Tipos de Defecto Más Frecuentes</div>
-        <span class="badge badge-danger"><i class="ti ti-flame" style="font-size:10px;"></i> Ranking</span>
+        <span class="badge badge-danger"><i class="ti ti-flame"></i> Ranking</span>
       </div>
-      <div class="card-body" id="top-tipos-defecto" style="padding:0.5rem 1.5rem 1rem;">
+      <div class="card-body placeholder-body" id="top-tipos-defecto">
         <div class="loading-placeholder"><i class="ti ti-loader-2 loading-spinner"></i> Cargando datos...</div>
       </div>
     </div>
   </section>
 
-  <section class="dashboard-layout dashboard-layout-2col" style="margin-top:1.5rem;">
+  <section class="dashboard-layout dashboard-layout-2col">
     <div class="card anim-card">
       <div class="card-header">
         <div class="card-title"><i class="ti ti-chart-line"></i> Eficiencia Mensual</div>
-        <span class="badge badge-success"><i class="ti ti-trending-up" style="font-size:10px;"></i> Tendencia</span>
+        <span class="badge badge-success"><i class="ti ti-trending-up"></i> Tendencia</span>
       </div>
-      <div class="card-body" style="padding:1rem 1.5rem 1.5rem;">
-        <canvas id="eficienciaChart" style="max-height:200px;width:100%;"></canvas>
+      <div class="card-body pie-chart-body">
+        <canvas id="eficienciaChart" class="chart-eficiencia"></canvas>
       </div>
     </div>
 
     <div class="card anim-card">
       <div class="card-header">
         <div class="card-title"><i class="ti ti-user-x"></i> Top Clientes con Retención</div>
-        <span class="badge badge-danger"><i class="ti ti-alert-triangle" style="font-size:10px;"></i> Ranking</span>
+        <span class="badge badge-danger"><i class="ti ti-alert-triangle"></i> Ranking</span>
       </div>
-      <div class="card-body" id="top-clientes-retencion" style="padding:0.5rem 1.5rem 1rem;">
+      <div class="card-body placeholder-body" id="top-clientes-retencion">
         <div class="loading-placeholder"><i class="ti ti-loader-2 loading-spinner"></i> Cargando datos...</div>
       </div>
     </div>
   </section>
 
-  <section class="dashboard-layout dashboard-layout-2col" style="margin-top:1.5rem;">
+  <section class="dashboard-layout dashboard-layout-2col">
     <div class="card anim-card">
       <div class="card-header">
         <div class="card-title"><i class="ti ti-clipboard-check"></i> Auditorías Pendientes</div>
-        <span class="badge badge-warning"><i class="ti ti-clock" style="font-size:10px;"></i> En tiempo real</span>
+        <span class="badge badge-warning"><i class="ti ti-clock"></i> En tiempo real</span>
       </div>
-      <div class="card-body" id="auditorias-pendientes" style="padding:1rem 1.5rem;">
+      <div class="card-body placeholder-body-tall" id="auditorias-pendientes">
         <div class="loading-placeholder"><i class="ti ti-loader-2 loading-spinner"></i> Cargando auditorías...</div>
       </div>
     </div>
@@ -262,11 +262,11 @@
     <div class="card anim-card">
       <div class="card-header">
         <div class="card-title"><i class="ti ti-bell"></i> Alertas del Sistema</div>
-        <span class="badge badge-success"><i class="ti ti-circle-dot" style="font-size:10px;"></i> En vivo</span>
+        <span class="badge badge-success"><i class="ti ti-circle-dot"></i> En vivo</span>
       </div>
-      <div class="card-body" style="padding:0.5rem 1.5rem;">
-        <ul class="alert-list" id="dashboard-alerts" style="list-style:none;padding:0;margin:0;">
-          <li style="padding:10px 0;color:var(--text-muted);text-align:center;">
+      <div class="card-body placeholder-body-alerts">
+        <ul class="alert-list" id="dashboard-alerts">
+          <li class="alert-loading">
             <i class="ti ti-loader-2 loading-spinner"></i> Cargando alertas...
           </li>
         </ul>
@@ -274,15 +274,15 @@
     </div>
   </section>
 
-  <section class="dashboard-layout" style="margin-top:1.5rem;">
+  <section class="dashboard-layout">
     <div class="card anim-card">
       <div class="card-header">
         <div class="card-title"><i class="ti ti-table"></i> Últimos Registros</div>
         <span class="badge badge-info" id="total-registros-badge">0 registros</span>
       </div>
-      <div class="card-body table-wrap" style="padding:0;">
-        <table style="width:100%;border-collapse:collapse;">
-          <thead style="background:var(--off-white);">
+      <div class="card-body table-wrap">
+        <table class="table-dash">
+          <thead>
             <tr>
               <th class="th-dash">Fecha</th>
               <th class="th-dash">Ticket</th>
@@ -295,7 +295,7 @@
           </thead>
           <tbody id="dashboard-table">
             <tr>
-              <td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">
+              <td colspan="7" class="table-loading">
                 <i class="ti ti-loader-2 loading-spinner"></i> Cargando registros...
               </td>
             </tr>
@@ -307,8 +307,8 @@
 
 </main>
 
-<footer class="footer" style="text-align:center;padding:1.5rem;color:var(--text-muted);border-top:1px solid var(--border);margin-top:1.5rem;">
-  <p style="font-size:12px;">© 2026 Venvidrio — Sistema de Control de Calidad</p>
+<footer class="footer">
+  <p>© 2026 Venvidrio — Sistema de Control de Calidad</p>
 </footer>
 
 <div class="modal-overlay" id="modalInactividad">
