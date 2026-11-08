@@ -6,15 +6,15 @@ from datetime import datetime
 from pathlib import Path
 from fastapi.responses import Response
 
-# 👇 CORRECCIÓN: Rutas de importación estandarizadas
-from app.models.auditoria_interna import AuditoriaCalidad
+# 👇 IMPORTACIONES ESTANDARIZADAS A "AuditoriaInterna"
+from app.models.auditoria_interna import AuditoriaInterna
 from app.models.usuario import Usuario
-from app.schemas.auditoria_interna import AuditoriaCalidadCreate, AuditoriaCalidadResponse
-from app.dependencies.auth import get_db, check_auditoria_interna
+from app.schemas.auditoria_interna import AuditoriaInternaCreate, AuditoriaInternaResponse
+from app.dependencies.auth import get_db, check_auditoria_interna, check_admin
 
 router = APIRouter(
-    prefix="/auditorias/calidad",
-    tags=["Auditoría Interna de Calidad"]
+    prefix="/auditorias/interna",
+    tags=["Auditoría Interna"]
 )
 
 # Ruta absoluta al logo
@@ -24,13 +24,12 @@ LOGO_PATH = BASE_DIR / "static" / "logo.png"
 # =========================
 # LISTAR EVALUACIONES
 # =========================
-@router.get("/evaluaciones", response_model=List[AuditoriaCalidadResponse])
+@router.get("/evaluaciones", response_model=List[AuditoriaInternaResponse])
 def listar_evaluaciones(
     db: Session = Depends(get_db),
-    # 👇 Usamos la nueva dependencia (valida roles 2 y 3)
     current_user: Usuario = Depends(check_auditoria_interna())
 ):
-    auditorias = db.query(AuditoriaCalidad).order_by(AuditoriaCalidad.fecha.desc()).all()
+    auditorias = db.query(AuditoriaInterna).order_by(AuditoriaInterna.fecha.desc()).all()
     
     res = []
     for a in auditorias:
@@ -38,7 +37,7 @@ def listar_evaluaciones(
         evaluador = db.query(Usuario).filter(Usuario.id == a.evaluador_id).first()
         
         res.append(
-            AuditoriaCalidadResponse(
+            AuditoriaInternaResponse(
                 id=a.id,
                 evaluado_id=a.evaluado_id,
                 evaluador_id=a.evaluador_id,
@@ -57,9 +56,9 @@ def listar_evaluaciones(
 # =========================
 # CREAR EVALUACIÓN
 # =========================
-@router.post("/evaluaciones", response_model=AuditoriaCalidadResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/evaluaciones", response_model=AuditoriaInternaResponse, status_code=status.HTTP_201_CREATED)
 def crear_evaluacion(
-    data: AuditoriaCalidadCreate,
+    data: AuditoriaInternaCreate,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(check_auditoria_interna())
 ):
@@ -67,7 +66,7 @@ def crear_evaluacion(
     if not evaluado:
         raise HTTPException(404, "El usuario evaluado no existe")
 
-    nueva_auditoria = AuditoriaCalidad(
+    nueva_auditoria = AuditoriaInterna(
         evaluado_id=data.evaluado_id,
         evaluador_id=current_user.id,
         periodo=data.periodo,
@@ -81,7 +80,7 @@ def crear_evaluacion(
     db.commit()
     db.refresh(nueva_auditoria)
 
-    return AuditoriaCalidadResponse(
+    return AuditoriaInternaResponse(
         id=nueva_auditoria.id,
         evaluado_id=nueva_auditoria.evaluado_id,
         evaluador_id=nueva_auditoria.evaluador_id,
@@ -104,7 +103,7 @@ def exportar_pdf(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(check_auditoria_interna())
 ):
-    evaluacion = db.query(AuditoriaCalidad).filter(AuditoriaCalidad.id == evaluacion_id).first()
+    evaluacion = db.query(AuditoriaInterna).filter(AuditoriaInterna.id == evaluacion_id).first()
     if not evaluacion:
         raise HTTPException(404, "Evaluación no encontrada")
 
@@ -117,14 +116,13 @@ def exportar_pdf(
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib import colors
         from reportlab.lib.units import cm
-        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from reportlab.lib.enums import TA_CENTER
 
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1.5*cm)
         elements = []
         styles = getSampleStyleSheet()
 
-        # Insertar Logo
         if LOGO_PATH.exists():
             try:
                 img = Image(str(LOGO_PATH), width=5*cm, height=2.5*cm)
@@ -135,7 +133,7 @@ def exportar_pdf(
                 print(f"Error cargando logo PDF: {e}")
 
         titulo_style = ParagraphStyle('Titulo', parent=styles['Heading1'], fontSize=16, alignment=TA_CENTER, textColor=colors.HexColor('#1a237e'))
-        elements.append(Paragraph('REPORTE DE EVALUACIÓN DE CALIDAD', titulo_style))
+        elements.append(Paragraph('REPORTE DE EVALUACIÓN INTERNA', titulo_style))
         elements.append(Spacer(1, 0.8*cm))
 
         data = [
@@ -178,7 +176,7 @@ def exportar_word(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(check_auditoria_interna())
 ):
-    evaluacion = db.query(AuditoriaCalidad).filter(AuditoriaCalidad.id == evaluacion_id).first()
+    evaluacion = db.query(AuditoriaInterna).filter(AuditoriaInterna.id == evaluacion_id).first()
     if not evaluacion:
         raise HTTPException(404, "Evaluación no encontrada")
 
@@ -192,7 +190,6 @@ def exportar_word(
 
         doc = Document()
 
-        # Insertar Logo
         if LOGO_PATH.exists():
             try:
                 p_logo = doc.add_paragraph()
@@ -202,7 +199,7 @@ def exportar_word(
             except Exception as e:
                 print(f"Error cargando logo Word: {e}")
 
-        titulo = doc.add_heading('REPORTE DE EVALUACIÓN DE CALIDAD', level=1)
+        titulo = doc.add_heading('REPORTE DE EVALUACIÓN INTERNA', level=1)
         titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
         doc.add_paragraph(f"ID Evaluación: {evaluacion.id}")
@@ -235,7 +232,7 @@ def exportar_todas_pdf(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(check_auditoria_interna())
 ):
-    evaluaciones = db.query(AuditoriaCalidad).order_by(AuditoriaCalidad.fecha.desc()).all()
+    evaluaciones = db.query(AuditoriaInterna).order_by(AuditoriaInterna.fecha.desc()).all()
     if not evaluaciones:
         raise HTTPException(404, "No hay evaluaciones registradas")
 
@@ -252,7 +249,6 @@ def exportar_todas_pdf(
         elements = []
         styles = getSampleStyleSheet()
 
-        # Logo
         if LOGO_PATH.exists():
             try:
                 img = Image(str(LOGO_PATH), width=4*cm, height=2*cm)
@@ -263,7 +259,7 @@ def exportar_todas_pdf(
                 print(f"Error cargando logo PDF global: {e}")
 
         titulo_style = ParagraphStyle('Titulo', parent=styles['Heading1'], fontSize=14, alignment=TA_CENTER, textColor=colors.HexColor('#1a237e'))
-        elements.append(Paragraph('REPORTE GLOBAL DE EVALUACIONES DE CALIDAD', titulo_style))
+        elements.append(Paragraph('REPORTE GLOBAL DE EVALUACIONES INTERNAS', titulo_style))
         elements.append(Spacer(1, 0.5*cm))
 
         data = [['ID', 'Periodo', 'Evaluado', 'Evaluador', 'Puntaje', 'Categoría', 'Fecha']]
@@ -311,7 +307,7 @@ def exportar_todas_word(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(check_auditoria_interna())
 ):
-    evaluaciones = db.query(AuditoriaCalidad).order_by(AuditoriaCalidad.fecha.desc()).all()
+    evaluaciones = db.query(AuditoriaInterna).order_by(AuditoriaInterna.fecha.desc()).all()
     if not evaluaciones:
         raise HTTPException(404, "No hay evaluaciones registradas")
 
@@ -322,7 +318,6 @@ def exportar_todas_word(
 
         doc = Document()
 
-        # Logo
         if LOGO_PATH.exists():
             try:
                 p_logo = doc.add_paragraph()
@@ -332,7 +327,7 @@ def exportar_todas_word(
             except Exception as e:
                 print(f"Error cargando logo Word global: {e}")
 
-        titulo = doc.add_heading('REPORTE GLOBAL DE EVALUACIONES DE CALIDAD', level=1)
+        titulo = doc.add_heading('REPORTE GLOBAL DE EVALUACIONES INTERNAS', level=1)
         titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
         table = doc.add_table(rows=1, cols=7)
@@ -376,10 +371,9 @@ def exportar_todas_word(
 def eliminar_evaluacion(
     evaluacion_id: int,
     db: Session = Depends(get_db),
-    # 👇 Solo Admin (Rol 3) puede eliminar
-    current_user: Usuario = Depends(check_role([3])) 
+    current_user: Usuario = Depends(check_admin())
 ):
-    evaluacion = db.query(AuditoriaCalidad).filter(AuditoriaCalidad.id == evaluacion_id).first()
+    evaluacion = db.query(AuditoriaInterna).filter(AuditoriaInterna.id == evaluacion_id).first()
     if not evaluacion:
         raise HTTPException(404, "Evaluación no encontrada")
 
