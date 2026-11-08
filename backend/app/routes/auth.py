@@ -33,7 +33,7 @@ def login(data: LoginRequest):
         with engine.connect() as conn:
             logger.debug("📡 Buscando usuario en la base de datos...")
 
-            # 👇 MODIFICAMOS LA CONSULTA PARA TRAER EL CARGO Y SUS PERMISOS
+            # Consulta con JOIN para traer cargo y permisos
             user = conn.execute(
                 text("""
                     SELECT u.id, u.nombre, u.correo, u.password, u.rol_id, u.activo,
@@ -68,32 +68,43 @@ def login(data: LoginRequest):
                     detail="Usuario desactivado. Contacte al administrador"
                 )
 
-            # Verificar si el usuario está bloqueado
+            # =========================================================
+            # 👇 CORRECCIÓN DEL ERROR: datetime vs str en bloqueado_hasta
+            # =========================================================
             if user["bloqueado_hasta"]:
-                try:
-                    bloqueado_hasta = datetime.fromisoformat(user["bloqueado_hasta"])
-                    if bloqueado_hasta > datetime.utcnow():
-                        minutos_restantes = int((bloqueado_hasta - datetime.utcnow()).seconds / 60)
-                        logger.warning(f"🔒 Usuario bloqueado: {data.correo}")
-                        raise HTTPException(
-                            status_code=status.HTTP_403_FORBIDDEN,
-                            detail=f"Usuario bloqueado. Intente en {minutos_restantes} minutos"
-                        )
-                except ValueError as e:
-                    logger.error(f"❌ Error parseando fecha de bloqueo: {e}")
+                valor_bloqueo = user["bloqueado_hasta"]
+                
+                # Si ya es un objeto datetime (PostgreSQL TIMESTAMP), lo usamos directo
+                if isinstance(valor_bloqueo, datetime):
+                    bloqueado_hasta = valor_bloqueo
+                # Si por alguna razón viene como string, lo parseamos
+                elif isinstance(valor_bloqueo, str):
+                    try:
+                        bloqueado_hasta = datetime.fromisoformat(valor_bloqueo)
+                    except ValueError as e:
+                        logger.error(f"❌ Error parseando fecha de bloqueo (string): {e}")
+                        bloqueado_hasta = None
+                else:
+                    bloqueado_hasta = None
 
-            # ==================================================================
-            # LÓGICA CLAVE: REEMPLAZAR SESIÓN ANTERIOR (SIN BLOQUEAR)
-            # ==================================================================
+                if bloqueado_hasta and bloqueado_hasta > datetime.utcnow():
+                    minutos_restantes = int((bloqueado_hasta - datetime.utcnow()).total_seconds() / 60)
+                    logger.warning(f"🔒 Usuario bloqueado: {data.correo}")
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Usuario bloqueado. Intente en {minutos_restantes} minutos"
+                    )
+
+            # =========================================================
+            # REEMPLAZAR SESIÓN ANTERIOR (SIN BLOQUEAR)
+            # =========================================================
             if user["session_id"]:
                 logger.info(f"♻️ Reemplazando sesión anterior para: {data.correo}")
-                # Limpiamos la sesión anterior en la BD antes de crear la nueva
                 conn.execute(
                     text("UPDATE usuarios SET session_id = NULL, ultima_actividad = NULL WHERE id = :id"),
                     {"id": user["id"]}
                 )
                 conn.commit()
-            # ==================================================================
 
             # Verificar contraseña
             logger.debug("🔑 Verificando contraseña...")
@@ -123,7 +134,7 @@ def login(data: LoginRequest):
                             """),
                             {
                                 "intentos": nuevos_intentos,
-                                "bloqueado": bloqueado_hasta.isoformat(),
+                                "bloqueado": bloqueado_hasta,  # 👈 El driver acepta datetime nativo
                                 "id": user["id"]
                             }
                         )
@@ -169,7 +180,7 @@ def login(data: LoginRequest):
                         WHERE id = :id
                     """),
                     {
-                        "now": datetime.utcnow().isoformat(),
+                        "now": datetime.utcnow(),  # 👈 Objeto datetime nativo
                         "id": user["id"]
                     }
                 )
@@ -197,7 +208,7 @@ def login(data: LoginRequest):
 
             # ✅ GUARDAR LA SESIÓN EN LA BD (session_id + ultima_actividad)
             try:
-                now_iso = datetime.utcnow().isoformat()
+                now_iso = datetime.utcnow()
                 conn.execute(
                     text("""
                         UPDATE usuarios
@@ -207,7 +218,7 @@ def login(data: LoginRequest):
                     """),
                     {
                         "sid": nuevo_session_id,
-                        "now": now_iso,
+                        "now": now_iso,  # 👈 Objeto datetime nativo
                         "id": user["id"]
                     }
                 )
@@ -216,7 +227,6 @@ def login(data: LoginRequest):
             except Exception as e:
                 logger.error(f"❌ Error guardando session_id en BD: {e}")
 
-            # 👇 AGREGAMOS LOS CAMPOS DE CARGO Y PERMISOS EN EL RETURN
             return {
                 "access_token": access_token,
                 "token_type": "bearer",
@@ -248,9 +258,6 @@ def login(data: LoginRequest):
 # =========================
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(data: RegisterRequest):
-    """
-    Registrar un nuevo usuario
-    """
     logger.info(f"📝 Registro de nuevo usuario: {data.correo}")
 
     try:
@@ -268,7 +275,6 @@ def register(data: RegisterRequest):
                     detail="El correo ya está registrado"
                 )
 
-            # Crear nuevo usuario
             try:
                 password_hash = hash_password(data.password)
                 logger.debug("🔑 Contraseña hasheada correctamente")
@@ -291,7 +297,7 @@ def register(data: RegisterRequest):
                     "password": password_hash,
                     "rol_id": data.rol_id or 1,
                     "activo": True,
-                    "creado_en": datetime.utcnow().isoformat(),
+                    "creado_en": datetime.utcnow(),  # 👈 datetime nativo
                     "intentos_fallidos": 0
                 }
             ).mappings().first()
@@ -327,9 +333,6 @@ def register(data: RegisterRequest):
 # =========================
 @router.post("/logout")
 def logout(current_user = Depends(get_current_user)):
-    """
-    Cerrar sesión (libera el session_id y ultima_actividad en la BD)
-    """
     try:
         logger.info(f"👋 Solicitud de logout para usuario ID: {current_user.id}")
 
@@ -371,9 +374,6 @@ def cambiar_password(
     data: PasswordChangeRequest,
     current_user = Depends(get_current_user)
 ):
-    """
-    Cambiar contraseña del usuario autenticado
-    """
     logger.info(f"🔑 Cambio de contraseña para usuario ID: {current_user.id}")
 
     try:
@@ -433,14 +433,10 @@ def cambiar_password(
 # =========================
 @router.get("/verify")
 def verify_token(current_user = Depends(get_current_user)):
-    """
-    Verificar si el token es válido y actualizar la última actividad (heartbeat)
-    """
     logger.info(f"✅ Token verificado para usuario ID: {current_user.id}")
     
     try:
         with engine.connect() as conn:
-            # 🔧 ACTUALIZAR LA HORA DE ÚLTIMA ACTIVIDAD EN LA BD
             conn.execute(
                 text("""
                     UPDATE usuarios
@@ -448,7 +444,7 @@ def verify_token(current_user = Depends(get_current_user)):
                     WHERE id = :id
                 """),
                 {
-                    "now": datetime.utcnow().isoformat(),
+                    "now": datetime.utcnow(),  # 👈 datetime nativo
                     "id": current_user.id
                 }
             )
@@ -472,7 +468,6 @@ def verify_token(current_user = Depends(get_current_user)):
 # =========================
 @router.get("/test")
 def test_endpoint():
-    """Endpoint de prueba para verificar que el router funciona"""
     return {
         "success": True,
         "message": "Auth router funcionando correctamente"
@@ -484,7 +479,6 @@ def test_endpoint():
 # =========================
 @router.post("/test-login")
 def test_login(data: LoginRequest):
-    """Endpoint de prueba para verificar conexión con la base de datos"""
     try:
         with engine.connect() as conn:
             result = conn.execute(text("SELECT 1 as test")).mappings().first()
