@@ -17,6 +17,11 @@ router = APIRouter(
     tags=["Producción"]
 )
 
+# 🔒 FIX: estatus que SOLO puede asignar el módulo de Defectos
+ESTATUS_SOLO_DEFECTOS = {"200", "300"}
+# 🔒 FIX: estatus válidos al crear un lote desde Producción
+ESTATUS_PERMITIDOS_ALTA = {"100"}
+
 
 def get_db():
     db = SessionLocal()
@@ -46,8 +51,7 @@ def _generar_codigo_lote(
     if fecha is None:
         fecha = date.today()
 
-    # 👇 CORRECCIÓN DE FECHA: Año, Mes, Día
-    fecha_str = fecha.strftime("%Y%m%d") 
+    fecha_str = fecha.strftime("%Y%m%d")
     maquina_limpia = (maquina or "XX").replace(" ", "").upper()
     prefijo = f"{fecha_str}{maquina_limpia}"
 
@@ -139,7 +143,7 @@ def buscar_lote_por_codigo(codigo_escaneado: str, db: Session = Depends(get_db))
     Busca un lote comparando el código escaneado con el 'codigo_lote' o con el 'ticket_carga'.
     """
     codigo_limpio = codigo_escaneado.strip()
-    
+
     produccion = db.query(Produccion).filter(
         or_(
             Produccion.codigo_lote == codigo_limpio,
@@ -149,7 +153,7 @@ def buscar_lote_por_codigo(codigo_escaneado: str, db: Session = Depends(get_db))
 
     if not produccion:
         raise HTTPException(status_code=404, detail="No se encontró ningún lote con ese código o ticket.")
-    
+
     return produccion
 
 
@@ -163,7 +167,7 @@ def buscar_lote_publico(codigo_escaneado: str, db: Session = Depends(get_db)):
     consultar un lote escaneando el QR desde su móvil.
     """
     codigo_limpio = codigo_escaneado.strip()
-    
+
     produccion = db.query(Produccion).filter(
         or_(
             Produccion.codigo_lote == codigo_limpio,
@@ -173,7 +177,7 @@ def buscar_lote_publico(codigo_escaneado: str, db: Session = Depends(get_db)):
 
     if not produccion:
         raise HTTPException(status_code=404, detail="No se encontró ningún lote con ese código o ticket.")
-    
+
     return produccion
 
 
@@ -198,7 +202,7 @@ def obtener_opciones_filtros(db: Session = Depends(get_db)):
         "acabados": unicos(Produccion.acabado),
         "grupos": unicos(Produccion.grupo),
         "ordenes": unicos(Produccion.orden),
-        "turnos": [1, 2, 3, 4] 
+        "turnos": [1, 2, 3, 4]
     }
 
 
@@ -389,6 +393,10 @@ def crear_produccion(datos: ProduccionCreate, db: Session = Depends(get_db)):
     """
     Crea un nuevo lote.
     El código se genera como AAAAMMDD + Máquina + XXX (ej: 20261106A1001).
+
+    🔒 FIX: El estatus inicial SIEMPRE es "100" (pendiente).
+    Producción NO puede crear lotes como "200" (Apto) ni "300" (Retenido);
+    esos estados solo los asigna el módulo de Defectos.
     """
     fecha_ref = datos.fecha_produccion if datos.fecha_produccion else date.today()
     if isinstance(fecha_ref, datetime):
@@ -405,6 +413,18 @@ def crear_produccion(datos: ProduccionCreate, db: Session = Depends(get_db)):
                 status_code=400,
                 detail=f"El ticket {datos.ticket_carga} ya está registrado en el lote {existe_ticket.codigo_lote}."
             )
+
+    # 🔒 FIX: validar y forzar estatus inicial
+    estatus_inicial = str(getattr(datos, "estatus", None) or "100").strip()
+    if estatus_inicial not in ESTATUS_PERMITIDOS_ALTA:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Estatus inicial inválido: '{estatus_inicial}'. "
+                "Producción solo puede crear lotes en estatus '100' (pendiente). "
+                "Los estatus '200' (Apto) y '300' (Retenido) los asigna únicamente el módulo de Defectos."
+            )
+        )
 
     nueva = Produccion(
         codigo_lote=codigo_generado,
@@ -435,7 +455,7 @@ def crear_produccion(datos: ProduccionCreate, db: Session = Depends(get_db)):
         bot_por_canada=datos.bot_por_canada,
         bot_por_paleta=datos.bot_por_paleta,
         gruesas_por_paleta=datos.gruesas_por_paleta,
-        estatus=datos.estatus,
+        estatus="100",  # 🔒 FIX: forzado, nunca desde el body
         observaciones=datos.observaciones,
         fecha_produccion=datos.fecha_produccion
     )
@@ -448,7 +468,7 @@ def crear_produccion(datos: ProduccionCreate, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(
-            status_code=500, 
+            status_code=500,
             detail=f"Error al guardar el lote en la base de datos: {str(e)}"
         )
 
@@ -464,6 +484,22 @@ def actualizar_produccion(produccion_id: int, datos: ProduccionUpdate, db: Sessi
 
     update_data = datos.dict(exclude_unset=True)
     update_data.pop('codigo_lote', None)
+
+    # 🔒 FIX: Producción NO puede poner estatus "200" (Apto) ni "300" (Retenido).
+    # Esos solo los asigna el módulo de Defectos (/defectos/lote/{id}/apto y POST /defectos/).
+    # Sí se permite volver a "100" (devolver a evaluación), que es lo que hace Defectos.
+    nuevo_estatus = update_data.get("estatus")
+    if nuevo_estatus is not None:
+        nuevo_estatus = str(nuevo_estatus).strip()
+        if nuevo_estatus in ESTATUS_SOLO_DEFECTOS:
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    f"El estatus '{nuevo_estatus}' solo puede asignarse desde el módulo de Defectos. "
+                    "Producción no puede marcar un lote como Apto (200) ni Retenido (300)."
+                )
+            )
+        update_data["estatus"] = nuevo_estatus
 
     nuevo_ticket = update_data.get('ticket_carga')
     if nuevo_ticket and nuevo_ticket != produccion.ticket_carga:
