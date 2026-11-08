@@ -1,20 +1,31 @@
 /* ==========================================
    VENVIDRIO - AUDITORÍA INTERNA DE CALIDAD
-   auditoria.js - Evaluación del desempeño del personal de calidad
-   Acceso restringido: admin (3) y supervisor (2)
+   auditoria.js - v2 (Corregido)
+   - API_URL dinámico (localhost vs Render)
+   - Timeout + retry para Render wake-up
+   - foto_url robusta (absoluta o relativa)
+   - Race condition personal/evaluaciones resuelta
+   - Eliminación de evaluación con permisos por rol
+   - Exportaciones con token por header (no query)
    ========================================== */
 
 (function () {
   'use strict';
 
   // =========================
-  // CONFIGURACIÓN
+  // CONFIGURACIÓN DINÁMICA DE API
   // =========================
-  const API_URL = "http://127.0.0.1:8000";
+  const hostname = window.location.hostname;
+  const API_URL = (hostname === 'localhost' || hostname === '127.0.0.1')
+    ? 'http://127.0.0.1:8000'
+    : 'https://calidad-venvidrio-repository-main.onrender.com';
+
   const ROLES_PERMITIDOS = [2, 3]; // 2 = supervisor, 3 = admin
+  const TIMEOUT_MS = 15000;
+  const TIMEOUT_WAKE_MS = 30000;
 
   // =========================
-  // CATÁLOGO DE CRITERIOS DE EVALUACIÓN
+  // CATÁLOGO DE CRITERIOS
   // =========================
   const CRITERIOS = [
     { id: "c1",  texto: "Cumple sus funciones y responsabilidades asignadas", funcion: "Cumplimiento de funciones" },
@@ -29,31 +40,29 @@
     { id: "c10", texto: "Mantiene actualizada su documentación personal y certificaciones", funcion: "Documentación personal" }
   ];
 
-  // =========================
-  // PERSONAL DE CALIDAD (fallback local)
-  // =========================
   const PERSONAL_FALLBACK = [
-    { id: 1,  nombre: "María González",   cargo: "Inspectora de Calidad",         turno: "A", ingreso: "2022-03-15" },
-    { id: 2,  nombre: "Carlos Rodríguez", cargo: "Supervisor de Calidad",         turno: "A", ingreso: "2020-08-02" },
-    { id: 3,  nombre: "Ana Martínez",     cargo: "Analista de Calidad",           turno: "B", ingreso: "2021-11-20" },
-    { id: 4,  nombre: "José Pérez",       cargo: "Inspector de Calidad",          turno: "B", ingreso: "2023-01-09" },
-    { id: 5,  nombre: "Luisa Fernández",  cargo: "Coordinadora SGC",              turno: "A", ingreso: "2019-05-12" },
-    { id: 6,  nombre: "Pedro Sánchez",    cargo: "Metrólogo",                     turno: "C", ingreso: "2021-02-18" },
-    { id: 7,  nombre: "Daniela Torres",   cargo: "Inspectora de Calidad",         turno: "C", ingreso: "2023-06-30" },
-    { id: 8,  nombre: "Ramón Herrera",    cargo: "Jefe de Calidad",               turno: "A", ingreso: "2018-09-05" }
+    { id: 1,  nombre: "María González",   cargo: "Inspectora de Calidad",  turno: "A", ingreso: "2022-03-15" },
+    { id: 2,  nombre: "Carlos Rodríguez", cargo: "Supervisor de Calidad",  turno: "A", ingreso: "2020-08-02" },
+    { id: 3,  nombre: "Ana Martínez",     cargo: "Analista de Calidad",    turno: "B", ingreso: "2021-11-20" },
+    { id: 4,  nombre: "José Pérez",       cargo: "Inspector de Calidad",   turno: "B", ingreso: "2023-01-09" },
+    { id: 5,  nombre: "Luisa Fernández",  cargo: "Coordinadora SGC",       turno: "A", ingreso: "2019-05-12" },
+    { id: 6,  nombre: "Pedro Sánchez",    cargo: "Metrólogo",              turno: "C", ingreso: "2021-02-18" },
+    { id: 7,  nombre: "Daniela Torres",   cargo: "Inspectora de Calidad",  turno: "C", ingreso: "2023-06-30" },
+    { id: 8,  nombre: "Ramón Herrera",    cargo: "Jefe de Calidad",        turno: "A", ingreso: "2018-09-05" }
   ];
 
   // =========================
   // ESTADO
   // =========================
   let personal = [...PERSONAL_FALLBACK];
-  let evaluaciones = [];      // Historial
-  let planes = [];            // Planes de mejora activos
-  let evaluadoActual = null;  // Ficha seleccionada
-  let evaluacionState = {};   // { c1: 'ok'|'parcial'|'fail'|null, ... }
+  let evaluaciones = [];
+  let planes = [];
+  let evaluadoActual = null;
+  let evaluacionState = {};
   let usuarioActual = null;
   let rolActual = 0;
-  let evaluacionEliminando = null; // Variable para el modal de eliminar
+  let evaluacionEliminando = null;
+  let personalCargado = false;
 
   // =========================
   // UTILIDADES
@@ -87,11 +96,67 @@
     return (a + b).toUpperCase();
   }
 
-  function authHeaders() {
+  // 👇 CORREGIDO: robusto para URLs relativas o absolutas (Supabase Storage)
+  function obtenerUrlFoto(fotoUrl) {
+    if (!fotoUrl) return null;
+    if (/^https?:\/\//i.test(fotoUrl)) return fotoUrl;
+    if (fotoUrl.startsWith('//')) return `https:${fotoUrl}`;
+    return `${API_URL}${fotoUrl.startsWith('/') ? '' : '/'}${fotoUrl}`;
+  }
+
+  function authHeaders(extra = {}) {
     return {
       'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      ...extra
     };
+  }
+
+  // 👇 NUEVO: fetch con timeout (para evitar cuelgues si Render duerme)
+  async function fetchConTimeout(url, options = {}, timeout = TIMEOUT_MS) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(id);
+      return res;
+    } catch (err) {
+      clearTimeout(id);
+      throw err;
+    }
+  }
+
+  // 👇 NUEVO: fetch con retry + pantalla de "conectando" para Render
+  async function fetchConRetry(url, options = {}, intentos = 2) {
+    try {
+      return await fetchConTimeout(url, options, TIMEOUT_MS);
+    } catch (err) {
+      if (intentos <= 1) throw err;
+      mostrarPantallaConexion();
+      await new Promise(r => setTimeout(r, 5000));
+      try {
+        return await fetchConTimeout(url, options, TIMEOUT_WAKE_MS);
+      } finally {
+        ocultarPantallaConexion();
+      }
+    }
+  }
+
+  function mostrarPantallaConexion() {
+    if ($('render-wake-up')) return;
+    document.body.insertAdjacentHTML('beforeend', `
+      <div id="render-wake-up" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.95);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;">
+        <div style="border:4px solid #f3f3f3;border-top:4px solid #1a237e;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin-bottom:20px;"></div>
+        <h2 style="color:#1a237e;margin-bottom:10px;">Conectando con el servidor...</h2>
+        <p style="color:#64748b;">El servidor estaba en reposo. Reintentando...</p>
+        <style>@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>
+      </div>
+    `);
+  }
+
+  function ocultarPantallaConexion() {
+    const el = $('render-wake-up');
+    if (el) el.remove();
   }
 
   function clasificar(pct) {
@@ -131,25 +196,24 @@
     try {
       const user = JSON.parse(userData);
       usuarioActual = user;
-      
-      // 👇 SOLUCIÓN: Validar si tiene foto para el navbar en lugar de sobreescribir con iniciales
+
       let avatarHtml = '';
-      if (user.foto_url) {
-        avatarHtml = `<img src="${API_URL}${user.foto_url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
+      const urlFoto = obtenerUrlFoto(user.foto_url);
+      if (urlFoto) {
+        avatarHtml = `<img src="${esc(urlFoto)}" alt="Avatar" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
       } else {
         avatarHtml = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
       }
 
       const navAvatar = $('navAvatar');
       if (navAvatar) navAvatar.innerHTML = avatarHtml;
-      
+
       const dropdownAvatar = $('dropdownAvatar');
       if (dropdownAvatar) dropdownAvatar.innerHTML = avatarHtml;
 
       setText('navUsername', user.nombre || 'Usuario');
       setText('dropdownName', user.nombre || 'Usuario');
       setText('dropdownEmail', user.correo || 'usuario@email.com');
-      
     } catch (e) {
       logError('Error cargando usuario:', e);
     }
@@ -162,12 +226,22 @@
     }
   }
 
-  function cerrarSesion(mensaje) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('role');
-    if (mensaje) alert(mensaje);
-    window.location.href = '../public/login.html';
+  async function cerrarSesion(mensaje) {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await fetchConTimeout(`${API_URL}/auth/logout`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        }, 5000).catch(() => {});
+      }
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('role');
+      if (mensaje) alert(mensaje);
+      window.location.href = '../public/login.html';
+    }
   }
 
   function initUserControls() {
@@ -175,16 +249,26 @@
     const dropdown  = $('userDropdown');
     const logoutBtn = $('dropdownLogout');
 
-    if (container && dropdown) {
-      container.addEventListener('click', e => {
-        e.stopPropagation();
-        dropdown.classList.toggle('show');
-      });
+    let lastToggle = 0;
+    const toggleDropdown = (e) => {
+      e.stopPropagation();
+      const now = Date.now();
+      if (now - lastToggle < 300) return;
+      lastToggle = now;
+      if (dropdown) dropdown.classList.toggle('show');
+    };
+
+    if (container) {
+      container.addEventListener('click', toggleDropdown);
+      container.addEventListener('touchstart', toggleDropdown, { passive: false });
     }
-    document.addEventListener('click', () => dropdown && dropdown.classList.remove('show'));
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && dropdown) dropdown.classList.remove('show');
-    });
+
+    const cerrarDropdown = () => { if (dropdown) dropdown.classList.remove('show'); };
+    document.addEventListener('click', cerrarDropdown);
+    document.addEventListener('touchstart', (e) => {
+      if (container && !container.contains(e.target)) cerrarDropdown();
+    }, { passive: true });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarDropdown(); });
 
     if (logoutBtn) {
       logoutBtn.addEventListener('click', e => {
@@ -196,30 +280,61 @@
     }
   }
 
-  function verificarSesion() {
+  // 👇 CORREGIDO: verificación asíncrona robusta con timeout + retry
+  async function verificarSesion() {
     if (!verificarAcceso()) return;
 
-    fetch(`${API_URL}/auth/verify`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } })
-      .then(r => { if (!r.ok) throw new Error('Token inválido'); return r.json(); })
-      .then(() => {
-        cargarUsuarioNav();
-        mostrarEnlaceUsuarios();
-        initUserControls();
-        init();
-      })
-      .catch(() => cerrarSesion('Sesión expirada.'));
+    try {
+      const response = await fetchConRetry(
+        `${API_URL}/auth/verify`,
+        { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } },
+        2
+      );
+
+      if (response.status === 401 || response.status === 403) {
+        await cerrarSesion('Sesión expirada. Vuelve a iniciar sesión.');
+        return;
+      }
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      // Todo OK
+      cargarUsuarioNav();
+      mostrarEnlaceUsuarios();
+      initUserControls();
+      init();
+
+    } catch (error) {
+      logError('Error en verificación de sesión:', error);
+
+      if (error.name === 'AbortError') {
+        alert('El servidor tardó demasiado en responder. Revisa tu conexión.');
+      }
+
+      // ⚠️ NO borramos token por error de red: permitimos que la app cargue
+      // (la UI se mostrará, y si el backend falla, verá errores puntuales)
+      cargarUsuarioNav();
+      mostrarEnlaceUsuarios();
+      initUserControls();
+      init();
+    }
   }
 
   // =========================
-  // CARGA DEL PERSONAL DE CALIDAD
+  // CARGA DEL PERSONAL
   // =========================
   async function cargarPersonal() {
     try {
-      const response = await fetch(`${API_URL}/usuarios/?t=${Date.now()}`, { headers: authHeaders() });
+      // 👇 Sin barra final para evitar redirects problemáticos
+      const response = await fetchConTimeout(
+        `${API_URL}/usuarios?t=${Date.now()}`,
+        { headers: authHeaders() }
+      );
+
       if (response.ok) {
         const data = await response.json();
         const lista = Array.isArray(data) ? data : (data.items || data.usuarios || []);
-        
+
         personal = lista.map(u => ({
           id: u.id,
           nombre: u.nombre || 'Sin nombre',
@@ -229,11 +344,14 @@
         }));
 
         logSuccess(`${personal.length} personas cargadas desde backend`);
+      } else {
+        logError(`No se pudo cargar personal (HTTP ${response.status}), usando fallback`);
       }
     } catch (e) {
-      logError('No se pudo cargar personal del backend:', e);
+      logError('No se pudo cargar personal del backend, usando fallback:', e);
     }
 
+    personalCargado = true;
     poblarSelectorPersonal();
   }
 
@@ -360,13 +478,13 @@
   // =========================
   function generarPlanesDesdeEvaluacion(p, evaluacion, pct, categoria) {
     const nuevos = [];
-
     if (categoria === 'Regular' || categoria === 'Deficiente') {
       CRITERIOS.forEach(c => {
         const v = evaluacionState[c.id];
         if (v === 'fail' || v === 'parcial') {
           nuevos.push({
-            id: Date.now() + Math.random(),
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            evaluado_id: p.id,
             evaluado: p.nombre,
             cargo: p.cargo,
             criterio: c.texto,
@@ -379,7 +497,6 @@
         }
       });
     }
-
     return nuevos;
   }
 
@@ -423,7 +540,7 @@
   }
 
   // =========================
-  // HISTORIAL DEL EVALUADO (panel derecho)
+  // HISTORIAL DEL EVALUADO
   // =========================
   function renderHistorialEvaluado() {
     const cont = $('historial-evaluado');
@@ -493,34 +610,43 @@
     if (btn) btn.disabled = true;
 
     try {
-      const response = await fetch(`${API_URL}/auditorias/calidad/evaluaciones`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify(payload)
-      });
+      const response = await fetchConTimeout(
+        `${API_URL}/auditorias/calidad/evaluaciones`,
+        {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(payload)
+        },
+        TIMEOUT_WAKE_MS
+      );
 
       if (response.ok) {
         logSuccess('Evaluación guardada en backend');
-        alert(`✅ Evaluación guardada.\nPuntaje: ${pct}% (${categoria})`);
-        
-        // Generar planes de mejora en memoria
+
+        // Planes solo en memoria (ideal: guardarlos también en backend)
         const nuevosPlanes = generarPlanesDesdeEvaluacion(evaluadoActual, payload, pct, categoria);
         planes = [...nuevosPlanes, ...planes];
+        renderPlanes();
+        actualizarKPIs();
 
-        // Recargar historial desde el backend para traer el ID real
+        // Recargar historial
         await cargarEvaluaciones();
-        
-        // Resetear
+
+        alert(`✅ Evaluación guardada.\nPuntaje: ${pct}% (${categoria})`);
+
         evaluadoActual = null;
-        $('evaluado').value = '';
+        const sel = $('evaluado');
+        if (sel) sel.value = '';
         mostrarFicha(null);
         resetEvaluacion();
+        renderHistorialEvaluado();
+
       } else {
         const errorData = await response.json().catch(() => ({}));
         alert(`Error al guardar: ${errorData.detail || 'Error desconocido'}`);
       }
     } catch (e) {
-      logError('Fallo de red al guardar:', e);
+      logError('Fallo al guardar:', e);
       alert('No se pudo conectar con el servidor.');
     } finally {
       if (btn) btn.disabled = false;
@@ -557,7 +683,6 @@
     if (!tbody) return;
 
     const lista = filtrarEvaluaciones();
-
     setText('filtro-resultados', `📋 ${lista.length} evaluación(es) mostrada(s)`);
 
     if (lista.length === 0) {
@@ -565,11 +690,18 @@
       return;
     }
 
+    const puedeEliminar = rolActual === 3;
+
     tbody.innerHTML = lista.map(e => {
       const cat = clasificar(e.puntaje);
       const planesDelEvaluado = planes.filter(p =>
         String(p.evaluado) === String(e.evaluado) && p.estado === 'abierto'
       ).length;
+
+      const colorBarra =
+        cat.clase === 'cat-excelente' ? '#2e7d32' :
+        cat.clase === 'cat-bueno'     ? '#1565c0' :
+        cat.clase === 'cat-regular'   ? '#f57f17' : '#dc3545';
 
       return `
         <tr>
@@ -581,11 +713,7 @@
             <div class="cell-puntaje">
               <span class="cell-puntaje-num ${cat.clase}">${e.puntaje}%</span>
               <div class="mini-progress-track">
-                <div class="mini-progress-fill" style="width:${e.puntaje}%;background:${
-                  cat.clase === 'cat-excelente' ? '#2e7d32' :
-                  cat.clase === 'cat-bueno'     ? '#1565c0' :
-                  cat.clase === 'cat-regular'   ? '#f57f17' : '#dc3545'
-                }"></div>
+                <div class="mini-progress-fill" style="width:${e.puntaje}%;background:${colorBarra}"></div>
               </div>
             </div>
           </td>
@@ -597,23 +725,22 @@
               <button class="btn-icon" data-ver="${esc(e.id)}" title="Ver detalle">
                 <i class="ti ti-eye"></i>
               </button>
-              <button class="btn-icon" data-reevaluar="${esc(e.evaluado_id)}" title="Reevaluar (Cargar en formulario)">
+              <button class="btn-icon" data-reevaluar="${esc(e.evaluado_id)}" title="Reevaluar">
                 <i class="ti ti-refresh"></i>
               </button>
-              <button class="btn-icon btn-icon-danger" data-eliminar="${esc(e.id)}" title="Eliminar evaluación">
-                <i class="ti ti-trash"></i>
-              </button>
+              ${puedeEliminar ? `
+                <button class="btn-icon btn-icon-danger" data-eliminar="${esc(e.id)}" title="Eliminar evaluación">
+                  <i class="ti ti-trash"></i>
+                </button>` : ''}
             </div>
           </td>
         </tr>`;
     }).join('');
 
-    // Listeners para Ver
     tbody.querySelectorAll('[data-ver]').forEach(btn => {
       btn.addEventListener('click', () => abrirModalVer(btn.dataset.ver));
     });
 
-    // Listeners para Reevaluar
     tbody.querySelectorAll('[data-reevaluar]').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.dataset.reevaluar;
@@ -626,7 +753,6 @@
       });
     });
 
-    // Listeners para Eliminar
     tbody.querySelectorAll('[data-eliminar]').forEach(btn => {
       btn.addEventListener('click', () => abrirModalEliminar(btn.dataset.eliminar));
     });
@@ -641,8 +767,8 @@
 
     const modal = $('modal-ver-eval');
     const body = $('modal-eval-body');
-    
-    setText('modal-eval-title', ''); 
+    if (!modal || !body) return;
+
     const titleEl = $('modal-eval-title');
     if (titleEl) titleEl.innerHTML = `<i class="ti ti-eye"></i> Detalle de Evaluación: ${esc(evalEncontrada.evaluado)}`;
 
@@ -696,7 +822,7 @@
 
     $('modal-eval-close')?.addEventListener('click', cerrar);
     $('modal-eval-cerrar-footer')?.addEventListener('click', cerrar);
-    
+
     if (modal) {
       modal.addEventListener('click', e => { if (e.target === modal) cerrar(); });
     }
@@ -708,15 +834,17 @@
   function abrirModalEliminar(id) {
     const evalEncontrada = evaluaciones.find(e => String(e.id) === String(id));
     if (!evalEncontrada) return;
-    
+
     evaluacionEliminando = evalEncontrada;
     setText('eliminar-eval-nombre', `${evalEncontrada.evaluado} (${evalEncontrada.puntaje}%)`);
-    
-    $('modal-eliminar-eval').style.display = 'flex';
+
+    const modal = $('modal-eliminar-eval');
+    if (modal) modal.style.display = 'flex';
   }
 
   function cerrarModalEliminar() {
-    $('modal-eliminar-eval').style.display = 'none';
+    const modal = $('modal-eliminar-eval');
+    if (modal) modal.style.display = 'none';
     evaluacionEliminando = null;
   }
 
@@ -727,22 +855,23 @@
     if (btn) btn.disabled = true;
 
     try {
-      const response = await fetch(`${API_URL}/auditorias/calidad/evaluaciones/${evaluacionEliminando.id}`, {
-        method: 'DELETE',
-        headers: authHeaders()
-      });
+      const response = await fetchConTimeout(
+        `${API_URL}/auditorias/calidad/evaluaciones/${evaluacionEliminando.id}`,
+        { method: 'DELETE', headers: authHeaders() },
+        TIMEOUT_WAKE_MS
+      );
 
       if (response.ok) {
         logSuccess('Evaluación eliminada');
         cerrarModalEliminar();
-        await cargarEvaluaciones(); // Recargar la tabla
+        await cargarEvaluaciones();
       } else if (response.status === 403) {
         alert('No tienes permisos para eliminar evaluaciones (solo Administradores).');
       } else {
         alert('Error al eliminar la evaluación.');
       }
     } catch (e) {
-      logError('Fallo de red al eliminar:', e);
+      logError('Fallo al eliminar:', e);
       alert('No se pudo conectar con el servidor.');
     } finally {
       if (btn) btn.disabled = false;
@@ -756,15 +885,15 @@
     $('modal-eliminar-close')?.addEventListener('click', cerrar);
     $('modal-eliminar-cancelar')?.addEventListener('click', cerrar);
     $('modal-eliminar-confirmar')?.addEventListener('click', confirmarEliminar);
-    
+
     if (modal) {
       modal.addEventListener('click', e => { if (e.target === modal) cerrar(); });
     }
   }
 
   function poblarFiltrosHistorial() {
-    const cargos     = [...new Set(evaluaciones.map(e => e.cargo).filter(Boolean))].sort();
-    const evaluadores= [...new Set(evaluaciones.map(e => e.evaluador).filter(Boolean))].sort();
+    const cargos      = [...new Set(evaluaciones.map(e => e.cargo).filter(Boolean))].sort();
+    const evaluadores = [...new Set(evaluaciones.map(e => e.evaluador).filter(Boolean))].sort();
 
     const fill = (id, opciones) => {
       const sel = $(id);
@@ -798,6 +927,7 @@
       const f = new Date(e.fecha);
       return f.getMonth() === ahora.getMonth() && f.getFullYear() === ahora.getFullYear();
     });
+
     setText('kpi-evaluaciones', delMes.length);
     setText('kpi-evaluaciones-sub', delMes.length
       ? `${delMes.length} en ${ahora.toLocaleDateString('es-ES', { month: 'long' })}`
@@ -823,20 +953,24 @@
   }
 
   // =========================
-  // CARGA DE EVALUACIONES DESDE BACKEND
+  // CARGA DE EVALUACIONES
   // =========================
   async function cargarEvaluaciones() {
     try {
-      const response = await fetch(`${API_URL}/auditorias/calidad/evaluaciones?t=${Date.now()}`, { headers: authHeaders() });
+      const response = await fetchConTimeout(
+        `${API_URL}/auditorias/calidad/evaluaciones?t=${Date.now()}`,
+        { headers: authHeaders() }
+      );
+
       if (response.ok) {
         const data = await response.json();
         const lista = Array.isArray(data) ? data : (data.items || data.evaluaciones || []);
-        
+
         evaluaciones = lista.map(e => ({
           id: e.id,
           evaluado_id: e.evaluado_id,
           evaluado: e.evaluado_nombre || '—',
-          cargo: personal.find(p => p.id === e.evaluado_id)?.cargo || '—',
+          cargo: personal.find(p => String(p.id) === String(e.evaluado_id))?.cargo || '—',
           evaluador: e.evaluador_nombre || '—',
           periodo: e.periodo || 'mensual',
           puntaje: Number(e.puntaje) || 0,
@@ -844,11 +978,11 @@
           fecha: e.fecha || new Date().toISOString(),
           observaciones: e.observaciones || null
         }));
-        
-        logSuccess(`${evaluaciones.length} evaluaciones cargadas desde backend`);
+
+        logSuccess(`${evaluaciones.length} evaluaciones cargadas`);
       }
     } catch (e) {
-      logError('No se pudo cargar historial del backend:', e);
+      logError('No se pudo cargar historial:', e);
     }
 
     renderHistorial();
@@ -857,24 +991,47 @@
   }
 
   // =========================
-  // EXPORTACIONES
+  // EXPORTACIONES (token por header, no query)
   // =========================
   function initExportes() {
-    const token = localStorage.getItem('token');
+    const descargar = async (endpoint, nombre) => {
+      try {
+        const res = await fetchConTimeout(
+          `${API_URL}${endpoint}`,
+          { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } },
+          TIMEOUT_WAKE_MS
+        );
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = nombre;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (e) {
+        logError('Error al exportar:', e);
+        alert('No se pudo generar el archivo. Revisa tu conexión.');
+      }
+    };
 
     $('btn-export-pdf-global')?.addEventListener('click', () => {
-      window.open(`${API_URL}/auditorias/calidad/evaluaciones/exportar/pdf?token=${token}`, '_blank');
+      descargar('/auditorias/calidad/evaluaciones/exportar/pdf', 'auditoria-interna.pdf');
     });
 
     $('btn-export-word-global')?.addEventListener('click', () => {
-      window.open(`${API_URL}/auditorias/calidad/evaluaciones/exportar/word?token=${token}`, '_blank');
+      descargar('/auditorias/calidad/evaluaciones/exportar/word', 'auditoria-interna.docx');
     });
   }
 
   // =========================
   // INIT
   // =========================
-  function init() {
+  async function init() {
     log('Iniciando módulo Auditoría Interna de Calidad...');
 
     resetEvaluacion();
@@ -891,18 +1048,28 @@
 
     $('btn-guardar-eval')?.addEventListener('click', guardarEvaluacion);
 
-    // Cargar datos
-    cargarPersonal();
-    cargarEvaluaciones();
+    // 👇 CORREGIDO: cargar personal PRIMERO y esperar, luego evaluaciones
+    // (evita que `evaluaciones` se mapee sin `personal` disponible)
+    await cargarPersonal();
+    await cargarEvaluaciones();
     renderPlanes();
     renderHistorialEvaluado();
 
     log('Auditoría Interna de Calidad iniciada');
   }
 
-  // Expuesto para depuración manual
-  window.recargarAuditoria = () => { cargarPersonal(); cargarEvaluaciones(); };
+  // Expuesto para depuración
+  window.recargarAuditoria = async () => {
+    await cargarPersonal();
+    await cargarEvaluaciones();
+    renderPlanes();
+  };
 
-  verificarSesion();
+  // 👇 CORREGIDO: arrancar cuando el DOM esté listo
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', verificarSesion);
+  } else {
+    verificarSesion();
+  }
 
 })();
