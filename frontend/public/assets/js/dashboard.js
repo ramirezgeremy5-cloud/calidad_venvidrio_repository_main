@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - DASHBOARD
-   JS v7 - Filtro por Planta + Optimizado
+   JS v9 - Lógica anti-fantasmas + Normalización de gráficas
    ========================================== */
 
 // Detectar dinámicamente la URL del servidor
@@ -20,7 +20,7 @@ let intervaloCarga = null;
 let datosDashboard = null;
 let periodoActual = 7;
 let filtroGrafico = 'ambos';
-let filtroPlanta = ''; // 👈 NUEVO: Filtro por planta
+let filtroPlanta = ''; 
 let abortController = null;
 
 // Colores de clasificación
@@ -93,12 +93,15 @@ function filtrarPorDias(lista, campoFecha) {
   });
 }
 
-function obtenerUrlFoto(fotoUrl) {
-  if (!fotoUrl) return null;
-  if (fotoUrl.startsWith('http://') || fotoUrl.startsWith('https://')) {
-    return fotoUrl.replace(/^(https?)\/\//, '$1://');
-  }
-  return `${API_URL}${fotoUrl}`;
+// 🔧 NORMALIZADOR DE CLASIFICACIÓN (Soluciona el gráfico en 0%)
+function normalizarClase(claseStr) {
+  if (!claseStr) return 'Menor';
+  const c = String(claseStr).toLowerCase().trim();
+  if (c.includes('critic')) return 'Crítico';
+  if (c.includes('b+') || c.includes('b +')) return 'Mayor B+';
+  if (c.includes('b-') || c.includes('b -')) return 'Mayor B-';
+  if (c.includes('menor')) return 'Menor';
+  return 'Menor'; // Fallback
 }
 
 /* ==========================================
@@ -121,86 +124,6 @@ function renderError(contenedorId, mensaje, callbackReintentar) {
 }
 
 /* ==========================================
-   SESIÓN BÁSICA (Usuario y Logout)
-========================================== */
-function cargarUsuarioNav() {
-  const userData = localStorage.getItem('user');
-  if (!userData) return;
-  try {
-    const user = JSON.parse(userData);
-    
-    let avatarHtml = '';
-    if (user.foto_url) {
-      const urlFoto = obtenerUrlFoto(user.foto_url);
-      avatarHtml = `<img src="${urlFoto}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
-    } else {
-      avatarHtml = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
-    }
-
-    const navAvatar = document.getElementById('navAvatar');
-    if (navAvatar) navAvatar.innerHTML = avatarHtml;
-    
-    const dropdownAvatar = document.getElementById('dropdownAvatar');
-    if (dropdownAvatar) dropdownAvatar.innerHTML = avatarHtml;
-
-    setText('navUsername', user.nombre || 'Usuario');
-    setText('dropdownName', user.nombre || 'Usuario');
-    setText('dropdownEmail', user.correo || 'usuario@email.com');
-  } catch (e) { logError('Error parseando usuario:', e); }
-}
-
-function mostrarEnlaceUsuarios() {
-  const rol = parseInt(localStorage.getItem('role'));
-  const link = document.getElementById('navUsuariosLink');
-  if (link && rol === 3) link.style.display = 'flex';
-}
-
-function logoutManual() {
-  if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
-    const token = localStorage.getItem('token');
-    
-    if (token) {
-      fetch(`${API_URL}/auth/logout`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-      }).finally(() => {
-        localStorage.clear();
-        window.location.href = 'login.html';
-      });
-    } else {
-      localStorage.clear();
-      window.location.href = 'login.html';
-    }
-  }
-}
-
-function initUserControls() {
-  const container = document.getElementById('navUserContainer');
-  const dropdown = document.getElementById('userDropdown');
-  const logoutBtn = document.getElementById('dropdownLogout');
-
-  if (container && dropdown) {
-    container.addEventListener('click', e => { e.stopPropagation(); dropdown.classList.toggle('show'); });
-  }
-  document.addEventListener('click', () => dropdown && dropdown.classList.remove('show'));
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && dropdown) dropdown.classList.remove('show'); });
-
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', e => {
-      e.preventDefault(); e.stopPropagation();
-      logoutManual();
-    });
-  }
-
-  document.addEventListener('keydown', e => {
-    if (e.ctrlKey && e.shiftKey && (e.key === 'L' || e.key === 'l')) {
-      e.preventDefault();
-      logoutManual();
-    }
-  });
-}
-
-/* ==========================================
    CARGA PRINCIPAL DE DATOS (CON FILTRO DE PLANTA)
 ========================================== */
 async function cargarDashboard(isBackground = false) {
@@ -219,14 +142,11 @@ async function cargarDashboard(isBackground = false) {
 
     const headers = { 'Authorization': `Bearer ${token}` };
 
-    // 👇 Construimos las URLs con el filtro de planta si existe
     let urlLotes = `${API_URL}/produccion?limit=2000`;
     let urlDefectos = `${API_URL}/defectos?limit=2000`;
     
     if (filtroPlanta) {
       urlLotes += `&planta=${encodeURIComponent(filtroPlanta)}`;
-      // El endpoint de defectos no filtra por planta directamente, 
-      // así que filtramos en el cliente o enviamos el parámetro si el backend lo soporta.
       urlDefectos += `&planta=${encodeURIComponent(filtroPlanta)}`;
     }
 
@@ -245,7 +165,6 @@ async function cargarDashboard(isBackground = false) {
     const lotes = await resLotes.json();
     const defectos = await resDefectos.json();
 
-    // Si el backend no filtró los defectos, los filtramos manualmente por los lotes de la planta
     let defectosFiltrados = defectos;
     if (filtroPlanta) {
       const idsLotesFiltrados = new Set(lotes.map(l => l.id));
@@ -265,7 +184,8 @@ async function cargarDashboard(isBackground = false) {
     renderTopTiposDefecto(defectosFiltrados);
     renderChartEficiencia(lotes, defectosFiltrados);
     renderTopClientesRetencion(lotes);
-    renderAuditoriasPendientes(lotes);
+    // 🔧 PASAMOS LOS DEFECTOS AQUÍ PARA VALIDAR LOS FANTASMAS
+    renderAuditoriasPendientes(lotes, defectosFiltrados); 
     renderAlertas(lotes, defectosFiltrados);
     renderTablaUltimosRegistros(lotes);
 
@@ -303,7 +223,7 @@ function renderKPIs(lotes, defectos) {
   const totalLotes = lotesFiltrados.length;
   const totalDefectos = defectosFiltrados.length;
   
-  const pendientes = lotesFiltrados.filter(l => String(l.estatus) === '100').length;
+  const pendientes = lotesFiltrados.filter(l => String(l.estatus || '100') === '100').length;
 
   const retenidos = lotesFiltrados.filter(l => String(l.estatus) === '300');
   const paletasInspeccionadas = lotesFiltrados.reduce((a, l) => a + (l.paletas || 0), 0);
@@ -413,7 +333,8 @@ function renderChartDefectos(defectos) {
   const porClase = { 'Crítico': 0, 'Mayor B+': 0, 'Mayor B-': 0, 'Menor': 0 };
 
   defectosFiltrados.forEach(d => {
-    if (porClase[d.clasificacion] !== undefined) porClase[d.clasificacion]++;
+    const claseNorm = normalizarClase(d.clasificacion);
+    if (porClase[claseNorm] !== undefined) porClase[claseNorm]++;
   });
 
   const labels = Object.keys(porClase);
@@ -649,7 +570,7 @@ function renderTopTiposDefecto(defectos) {
 
   defectosFiltrados.forEach(d => {
     const tipo = d.tipo_defecto || 'Sin tipo';
-    if (!porTipo[tipo]) porTipo[tipo] = { piezas: 0, registros: 0, clase: d.clasificacion };
+    if (!porTipo[tipo]) porTipo[tipo] = { piezas: 0, registros: 0, clase: normalizarClase(d.clasificacion) };
     porTipo[tipo].piezas += (d.cantidad_piezas || 0);
     porTipo[tipo].registros += 1;
   });
@@ -798,17 +719,44 @@ function renderTopClientesRetencion(lotes) {
 }
 
 /* ==========================================
-   AUDITORÍAS PENDIENTES
+   AUDITORÍAS PENDIENTES (CON VALIDACIÓN ANTI-FANTASMAS)
 ========================================== */
-function renderAuditoriasPendientes(lotes) {
+function renderAuditoriasPendientes(lotes, defectos) {
   const el = document.getElementById('auditorias-pendientes');
   if (!el) return;
 
-  const pendientes = lotes.filter(l => String(l.estatus) === '100').length;
-  const aptos = lotes.filter(l => String(l.estatus) === '200').length;
-  const retenidos = lotes.filter(l => String(l.estatus) === '300').length;
-  const despachados = lotes.filter(l => String(l.estatus) === '600').length;
-  const otros = lotes.length - pendientes - aptos - retenidos - despachados;
+  // Filtramos por fecha
+  const lotesFiltrados = filtrarPorDias(lotes, 'fecha_produccion');
+
+  let pendientes = 0;
+  let aptos = 0;
+  let retenidos = 0;
+  let despachados = 0;
+  let otros = 0;
+
+  lotesFiltrados.forEach(l => {
+    const est = String(l.estatus || '100').trim();
+    
+    // ¿Este lote tiene algún defecto registrado en el sistema?
+    const tieneDefectos = defectos.some(d => String(d.produccion_id) === String(l.id) || String(d.lote_id) === String(l.id));
+    
+    if (est === '100') {
+      pendientes++;
+    } else if (est === '200') {
+      // Si dice ser APTO pero no tiene ningún registro de inspección, es un fantasma
+      if (!tieneDefectos && !l.inspector && !l.observaciones) {
+         pendientes++; // Lo forzamos a pendiente
+      } else {
+         aptos++;
+      }
+    } else if (est === '300') {
+      retenidos++;
+    } else if (est === '600') {
+      despachados++;
+    } else {
+      otros++;
+    }
+  });
 
   const items = [
     { valor: pendientes, label: 'Pendientes', color: '#f57c00' },
@@ -843,12 +791,12 @@ function renderAlertas(lotes, defectos) {
     alertas.push({ tipo: 'danger', icono: 'ti ti-alert-triangle', titulo: `${lotesConRechazo.length} lote(s) retenido(s)`, desc: 'Requieren revisión inmediata de calidad.' });
   }
 
-  const criticos = defectos.filter(d => d.clasificacion === 'Crítico');
+  const criticos = defectos.filter(d => normalizarClase(d.clasificacion) === 'Crítico');
   if (criticos.length > 0) {
     alertas.push({ tipo: 'danger', icono: 'ti ti-flame', titulo: `${criticos.length} defecto(s) crítico(s)`, desc: 'Se recomienda auditar los lotes afectados.' });
   }
 
-  const pendientes = lotes.filter(l => String(l.estatus) === '100');
+  const pendientes = lotes.filter(l => String(l.estatus || '100') === '100');
   if (pendientes.length > 0) {
     alertas.push({ tipo: 'warning', icono: 'ti ti-clock', titulo: `${pendientes.length} lote(s) sin evaluar`, desc: 'Pendientes de aprobación en el módulo Defectos.' });
   }
@@ -945,6 +893,7 @@ function initFiltrosTiempo() {
         renderTopTiposDefecto(defectos);
         renderChartEficiencia(lotes, defectos);
         renderTopClientesRetencion(lotes);
+        renderAuditoriasPendientes(lotes, defectos); // 🔧 PASAMOS DEFECTOS AL FILTRAR
       }
     });
   });
@@ -961,7 +910,6 @@ function initFiltrosGrafico() {
   });
 }
 
-// 👇 NUEVA FUNCIÓN: Inicializar el filtro por planta
 function initFiltroPlanta() {
   const select = document.getElementById('filtro-planta');
   if (!select) return;
@@ -969,12 +917,12 @@ function initFiltroPlanta() {
   select.addEventListener('change', function() {
     filtroPlanta = this.value;
     log(`🔄 Filtro de planta cambiado a: ${filtroPlanta || 'Todas'}`);
-    cargarDashboard(); // Recargar todos los datos con el nuevo filtro
+    cargarDashboard(); 
   });
 }
 
 /* ==========================================
-   EXPORTAR WORD (FORZAR DESCARGA)
+   EXPORTAR WORD
 ========================================== */
 function exportarDashboardWord() {
   log('📤 Exportando dashboard a Word...');
@@ -1002,26 +950,22 @@ function recargarDashboard() {
 }
 
 /* ==========================================
-   INIT
+   INIT (LIMPIO)
 ========================================== */
 function iniciarDashboard() {
   log('🚀 Dashboard Venvidrio iniciado');
 
-  cargarUsuarioNav();
-  mostrarEnlaceUsuarios();
-  initUserControls();
+  // El reloj y el usuario ahora los maneja 100% shared.js. 
   initFiltrosTiempo();
   initFiltrosGrafico();
-  initFiltroPlanta(); // 👈 Inicializar filtro de planta
+  initFiltroPlanta();
   initShortcuts();
 
   document.getElementById('btn-exportar-word')?.addEventListener('click', exportarDashboardWord);
   document.getElementById('btn-refresh')?.addEventListener('click', recargarDashboard);
 
-  // Carga inicial
   cargarDashboard();
 
-  // Auto-actualización inteligente cada 30 segundos
   if (intervaloCarga) clearInterval(intervaloCarga);
   intervaloCarga = setInterval(() => {
     if (document.visibilityState === 'visible') {
@@ -1051,22 +995,3 @@ window.addEventListener('beforeunload', () => {
   if (lineasChart) lineasChart.destroy();
   if (eficienciaChart) eficienciaChart.destroy();
 });
-
-/* ==========================================
-   EXPOSICIÓN PARA CONSOLA
-========================================== */
-window.recargarDashboard = recargarDashboard;
-window.exportarDashboardWord = exportarDashboardWord;
-window.verEstadoDashboard = function () {
-  console.log('📊 Estado del Dashboard:');
-  console.log('  - Datos:', datosDashboard ? 'Cargados ✅' : 'No cargados ❌');
-  console.log('  - Período:', periodoActual);
-  console.log('  - Filtro gráfico:', filtroGrafico);
-  console.log('  - Filtro planta:', filtroPlanta || 'Todas');
-  console.log('  - Gráficas:');
-  console.log('    • Producción:', productionChart ? '✅' : '❌');
-  console.log('    • Defectos:', defectosChart ? '✅' : '❌');
-  console.log('    • Apto/Retenido:', aptoChart ? '✅' : '❌');
-  console.log('    • Líneas:', lineasChart ? '✅' : '❌');
-  console.log('    • Eficiencia:', eficienciaChart ? '✅' : '❌');
-};
