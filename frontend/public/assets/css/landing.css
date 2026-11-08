@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - LANDING PAGE
-   landing.css - Index (v4 - Diseño Premium)
+   landing.css - Index (v5 - Hero Sugerente)
    ========================================== */
 
 /* ==========================================================
@@ -54,7 +54,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 0.8rem 2rem;
-    background: rgba(255, 255, 255, 0.95); /* Blanco semitransparente */
+    background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
@@ -136,16 +136,17 @@ body {
 }
 
 /* ==========================================================
-   3. HERO SECTION
+   3. HERO SECTION (Ajustado para ser más sugerente)
    ========================================================== */
 .hero {
     position: relative;
-    min-height: 100vh;
+    /* 👇 REDUCIDO: Antes era 100vh, ahora ocupa un 80% de la pantalla */
+    min-height: 80vh;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 120px 20px 60px;
+    padding: 120px 20px 80px;
     color: #ffffff;
     background-image: url('../assets/img/fondo-venvidrio-fabrica.jpeg');
     background-size: cover;
@@ -157,7 +158,8 @@ body {
 .hero-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.85));
+    /* 👇 MÁS TRANSPARENTE: Antes era 0.75, ahora es 0.55 para que se vea más la foto */
+    background: linear-gradient(to bottom, rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.75));
     z-index: 1;
 }
 
@@ -166,6 +168,8 @@ body {
     z-index: 2;
     max-width: 900px;
     animation: fade-up 0.8s ease;
+    /* 👇 Un poco de margen superior para centrarlo mejor en el nuevo espacio */
+    margin-top: 20px;
 }
 
 .hero h1 {
@@ -572,6 +576,8 @@ body {
 /* --- Móviles (<= 600px) --- */
 @media (max-width: 600px) {
     .hero {
+        /* 👇 Reducimos la altura en móviles también para que sea más compacto */
+        min-height: 70vh;
         padding: 100px 15px 40px;
     }
 

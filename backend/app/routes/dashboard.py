@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi.responses import Response, StreamingResponse
-from sqlalchemy import func, desc, inspect # 👈 IMPORTANTE: Agregamos inspect
+from sqlalchemy import func, desc, inspect
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import Optional
 from pathlib import Path
 import io
 
-# 👇 NUEVA LIBRERÍA PARA WORD
+# 👇 LIBRERÍA PARA WORD
 from docx import Document
 from docx.shared import Pt, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -16,7 +16,8 @@ from app.database.connection import SessionLocal
 
 from app.models.produccion import Produccion
 from app.models.defecto import Defecto
-from app.models.auditoria_calidad import AuditoriaCalidad
+# 👇 CORRECCIÓN: Importación estandarizada
+from app.models.auditoria_interna import AuditoriaInterna
 
 
 router = APIRouter(
@@ -370,7 +371,7 @@ def top_defectos(
 
 
 # ==========================================
-# AUDITORÍAS DE CALIDAD PENDIENTES (SOLO PERSONAL)
+# AUDITORÍAS PENDIENTES (SOLO PERSONAL)
 # ==========================================
 
 @router.get("/auditorias/pendientes")
@@ -379,14 +380,14 @@ def auditorias_pendientes(
 ):
     """Devuelve resumen de evaluaciones al personal de calidad"""
     
-    total = db.query(func.count(AuditoriaCalidad.id)).scalar() or 0
+    total = db.query(func.count(AuditoriaInterna.id)).scalar() or 0
     
-    excelentes = db.query(func.count(AuditoriaCalidad.id)).filter(
-        AuditoriaCalidad.categoria == "Excelente"
+    excelentes = db.query(func.count(AuditoriaInterna.id)).filter(
+        AuditoriaInterna.categoria == "Excelente"
     ).scalar() or 0
     
-    deficientes = db.query(func.count(AuditoriaCalidad.id)).filter(
-        AuditoriaCalidad.categoria == "Deficiente"
+    deficientes = db.query(func.count(AuditoriaInterna.id)).filter(
+        AuditoriaInterna.categoria == "Deficiente"
     ).scalar() or 0
     
     return {
@@ -428,8 +429,8 @@ def dashboard_alerts(
                 "mensaje": f"Lote {lote.codigo_lote} con baja producción"
             })
 
-    evaluaciones_deficientes = db.query(AuditoriaCalidad).filter(
-        AuditoriaCalidad.categoria == "Deficiente"
+    evaluaciones_deficientes = db.query(AuditoriaInterna).filter(
+        AuditoriaInterna.categoria == "Deficiente"
     ).all()
     
     for eval in evaluaciones_deficientes:
@@ -448,7 +449,7 @@ def dashboard_alerts(
 
 
 # ==========================================
-# EXPORTAR DASHBOARD A WORD (CORREGIDO)
+# EXPORTAR DASHBOARD A WORD
 # ==========================================
 
 @router.get("/exportar/word")
@@ -469,9 +470,9 @@ def exportar_dashboard_word(
         mayores = db.query(func.count(Defecto.id)).filter(Defecto.clasificacion == "Mayor").scalar() or 0
         menores = db.query(func.count(Defecto.id)).filter(Defecto.clasificacion == "Menor").scalar() or 0
         
-        total_auditorias = db.query(func.count(AuditoriaCalidad.id)).scalar() or 0
-        excelentes = db.query(func.count(AuditoriaCalidad.id)).filter(AuditoriaCalidad.categoria == "Excelente").scalar() or 0
-        deficientes = db.query(func.count(AuditoriaCalidad.id)).filter(AuditoriaCalidad.categoria == "Deficiente").scalar() or 0
+        total_auditorias = db.query(func.count(AuditoriaInterna.id)).scalar() or 0
+        excelentes = db.query(func.count(AuditoriaInterna.id)).filter(AuditoriaInterna.categoria == "Excelente").scalar() or 0
+        deficientes = db.query(func.count(AuditoriaInterna.id)).filter(AuditoriaInterna.categoria == "Deficiente").scalar() or 0
         
         ultimos = db.query(Produccion).order_by(desc(Produccion.id)).limit(5).all()
 
@@ -557,7 +558,7 @@ def exportar_dashboard_word(
         
         doc.add_paragraph()
 
-        # 4. TOP 5 PRODUCTOS (Solo si la columna existe)
+        # 4. TOP 5 PRODUCTOS
         doc.add_heading('4. Top 5 Productos con Defectos', level=1)
         
         if tiene_tipo_producto and top_productos:
@@ -631,13 +632,11 @@ def exportar_dashboard_word(
 
 
 # ==========================================
-# EXPORTAR DASHBOARD A PDF (SE MANTIENE POR SI ACASO)
+# EXPORTAR DASHBOARD A PDF
 # ==========================================
 
 @router.get("/exportar/pdf")
 def exportar_dashboard_pdf(
     db: Session = Depends(get_db)
 ):
-    # ... (Tu código original del PDF se mantiene igual, no lo borré)
-    # Si quieres eliminarlo, puedes borrar esta función completa.
     pass
