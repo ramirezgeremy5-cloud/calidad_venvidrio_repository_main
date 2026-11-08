@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 import os
 import uuid
-import requests # 👈 Importamos requests para la subida directa
+import requests 
 
 from app.models.usuario import Usuario
 from app.models.cargo import Cargo
@@ -20,7 +20,8 @@ from app.dependencies.auth import (
     get_db,
     get_current_user,
     get_current_active_user,
-    check_role
+    check_role,
+    check_admin # 👈 Importamos check_admin
 )
 
 router = APIRouter(
@@ -31,7 +32,7 @@ router = APIRouter(
 # =========================
 # CONFIGURACIÓN DE SUPABASE STORAGE (DIRECTA)
 # =========================
-SUPABASE_URL = os.getenv("SUPABASE_URL")  # Debe ser: https://rxoiedlrtoumeflqkbzb.supabase.co
+SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
 print("==========================================")
@@ -65,7 +66,6 @@ def subir_foto(
         file_content = file.file.read()
         print(f"📤 [UPLOAD] Tamaño del archivo: {len(file_content)} bytes")
         
-        # Construimos la URL de la API de Storage de Supabase
         bucket_name = "avatars"
         upload_url = f"{SUPABASE_URL}/storage/v1/object/{bucket_name}/{filename}"
         
@@ -75,7 +75,6 @@ def subir_foto(
             "Content-Type": file.content_type
         }
         
-        # Hacemos la petición POST con requests (fuerza IPv4)
         response = requests.post(upload_url, headers=headers, data=file_content, timeout=30)
         
         if response.status_code not in [200, 201]:
@@ -84,7 +83,6 @@ def subir_foto(
             
         print(f"📤 [UPLOAD] Respuesta de Supabase: {response.status_code}")
         
-        # Construimos la URL pública
         public_url = f"{SUPABASE_URL}/storage/v1/object/public/{bucket_name}/{filename}"
         print(f"📤 [UPLOAD] URL pública generada: {public_url}")
         
@@ -144,7 +142,29 @@ def obtener_usuario(
             detail="Usuario no encontrado"
         )
 
-    return usuario
+    # 👇 CORRECCIÓN CRÍTICA: Evitamos que Pydantic falle con las relaciones
+    # Armamos el JSON manualmente.
+    cargo_nombre = None
+    if usuario.cargo_id:
+        cargo_obj = db.query(Cargo).filter(Cargo.id == usuario.cargo_id).first()
+        if cargo_obj:
+            cargo_nombre = cargo_obj.nombre
+
+    return {
+        "id": usuario.id,
+        "nombre": usuario.nombre,
+        "cedula": usuario.cedula,
+        "correo": usuario.correo,
+        "rol_id": usuario.rol_id,
+        "activo": usuario.activo,
+        "cargo_id": usuario.cargo_id,
+        "turno": usuario.turno,
+        "fecha_ingreso": usuario.fecha_ingreso,
+        "fecha_nacimiento": usuario.fecha_nacimiento,
+        "foto_url": usuario.foto_url,
+        "ultimo_login": usuario.ultimo_login if hasattr(usuario, 'ultimo_login') else None,
+        "cargo": cargo_nombre # 👈 Enviamos el nombre del cargo extra para el frontend
+    }
 
 
 # =========================
@@ -407,7 +427,7 @@ def activar_usuario(
 def eliminar_usuario(
     usuario_id: int,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(check_role([3]))
+    current_user: Usuario = Depends(check_admin()) # 👈 Usamos check_admin
 ):
     if current_user.id == usuario_id:
         raise HTTPException(

@@ -33,7 +33,7 @@ from app.routes import etiqueta
 from app.routes import defecto
 from app.routes import defecto_tipos
 from app.routes import auditoria_interna
-from app.routes import auditoria_producto  # 👈 NUEVO ROUTER
+from app.routes import auditoria_producto
 from app.routes import dashboard
 from app.routes import reportes
 from app.routes import reportes_defectos
@@ -139,7 +139,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
 # =========================
-# CORS FRONTEND
+# CORS FRONTEND (BLINDADO PARA RENDER)
 # =========================
 
 origins = [
@@ -156,13 +156,14 @@ origins = [
     "http://localhost:8000",
     "http://127.0.0.1:3000",
     "http://localhost:3000",
-    "https://venvidrio-calidad.onrender.com",
+    # 👇 DOMINIOS DE PRODUCCIÓN EN RENDER
+    "https://venvidrio-calidad.onrender.com",           # Tu Frontend
+    "https://calidad-venvidrio-repository-main.onrender.com", # Tu Backend
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    # 👇 REGEX AMPLIADO: Acepta IPs locales 192.168.x.x y 10.x.x.x (redes corporativas)
     allow_origin_regex=r"http://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+):[0-9]{4,5}",
     allow_credentials=True,
     allow_methods=["*"],
@@ -200,7 +201,7 @@ app.include_router(defecto.router)
 
 # 👇 ROUTERS DE AUDITORÍA
 app.include_router(auditoria_interna.router)
-app.include_router(auditoria_producto.router)  # 👈 NUEVO
+app.include_router(auditoria_producto.router)
 
 app.include_router(dashboard.router)
 

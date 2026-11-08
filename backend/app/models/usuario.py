@@ -45,16 +45,18 @@ class Usuario(Base):
         index=True,
     )
     
+    # 👇 CORRECCIÓN: lazy="joined" para que traiga el cargo automáticamente
     cargo = relationship(
         "Cargo",
-        back_populates="usuarios"
+        back_populates="usuarios",
+        lazy="joined"
     )
 
     # ============================
-    # 👇 CAMPOS DE PERFIL ACTUALIZADOS
+    # CAMPOS DE PERFIL ACTUALIZADOS
     # ============================
     
-    # 👇 CAMBIO: Ahora es Integer y solo permite del 1 al 4
+    # Turno: 1, 2, 3 o 4
     turno = Column(Integer, nullable=True)
     
     fecha_ingreso = Column(Date, nullable=True)

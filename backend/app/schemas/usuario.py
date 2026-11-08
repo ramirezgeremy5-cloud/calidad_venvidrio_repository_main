@@ -37,7 +37,6 @@ class UsuarioCreate(UsuarioBase):
     
     cedula: Optional[str] = Field(None, max_length=20, description="Cédula de identidad (opcional)")
     
-    # 👇 CAMBIO: Turno ahora es un entero
     turno: int = Field(..., ge=1, le=4, description="Turno del usuario (1, 2, 3 o 4)")
     
     fecha_ingreso: Optional[date] = Field(None, description="Fecha de ingreso (opcional)")
@@ -105,10 +104,11 @@ class UsuarioResponse(UsuarioBase):
         }
     )
 
+    # 👇 CORRECCIÓN: Este validador traduce el objeto Cargo a su nombre
     @field_validator('cargo', mode='before')
     @classmethod
     def resolver_cargo(cls, v):
-        """Extrae el string si SQLAlchemy devuelve el objeto"""
+        """Si SQLAlchemy devuelve un objeto Cargo, extraemos su nombre."""
         if v is not None and hasattr(v, 'nombre'):
             return v.nombre
         return v
@@ -131,7 +131,6 @@ class UsuarioUpdate(BaseModel):
     )
     
     cedula: Optional[str] = Field(None, max_length=20)
-    # 👇 CAMBIO: Turno ahora es un entero
     turno: Optional[int] = Field(None, ge=1, le=4)
     fecha_ingreso: Optional[date] = None
     fecha_nacimiento: Optional[date] = None
