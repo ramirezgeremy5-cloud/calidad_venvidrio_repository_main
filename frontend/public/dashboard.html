@@ -4,18 +4,100 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Venvidrio | Dashboard</title>
+  
+  <!-- Iconos y Estilos -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
-  <!-- CORREGIDO: Quitado el ../ y subido a v=4 -->
-  <link rel="stylesheet" href="./assets/css/shared.css?v=4">
-  <link rel="stylesheet" href="./assets/css/dashboard.css?v=4">
+  <link rel="stylesheet" href="./assets/css/shared.css?v=5">
+  <link rel="stylesheet" href="./assets/css/dashboard.css?v=5">
+  
+  <!-- Estilos específicos para los íconos de fondo en los KPIs y el selector de planta -->
+  <style>
+    .kpi-card {
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .kpi-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 20px -8px rgba(15, 23, 42, 0.15);
+    }
+    .kpi-card .kpi-bg-icon {
+      position: absolute;
+      right: -15px;
+      bottom: -15px;
+      font-size: 100px;
+      opacity: 0.05;
+      pointer-events: none;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    .kpi-card:hover .kpi-bg-icon {
+      transform: scale(1.1) rotate(-5deg);
+      opacity: 0.08;
+    }
+    /* Gradientes por KPI */
+    .kpi-card.produccion { background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); border-left: 4px solid #22c55e; }
+    .kpi-card.lotes { background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%); border-left: 4px solid #3b82f6; }
+    .kpi-card.pendientes { background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%); border-left: 4px solid #f59e0b; }
+    .kpi-card.defectos { background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%); border-left: 4px solid #ef4444; }
+    .kpi-card.rechazo { background: linear-gradient(135deg, #ffffff 0%, #fdf2f8 100%); border-left: 4px solid #ec4899; }
+    .kpi-card.eficiencia { background: linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%); border-left: 4px solid #8b5cf6; }
+    
+    .kpi-card a {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      height: 100%;
+    }
+    
+    /* Selector de planta */
+    .selector-planta {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .selector-planta:focus, .selector-planta:hover {
+      border-color: var(--brand-2);
+    }
+
+    /* Reloj en el navbar */
+    .nav-reloj {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      margin-left: 15px;
+    }
+    @media (max-width: 900px) {
+      .nav-reloj { display: none; } /* Ocultar en móvil para no saturar */
+    }
+  </style>
 </head>
 <body>
 
 <!-- ================= NAVBAR ================= -->
 <nav class="navbar">
-  <div class="nav-brand">
-    <!-- CORREGIDO -->
-    <img src="./assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
+  <div class="nav-left-group">
+    <div class="nav-brand">
+      <img src="./assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
+    </div>
+    
+    <!-- RELOJ EN EL NAVBAR (Se actualiza con shared.js) -->
+    <div class="nav-reloj">
+      <i class="ti ti-clock"></i>
+      <span id="reloj-real">--:--:--</span>
+    </div>
   </div>
 
   <ul class="nav-links" id="navLinks">
@@ -60,9 +142,18 @@
       <button class="filtro-tiempo" data-dias="90">90 días</button>
       <button class="filtro-tiempo" data-dias="all">Todo</button>
     </div>
+    
     <div class="ultima-actualizacion">
+      <!-- FILTRO POR PLANTA (Para que el dashboard.js lo lea) -->
+      <select id="filtro-planta" class="selector-planta" title="Filtrar por planta">
+        <option value="">Todas las plantas</option>
+        <option value="Valera">Planta Valera</option>
+        <option value="Los Guayos">Planta Los Guayos</option>
+      </select>
+
       <i class="ti ti-clock"></i>
       Última actualización: <span id="ultima-actualizacion">--:--:--</span>
+      
       <button class="btn-refresh" title="Recargar datos (Ctrl+R)" id="btn-refresh">
         <i class="ti ti-refresh"></i>
       </button>
@@ -73,37 +164,57 @@
   </div>
 
   <section class="kpi-grid kpi-grid-6">
-    <div class="kpi-card anim-card produccion" title="Total de unidades producidas">
-      <p class="kpi-label">Producción Total</p>
-      <div class="kpi-value" id="dash-unidades"><span class="skeleton"></span></div>
-      <div class="kpi-meta">Unidades producidas</div>
+    <!-- KPI PRODUCCION TOTAL (Clicable a Producción) -->
+    <div class="kpi-card anim-card produccion" title="Ver producción total">
+      <a href="../pages/produccion.html">
+        <i class="ti ti-box kpi-bg-icon"></i>
+        <p class="kpi-label">Producción Total</p>
+        <div class="kpi-value" id="dash-unidades"><span class="skeleton"></span></div>
+        <div class="kpi-meta">Unidades producidas</div>
+      </a>
     </div>
 
-    <div class="kpi-card anim-card lotes" title="Cantidad de lotes registrados">
-      <p class="kpi-label">Lotes Registrados</p>
-      <div class="kpi-value" id="dash-lotes"><span class="skeleton"></span></div>
-      <div class="kpi-meta">Producción actual</div>
+    <!-- KPI LOTES REGISTRADOS (Clicable a Producción) -->
+    <div class="kpi-card anim-card lotes" title="Ver lotes registrados">
+      <a href="../pages/produccion.html">
+        <i class="ti ti-files kpi-bg-icon"></i>
+        <p class="kpi-label">Lotes Registrados</p>
+        <div class="kpi-value" id="dash-lotes"><span class="skeleton"></span></div>
+        <div class="kpi-meta">Producción actual</div>
+      </a>
     </div>
 
-    <div class="kpi-card anim-card pendientes" title="Lotes esperando por evaluación de calidad">
-      <p class="kpi-label">Pendientes por Evaluar</p>
-      <div class="kpi-value warning" id="dash-pendientes"><span class="skeleton"></span></div>
-      <div class="kpi-meta">Requieren inspección</div>
+    <!-- KPI PENDIENTES (Clicable a Auditoría) -->
+    <div class="kpi-card anim-card pendientes" title="Ver lotes pendientes de auditar">
+      <a href="../pages/auditoria_interna.html">
+        <i class="ti ti-clipboard-list kpi-bg-icon"></i>
+        <p class="kpi-label">Pendientes por Evaluar</p>
+        <div class="kpi-value warning" id="dash-pendientes"><span class="skeleton"></span></div>
+        <div class="kpi-meta">Requieren inspección</div>
+      </a>
     </div>
 
-    <div class="kpi-card anim-card defectos" title="Total de defectos catalogados">
-      <p class="kpi-label">Defectos</p>
-      <div class="kpi-value" id="dash-defectos"><span class="skeleton"></span></div>
-      <div class="kpi-meta">Registros encontrados</div>
+    <!-- KPI DEFECTOS (Clicable a Defectos) -->
+    <div class="kpi-card anim-card defectos" title="Ver catálogo de defectos">
+      <a href="../pages/defectos.html">
+        <i class="ti ti-alert-triangle kpi-bg-icon"></i>
+        <p class="kpi-label">Defectos</p>
+        <div class="kpi-value" id="dash-defectos"><span class="skeleton"></span></div>
+        <div class="kpi-meta">Registros encontrados</div>
+      </a>
     </div>
 
+    <!-- KPI TASA DE RECHAZO (No clicable) -->
     <div class="kpi-card anim-card rechazo" title="Porcentaje de paletas retenidas">
+      <i class="ti ti-x kpi-bg-icon"></i>
       <p class="kpi-label">Tasa de Rechazo</p>
       <div class="kpi-value danger" id="dash-rechazo"><span class="skeleton"></span></div>
       <div class="kpi-meta">Paletas retenidas</div>
     </div>
 
+    <!-- KPI EFICIENCIA (No clicable) -->
     <div class="kpi-card anim-card eficiencia" title="Eficiencia general">
+      <i class="ti ti-trending-up kpi-bg-icon"></i>
       <p class="kpi-label">Eficiencia</p>
       <div class="kpi-value" id="dash-eficiencia"><span class="skeleton"></span></div>
       <div class="kpi-meta">Rendimiento general</div>
@@ -285,7 +396,6 @@
 
 <!-- ================= SCRIPTS ================= -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- CORREGIDO: Quitado el ../ y subido a v=6 para forzar la recarga -->
 <script src="./assets/js/shared.js?v=6"></script>
 <script src="./assets/js/login_app.js?v=6"></script>
 <script src="./assets/js/dashboard.js?v=6"></script>

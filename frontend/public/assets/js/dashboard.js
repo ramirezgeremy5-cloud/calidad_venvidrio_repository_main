@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - DASHBOARD
-   JS v6 - Optimizado, Interactivo y a Prueba de Errores
+   JS v7 - Filtro por Planta + Optimizado
    ========================================== */
 
 // Detectar dinámicamente la URL del servidor
@@ -20,6 +20,7 @@ let intervaloCarga = null;
 let datosDashboard = null;
 let periodoActual = 7;
 let filtroGrafico = 'ambos';
+let filtroPlanta = ''; // 👈 NUEVO: Filtro por planta
 let abortController = null;
 
 // Colores de clasificación
@@ -92,15 +93,11 @@ function filtrarPorDias(lista, campoFecha) {
   });
 }
 
-// 👇 NUEVA FUNCIÓN: Normaliza la URL de la foto
 function obtenerUrlFoto(fotoUrl) {
   if (!fotoUrl) return null;
-  // Si ya es una URL completa (empieza con http), usarla directamente
   if (fotoUrl.startsWith('http://') || fotoUrl.startsWith('https://')) {
-    // Corregir URLs malformadas como "https//" (sin los dos puntos)
     return fotoUrl.replace(/^(https?)\/\//, '$1://');
   }
-  // Si es una ruta relativa (ej: /static/uploads/...), concatenar con API_URL
   return `${API_URL}${fotoUrl}`;
 }
 
@@ -134,7 +131,6 @@ function cargarUsuarioNav() {
     
     let avatarHtml = '';
     if (user.foto_url) {
-      // 👇 CORREGIDO: Usar la función normalizadora
       const urlFoto = obtenerUrlFoto(user.foto_url);
       avatarHtml = `<img src="${urlFoto}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
     } else {
@@ -205,7 +201,7 @@ function initUserControls() {
 }
 
 /* ==========================================
-   CARGA PRINCIPAL DE DATOS (CON ABORT CONTROLLER)
+   CARGA PRINCIPAL DE DATOS (CON FILTRO DE PLANTA)
 ========================================== */
 async function cargarDashboard(isBackground = false) {
   if (abortController) abortController.abort();
@@ -223,9 +219,20 @@ async function cargarDashboard(isBackground = false) {
 
     const headers = { 'Authorization': `Bearer ${token}` };
 
+    // 👇 Construimos las URLs con el filtro de planta si existe
+    let urlLotes = `${API_URL}/produccion?limit=2000`;
+    let urlDefectos = `${API_URL}/defectos?limit=2000`;
+    
+    if (filtroPlanta) {
+      urlLotes += `&planta=${encodeURIComponent(filtroPlanta)}`;
+      // El endpoint de defectos no filtra por planta directamente, 
+      // así que filtramos en el cliente o enviamos el parámetro si el backend lo soporta.
+      urlDefectos += `&planta=${encodeURIComponent(filtroPlanta)}`;
+    }
+
     const [resLotes, resDefectos] = await Promise.all([
-      fetch(`${API_URL}/produccion?limit=2000`, { headers, signal: abortController.signal }),
-      fetch(`${API_URL}/defectos?limit=2000`, { headers, signal: abortController.signal })
+      fetch(urlLotes, { headers, signal: abortController.signal }),
+      fetch(urlDefectos, { headers, signal: abortController.signal })
     ]);
 
     if (resLotes.status === 401 || resDefectos.status === 401) {
@@ -238,21 +245,28 @@ async function cargarDashboard(isBackground = false) {
     const lotes = await resLotes.json();
     const defectos = await resDefectos.json();
 
-    datosDashboard = { lotes, defectos };
+    // Si el backend no filtró los defectos, los filtramos manualmente por los lotes de la planta
+    let defectosFiltrados = defectos;
+    if (filtroPlanta) {
+      const idsLotesFiltrados = new Set(lotes.map(l => l.id));
+      defectosFiltrados = defectos.filter(d => idsLotesFiltrados.has(d.produccion_id));
+    }
 
-    logSuccess(`${lotes.length} lotes | ${defectos.length} defectos`);
+    datosDashboard = { lotes, defectos: defectosFiltrados };
 
-    renderKPIs(lotes, defectos);
+    logSuccess(`${lotes.length} lotes | ${defectosFiltrados.length} defectos`);
+
+    renderKPIs(lotes, defectosFiltrados);
     renderChartProduccion(lotes);
-    renderChartDefectos(defectos);
+    renderChartDefectos(defectosFiltrados);
     renderChartApto(lotes);
     renderChartLineas(lotes);
     renderTopProductos(lotes);
-    renderTopTiposDefecto(defectos);
-    renderChartEficiencia(lotes, defectos);
+    renderTopTiposDefecto(defectosFiltrados);
+    renderChartEficiencia(lotes, defectosFiltrados);
     renderTopClientesRetencion(lotes);
     renderAuditoriasPendientes(lotes);
-    renderAlertas(lotes, defectos);
+    renderAlertas(lotes, defectosFiltrados);
     renderTablaUltimosRegistros(lotes);
 
     setText('ultima-actualizacion', new Date().toLocaleTimeString('es-VE'));
@@ -312,7 +326,7 @@ function renderKPIs(lotes, defectos) {
 }
 
 /* ==========================================
-   GRÁFICAS INTERACTIVAS (CLICKS Y TOOLTIPS)
+   GRÁFICAS INTERACTIVAS
 ========================================== */
 
 function renderChartProduccion(lotes) {
@@ -947,6 +961,18 @@ function initFiltrosGrafico() {
   });
 }
 
+// 👇 NUEVA FUNCIÓN: Inicializar el filtro por planta
+function initFiltroPlanta() {
+  const select = document.getElementById('filtro-planta');
+  if (!select) return;
+
+  select.addEventListener('change', function() {
+    filtroPlanta = this.value;
+    log(`🔄 Filtro de planta cambiado a: ${filtroPlanta || 'Todas'}`);
+    cargarDashboard(); // Recargar todos los datos con el nuevo filtro
+  });
+}
+
 /* ==========================================
    EXPORTAR WORD (FORZAR DESCARGA)
 ========================================== */
@@ -986,6 +1012,7 @@ function iniciarDashboard() {
   initUserControls();
   initFiltrosTiempo();
   initFiltrosGrafico();
+  initFiltroPlanta(); // 👈 Inicializar filtro de planta
   initShortcuts();
 
   document.getElementById('btn-exportar-word')?.addEventListener('click', exportarDashboardWord);
@@ -1035,6 +1062,7 @@ window.verEstadoDashboard = function () {
   console.log('  - Datos:', datosDashboard ? 'Cargados ✅' : 'No cargados ❌');
   console.log('  - Período:', periodoActual);
   console.log('  - Filtro gráfico:', filtroGrafico);
+  console.log('  - Filtro planta:', filtroPlanta || 'Todas');
   console.log('  - Gráficas:');
   console.log('    • Producción:', productionChart ? '✅' : '❌');
   console.log('    • Defectos:', defectosChart ? '✅' : '❌');

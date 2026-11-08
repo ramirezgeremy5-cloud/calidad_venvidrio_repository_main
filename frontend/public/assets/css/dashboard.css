@@ -1,7 +1,6 @@
 /* =============================================
    DASHBOARD — VENVIDRIO
-   dashboard.css — v2 (rediseño coherente
-   con Mi Perfil / Etiquetas / Defectos)
+   dashboard.css — v3 (Compatible con Android + Mejoras)
    ============================================= */
 
 /* ================= VARIABLES DE MARCA ================= */
@@ -12,7 +11,6 @@
   --brand-soft: #eef2ff;
   --brand-line: #dfe4fb;
 
-  /* Alias heredados */
   --navy: var(--brand-1);
   --navy-dark: #0d1658;
   --off-white: #f8f9fa;
@@ -31,7 +29,7 @@
   --font-mono: 'SF Mono', 'Monaco', 'Cascadia Code', 'Courier New', monospace;
 }
 
-/* ================= FONDO GEOMÉTRICO ================= */
+/* ================= FONDO GENERAL ================= */
 body {
   background-color: #f4f6fb !important;
   background-image:
@@ -43,6 +41,7 @@ body {
   margin: 0;
   padding: 0;
   color: var(--text-main);
+  -webkit-tap-highlight-color: transparent; /* Mejora experiencia táctil en Android */
 }
 
 .page { max-width: 1400px; margin: 0 auto; padding: 1.25rem 1rem 0; }
@@ -58,10 +57,6 @@ body {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
-}
-@keyframes slide-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes shimmer {
   0%   { background-position: -200% 0; }
@@ -97,7 +92,10 @@ body {
   border-radius: 12px;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
   border: 1px solid #d1d9e6;
+  overflow-x: auto; /* Scroll horizontal en móviles muy estrechos */
+  scrollbar-width: none;
 }
+.filtros-grupo::-webkit-scrollbar { display: none; }
 
 .filtro-tiempo {
   padding: 8px 16px;
@@ -109,6 +107,11 @@ body {
   background: transparent;
   color: var(--text-muted);
   transition: all 0.15s ease;
+  white-space: nowrap;
+  min-height: 38px; /* Tamaño táctil mínimo */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .filtro-tiempo:hover {
   background: #dce4f0;
@@ -129,9 +132,36 @@ body {
 .ultima-actualizacion {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   font-size: 12px;
   color: var(--text-hint);
+  flex-wrap: wrap;
+}
+
+/* Selector de planta (Mejorado para táctil) */
+.selector-planta {
+  background: #fff;
+  border: 1px solid var(--border-dark);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+  min-height: 38px;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2364748b%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px top 50%;
+  background-size: 10px auto;
+  padding-right: 32px;
+}
+.selector-planta:focus, .selector-planta:hover {
+  border-color: var(--brand-2);
+  box-shadow: 0 0 0 3px rgba(57, 73, 171, 0.1);
 }
 
 .ultima-actualizacion .btn-refresh {
@@ -147,6 +177,8 @@ body {
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  min-width: 40px;
+  min-height: 40px;
 }
 .ultima-actualizacion .btn-refresh:hover {
   background: #f8fafc;
@@ -162,7 +194,7 @@ body {
   animation: spin 1s linear infinite;
 }
 
-/* ================= BOTÓN PRIMARIO (3D + marca) ================= */
+/* ================= BOTÓN PRIMARIO ================= */
 .btn-primary {
   background: linear-gradient(180deg, var(--brand-2) 0%, var(--brand-1) 100%) !important;
   color: #fff !important;
@@ -176,7 +208,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 38px;
+  min-height: 40px;
   box-shadow: 0 4px 10px -2px rgba(26, 35, 126, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transition: all 0.15s ease;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
@@ -211,7 +243,7 @@ body {
   margin-bottom: 1.5rem;
 }
 
-/* ================= KPI GRID ================= */
+/* ================= KPI GRID (Nuevos Estilos) ================= */
 .kpi-grid, .kpi-grid-5, .kpi-grid-6 {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -229,6 +261,7 @@ body {
   .kpi-grid-5 { grid-template-columns: repeat(5, 1fr); }
 }
 
+/* Estilos base para la tarjeta KPI */
 .kpi-card {
   background: #fff;
   border: 1px solid var(--border);
@@ -242,23 +275,45 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  text-decoration: none; /* Para cuando es un enlace */
+  color: inherit;
 }
+
 .kpi-card:hover {
   box-shadow: 0 14px 36px -16px rgba(26, 35, 126, 0.3);
   transform: translateY(-2px);
 }
-.kpi-card::before {
-  content: '';
+
+/* Íconos de fondo (Se inyectan desde el HTML) */
+.kpi-card .kpi-bg-icon {
   position: absolute;
-  left: 0; top: 0;
-  width: 100%; height: 4px;
+  right: -15px;
+  bottom: -15px;
+  font-size: 100px;
+  opacity: 0.05;
+  pointer-events: none;
+  transition: transform 0.3s ease, opacity 0.3s ease;
 }
-.kpi-card.produccion::before { background: var(--brand-1); }
-.kpi-card.lotes::before      { background: #2e7d32; }
-.kpi-card.pendientes::before { background: #f57c00; }
-.kpi-card.defectos::before   { background: var(--danger); }
-.kpi-card.eficiencia::before { background: #ff9800; }
-.kpi-card.rechazo::before    { background: #e65100; }
+.kpi-card:hover .kpi-bg-icon {
+  transform: scale(1.1) rotate(-5deg);
+  opacity: 0.08;
+}
+
+/* Gradientes específicos para cada KPI */
+.kpi-card.produccion { background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); border-left: 4px solid #22c55e; }
+.kpi-card.lotes { background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%); border-left: 4px solid #3b82f6; }
+.kpi-card.pendientes { background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%); border-left: 4px solid #f59e0b; }
+.kpi-card.defectos { background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%); border-left: 4px solid #ef4444; }
+.kpi-card.rechazo { background: linear-gradient(135deg, #ffffff 0%, #fdf2f8 100%); border-left: 4px solid #ec4899; }
+.kpi-card.eficiencia { background: linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%); border-left: 4px solid #8b5cf6; }
+
+/* Enlace dentro de la tarjeta KPI */
+.kpi-card a {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  height: 100%;
+}
 
 .kpi-label {
   font-size: 11px;
@@ -404,7 +459,7 @@ body {
   .card-body { padding: 1.15rem 1.5rem; }
 }
 
-/* ================= FILTROS DE GRÁFICO (3D) ================= */
+/* ================= FILTROS DE GRÁFICO ================= */
 .filtros-grafico {
   display: flex;
   gap: 4px;
@@ -424,6 +479,7 @@ body {
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
+  min-height: 32px;
 }
 .filtros-grafico .btn-sm:hover:not(.active) {
   background: #dce4f0;
@@ -670,6 +726,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-height: 40px;
 }
 .btn-reintentar:hover {
   background: #dc3545;
@@ -754,6 +811,7 @@ body {
   width: 100%;
   box-shadow: 0 4px 10px -2px rgba(26, 35, 126, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  min-height: 44px;
 }
 .btn-primary-modal:hover {
   background: linear-gradient(180deg, #4355b8 0%, var(--brand-1) 100%);
@@ -791,7 +849,7 @@ body {
 
 @media (max-width: 768px) {
   .btn-primary, .btn-primary-modal {
-    min-height: 44px;
+    min-height: 44px; /* Tamaño táctil óptimo en Android */
     font-size: 14px;
   }
 
@@ -837,6 +895,17 @@ body {
   .modal-icon { width: 60px; height: 60px; font-size: 2rem; }
 
   .table-wrap table { min-width: 560px; }
+
+  /* Selector de planta en móvil */
+  .selector-planta {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+  .ultima-actualizacion {
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+  }
 }
 
 @media (max-width: 380px) {
