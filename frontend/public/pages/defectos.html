@@ -15,8 +15,16 @@
 
 <!-- ================= NAVBAR ================= -->
 <nav class="navbar">
-  <div class="nav-brand">
-    <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
+  <div class="nav-left-group">
+    <div class="nav-brand">
+      <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
+    </div>
+    
+    <!-- RELOJ EN EL NAVBAR -->
+    <div class="nav-reloj">
+      <i class="ti ti-clock"></i>
+      <span id="reloj-real">--:--:--</span>
+    </div>
   </div>
 
   <ul class="nav-links" id="navLinks">
@@ -24,9 +32,16 @@
     <li><a href="../pages/produccion.html"><i class="ti ti-building-factory-2"></i> Producción</a></li>
     <li><a href="../pages/defectos.html" class="active"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
     <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
-    <li><a href="../pages/auditoria_interna.html"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a></li>
-    <li><a href="../pages/auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
-    <li id="navUsuariosLink" class="nav-hidden">
+
+    <!-- 👇 IDs CLAVE PARA shared.js -->
+    <li id="navAuditoriaInternaLink">
+      <a href="../pages/auditoria_interna.html"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a>
+    </li>
+    <li id="navAuditoriaProductoLink">
+      <a href="../pages/auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a>
+    </li>
+
+    <li id="navUsuariosLink">
       <a href="../pages/usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
     </li>
   </ul>

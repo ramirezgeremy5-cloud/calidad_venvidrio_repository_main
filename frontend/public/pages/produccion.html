@@ -37,9 +37,16 @@
     <li><a href="../pages/produccion.html" class="active"><i class="ti ti-building-factory-2"></i> Producción</a></li>
     <li><a href="../pages/defectos.html"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
     <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
-    <li><a href="../pages/auditoria_interna.html"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a></li>
-    <li><a href="../pages/auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
-    <li id="navUsuariosLink" class="nav-hidden">
+
+    <!-- 👇 IDs CLAVE PARA shared.js -->
+    <li id="navAuditoriaInternaLink">
+      <a href="../pages/auditoria_interna.html"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a>
+    </li>
+    <li id="navAuditoriaProductoLink">
+      <a href="../pages/auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a>
+    </li>
+
+    <li id="navUsuariosLink">
       <a href="../pages/usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
     </li>
   </ul>
@@ -734,7 +741,7 @@
   <p>© 2026 MoonDRAGO — Sistema de Control de Calidad para Venvidrio</p>
 </footer>
 
-<!-- SCRIPTS AL FINAL (Sin código embebido, todo desde el archivo .js) -->
+<!-- SCRIPTS AL FINAL -->
 <script src="../assets/js/shared.js"></script>
 <script src="../assets/js/login_app.js"></script>
 <script src="../assets/js/escaner.js"></script>
