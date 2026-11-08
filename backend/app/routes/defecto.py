@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload # 👈 IMPORTANTE AÑADIR joinedload
 from sqlalchemy import func
 from datetime import datetime, date
 from typing import Optional, List
@@ -18,7 +18,6 @@ from app.schemas.defecto import (
     DefectoTipoResponse,
 )
 
-# 👇 IMPORTAMOS LAS DEPENDENCIAS DE AUTENTICACIÓN
 from app.dependencies.auth import get_current_active_user, check_admin
 from app.models.usuario import Usuario
 
@@ -27,9 +26,7 @@ router = APIRouter(
     tags=["Defectos"]
 )
 
-# Clasificaciones oficiales de Venvidrio (Según Glosario)
 CLASIFICACIONES_OFICIALES = ["Crítico", "Mayor B+", "Mayor B-", "Menor"]
-
 
 def get_db():
     db = SessionLocal()
@@ -37,7 +34,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
 
 # =========================
 # LISTAR DEFECTOS (CON FILTROS)
@@ -54,13 +50,13 @@ def listar_defectos(
     fecha_hasta: Optional[date] = Query(None, description="Filtrar hasta fecha"),
     incluir_semillas: bool = Query(False, description="Incluir registros semilla del catálogo"),
     skip: int = Query(0),
-    limit: int = Query(500),
+    limit: int = Query(2000), # 👈 SUBIDO A 2000 PORQUE TU FRONTEND LO PIDE ASÍ
     db: Session = Depends(get_db),
-    # 👇 SOLO USUARIOS AUTENTICADOS PUEDEN VER LOS DEFECTOS
     current_user: Usuario = Depends(get_current_active_user)
 ):
     """Lista defectos con filtros opcionales. Excluye registros semilla por defecto."""
-    query = db.query(Defecto)
+    # 👇 USAMOS joinedload PARA EVITAR ERRORES DE LECTURA SI HAY RELACIONES
+    query = db.query(Defecto).options(joinedload(Defecto.lote)) 
 
     if not incluir_semillas:
         query = query.filter(Defecto.origen != "seed")
@@ -89,10 +85,7 @@ def listar_defectos(
 # =========================
 @router.get("/opciones", response_model=dict)
 def obtener_opciones_registradas(db: Session = Depends(get_db)):
-    """Devuelve valores únicos ya registrados, ordenados por frecuencia."""
-
     tipos_maestros = db.query(DefectoTipo.nombre).filter(DefectoTipo.activo == True).all()
-    
     base = db.query(Defecto).filter(Defecto.origen != "seed")
     
     zonas = base.with_entities(
@@ -114,17 +107,13 @@ def obtener_opciones_registradas(db: Session = Depends(get_db)):
 
 
 # =========================
-# TIPOS DE DEFECTO POR CLASIFICACIÓN (TABLA MAESTRA)
+# TIPOS DE DEFECTO POR CLASIFICACIÓN
 # =========================
 @router.get("/tipos", response_model=list[str])
 def obtener_tipos_por_clasificacion(
     clasificacion: Optional[str] = Query(None, description="Clasificación para filtrar"),
     db: Session = Depends(get_db)
 ):
-    """
-    Devuelve los nombres de los tipos de defecto desde la tabla maestra `tipos_defecto`.
-    Se usa para el datalist dinámico en el frontend.
-    """
     query = db.query(DefectoTipo.nombre).filter(DefectoTipo.activo == True)
 
     if clasificacion:
@@ -143,18 +132,10 @@ def obtener_tipos_por_clasificacion(
 def registrar_tipo_defecto(
     datos: TipoDefectoCreate,
     db: Session = Depends(get_db),
-    # 👇 SOLO ADMIN O SUPERVISOR PUEDEN CREAR TIPOS
     current_user: Usuario = Depends(check_admin())
 ):
-    """
-    Registra un nuevo tipo de defecto en la tabla maestra `tipos_defecto`.
-    Si ya existe (mismo nombre y clasificación), devuelve el existente.
-    """
     if datos.clasificacion not in CLASIFICACIONES_OFICIALES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Clasificación inválida. Debe ser una de: {', '.join(CLASIFICACIONES_OFICIALES)}"
-        )
+        raise HTTPException(status_code=400, detail="Clasificación inválida.")
 
     existente = db.query(DefectoTipo).filter(
         DefectoTipo.nombre.ilike(datos.tipo_defecto),
@@ -177,11 +158,10 @@ def registrar_tipo_defecto(
 
 
 # =========================
-# ESTADÍSTICAS (Con 4 clasificaciones oficiales)
+# ESTADÍSTICAS
 # =========================
 @router.get("/estadisticas", response_model=dict)
 def obtener_estadisticas(db: Session = Depends(get_db)):
-    """Devuelve estadísticas desglosadas por las 4 clasificaciones oficiales."""
     base = db.query(Defecto).filter(Defecto.origen != "seed")
 
     total = base.with_entities(func.count(Defecto.id)).scalar() or 0
@@ -222,16 +202,8 @@ def obtener_defecto(
 def crear_defectos(
     datos: List[DefectoCreate],
     db: Session = Depends(get_db),
-    # 👇 SOLO USUARIOS AUTENTICADOS PUEDEN CREAR DEFECTOS
     current_user: Usuario = Depends(get_current_active_user)
 ):
-    """
-    Registra un conjunto de defectos vinculados a un lote.
-    - Recibe una lista de defectos desde el frontend.
-    - Valida el lote y las clasificaciones.
-    - Actualiza el lote a RETENIDO (300).
-    - Guarda la info de muestra (tamaños, botellas por caja, etc.)
-    """
     if not datos:
         raise HTTPException(status_code=400, detail="No se enviaron defectos.")
 
@@ -239,28 +211,20 @@ def crear_defectos(
     if not lote_id:
         raise HTTPException(status_code=400, detail="El lote_id es obligatorio.")
 
-    # 1. Verificar que el lote existe
     lote = db.query(Produccion).filter(Produccion.id == lote_id).first()
     if not lote:
         raise HTTPException(status_code=404, detail=f"El lote ID {lote_id} no existe.")
 
-    # 2. Validar clasificaciones
     for d in datos:
         if d.clasificacion not in CLASIFICACIONES_OFICIALES:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Clasificación '{d.clasificacion}' inválida. Debe ser una de: {', '.join(CLASIFICACIONES_OFICIALES)}"
-            )
+            raise HTTPException(status_code=400, detail="Clasificación inválida.")
 
-    # 3. Crear los objetos Defecto
     nuevos_defectos = []
     for d in datos:
         nuevo = Defecto(
             lote_id=lote_id,
             codigo_lote=lote.codigo_lote,
-            # Datos del grupo
             grupo_id=d.grupo_id,
-            # Datos del defecto
             tipo_defecto=d.tipo_defecto,
             clasificacion=d.clasificacion,
             cantidad_piezas=d.cantidad_piezas,
@@ -271,7 +235,6 @@ def crear_defectos(
             resultado_lote=d.resultado_lote or "RETENIDO",
             origen="manual",
             validado=True,
-            # Datos de muestra
             tamano_muestra=d.tamano_muestra,
             canastas_inspeccionadas=d.canastas_inspeccionadas,
             tamano_poblacion=d.tamano_poblacion,
@@ -282,19 +245,14 @@ def crear_defectos(
         nuevos_defectos.append(nuevo)
 
     try:
-        # 4. Guardar todos los defectos en una transacción
         db.add_all(nuevos_defectos)
-        
-        # 5. Actualizar el lote
         lote.estatus = '300'
         
-        # Tomamos las observaciones del primer defecto (que son las generales)
         if datos[0].observaciones:
             lote.observaciones = datos[0].observaciones.strip()
         elif not lote.observaciones:
             lote.observaciones = f"Lote con {len(datos)} defecto(s) registrado(s)."
 
-        # Guardar el tamaño de muestra general en el lote (del primer defecto)
         if datos[0].tamano_muestra is not None:
             lote.tamano_muestra = str(datos[0].tamano_muestra)
         if datos[0].canastas_inspeccionadas is not None:
@@ -302,7 +260,6 @@ def crear_defectos(
 
         db.commit()
         
-        # Refrescar los objetos para obtener sus IDs
         for nd in nuevos_defectos:
             db.refresh(nd)
             
@@ -314,7 +271,7 @@ def crear_defectos(
 
 
 # ========================================================
-# ELIMINAR DEFECTOS DE UN LOTE (Devolver a Evaluación)
+# ELIMINAR DEFECTOS DE UN LOTE
 # ========================================================
 @router.delete("/lote/{lote_id}", status_code=204)
 def eliminar_defectos_por_lote(
@@ -322,18 +279,12 @@ def eliminar_defectos_por_lote(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user)
 ):
-    """
-    Elimina todos los defectos asociados a un lote y devuelve el lote a estatus 100.
-    Útil para corregir errores de registro.
-    """
     lote = db.query(Produccion).filter(Produccion.id == lote_id).first()
     if not lote:
         raise HTTPException(status_code=404, detail="Lote no encontrado.")
 
-    # Eliminar los defectos de la tabla
     db.query(Defecto).filter(Defecto.lote_id == lote_id).delete()
     
-    # Devolver el lote a evaluación
     lote.estatus = "100"
     lote.estado_auditoria = "pendiente"
     lote.observaciones = ""
@@ -357,10 +308,7 @@ def actualizar_defecto(
         raise HTTPException(status_code=404, detail="Defecto no encontrado.")
 
     if datos.clasificacion is not None and datos.clasificacion not in CLASIFICACIONES_OFICIALES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Clasificación inválida. Debe ser una de: {', '.join(CLASIFICACIONES_OFICIALES)}"
-        )
+        raise HTTPException(status_code=400, detail="Clasificación inválida.")
 
     for campo, valor in datos.dict(exclude_unset=True).items():
         if valor is not None:
@@ -426,7 +374,7 @@ def marcar_lote_apto(
 
 
 # =========================
-# MARCAR LOTE COMO RETENIDO (FALLBACK)
+# MARCAR LOTE COMO RETENIDO
 # =========================
 @router.post("/lote/{lote_id}/retenido", status_code=200)
 def marcar_lote_retenido(
@@ -440,10 +388,7 @@ def marcar_lote_retenido(
         raise HTTPException(status_code=404, detail="Lote no encontrado.")
 
     if not datos.observaciones or not datos.observaciones.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Debe proporcionar observaciones para marcar el lote como RETENIDO."
-        )
+        raise HTTPException(status_code=400, detail="Debe proporcionar observaciones.")
 
     lote.estatus = '300'
     lote.observaciones = datos.observaciones.strip()

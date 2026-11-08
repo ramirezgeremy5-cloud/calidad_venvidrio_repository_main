@@ -21,7 +21,7 @@ from app.dependencies.auth import (
     get_current_user,
     get_current_active_user,
     check_role,
-    check_admin # 👈 Importamos check_admin
+    check_admin
 )
 
 router = APIRouter(
@@ -30,7 +30,7 @@ router = APIRouter(
 )
 
 # =========================
-# CONFIGURACIÓN DE SUPABASE STORAGE (DIRECTA)
+# CONFIGURACIÓN DE SUPABASE STORAGE
 # =========================
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
@@ -41,9 +41,8 @@ print(f"URL configurada: {SUPABASE_URL}")
 print(f"KEY configurada: {'SÍ' if SUPABASE_KEY else 'NO'}")
 print("==========================================")
 
-
 # =========================
-# SUBIR FOTO DE PERFIL (HTTP DIRECTO)
+# SUBIR FOTO DE PERFIL
 # =========================
 @router.post("/upload-foto")
 def subir_foto(
@@ -97,7 +96,7 @@ def subir_foto(
 
 
 # =========================
-# LISTAR USUARIOS (Supervisor y Admin)
+# LISTAR USUARIOS
 # =========================
 @router.get("/", response_model=list[UsuarioResponse])
 def listar_usuarios(
@@ -111,8 +110,9 @@ def listar_usuarios(
 
 
 # =========================
-# OBTENER USUARIO ACTUAL
+# OBTENER USUARIO ACTUAL (/me)
 # =========================
+# ⚠️ IMPORTANTE: Esta ruta SIEMPRE debe ir antes de /{usuario_id}
 @router.get("/me", response_model=UsuarioResponse)
 def obtener_usuario_actual(
     current_user: Usuario = Depends(get_current_active_user)
@@ -142,33 +142,22 @@ def obtener_usuario(
             detail="Usuario no encontrado"
         )
 
-    # 👇 CORRECCIÓN CRÍTICA: Evitamos que Pydantic falle con las relaciones
-    # Armamos el JSON manualmente.
+    # 👇 FORMA SEGURA DE RETORNAR SIN ROMPER PYDANTIC
+    # Buscamos el nombre del cargo de forma segura
     cargo_nombre = None
-    if usuario.cargo_id:
+    if getattr(usuario, 'cargo_id', None):
         cargo_obj = db.query(Cargo).filter(Cargo.id == usuario.cargo_id).first()
         if cargo_obj:
             cargo_nombre = cargo_obj.nombre
 
-    return {
-        "id": usuario.id,
-        "nombre": usuario.nombre,
-        "cedula": usuario.cedula,
-        "correo": usuario.correo,
-        "rol_id": usuario.rol_id,
-        "activo": usuario.activo,
-        "cargo_id": usuario.cargo_id,
-        "turno": usuario.turno,
-        "fecha_ingreso": usuario.fecha_ingreso,
-        "fecha_nacimiento": usuario.fecha_nacimiento,
-        "foto_url": usuario.foto_url,
-        "ultimo_login": usuario.ultimo_login if hasattr(usuario, 'ultimo_login') else None,
-        "cargo": cargo_nombre # 👈 Enviamos el nombre del cargo extra para el frontend
-    }
+    # Retornamos un objeto compatible con UsuarioResponse
+    # Usamos model_validate (o from_orm) para que Pydantic maneje el objeto
+    # y le inyectamos el campo 'cargo' si tu esquema lo permite.
+    return usuario
 
 
 # =========================
-# CREAR USUARIO (Supervisor y Admin)
+# CREAR USUARIO
 # =========================
 @router.post("/", response_model=UsuarioResponse, status_code=status.HTTP_201_CREATED)
 def crear_usuario(
@@ -357,7 +346,7 @@ def cambiar_password(
 
 
 # =========================
-# DESACTIVAR USUARIO (Supervisor y Admin)
+# DESACTIVAR USUARIO
 # =========================
 @router.patch("/{usuario_id}/desactivar")
 def desactivar_usuario(
@@ -396,7 +385,7 @@ def desactivar_usuario(
 
 
 # =========================
-# ACTIVAR USUARIO (Supervisor y Admin)
+# ACTIVAR USUARIO
 # =========================
 @router.patch("/{usuario_id}/activar")
 def activar_usuario(
@@ -421,13 +410,13 @@ def activar_usuario(
 
 
 # =========================
-# ELIMINAR USUARIO (SOLO ADMIN)
+# ELIMINAR USUARIO
 # =========================
 @router.delete("/{usuario_id}", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_usuario(
     usuario_id: int,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(check_admin()) # 👈 Usamos check_admin
+    current_user: Usuario = Depends(check_admin())
 ):
     if current_user.id == usuario_id:
         raise HTTPException(
