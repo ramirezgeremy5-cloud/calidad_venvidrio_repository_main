@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-# Tiempo de inactividad permitido antes de expirar la sesión
-TIEMPO_INACTIVIDAD_MINUTOS = 4
+# Tiempo de inactividad permitido antes de expirar la sesión (60 minutos = 1 hora)
+TIEMPO_INACTIVIDAD_MINUTOS = 60
 
 
 # =========================
@@ -33,15 +33,19 @@ def login(data: LoginRequest):
         with engine.connect() as conn:
             logger.debug("📡 Buscando usuario en la base de datos...")
 
+            # 👇 MODIFICAMOS LA CONSULTA PARA TRAER EL CARGO Y SUS PERMISOS
             user = conn.execute(
                 text("""
-                    SELECT id, nombre, correo, password, rol_id, activo,
-                           COALESCE(intentos_fallidos, 0) as intentos_fallidos,
-                           bloqueado_hasta,
-                           session_id,
-                           ultima_actividad
-                    FROM usuarios
-                    WHERE correo = :correo
+                    SELECT u.id, u.nombre, u.correo, u.password, u.rol_id, u.activo,
+                           COALESCE(u.intentos_fallidos, 0) as intentos_fallidos,
+                           u.bloqueado_hasta,
+                           u.session_id,
+                           u.ultima_actividad,
+                           c.nombre as cargo_nombre,
+                           c.permisos as cargo_permisos
+                    FROM usuarios u
+                    LEFT JOIN cargos c ON u.cargo_id = c.id
+                    WHERE u.correo = :correo
                 """),
                 {"correo": data.correo}
             ).mappings().first()
@@ -79,30 +83,11 @@ def login(data: LoginRequest):
                     logger.error(f"❌ Error parseando fecha de bloqueo: {e}")
 
             # ==================================================================
-            # LÓGICA CLAVE: IMPEDIR SESIÓN DUPLICADA, PERO LIBERAR SI EXPIRÓ
+            # LÓGICA CLAVE: REEMPLAZAR SESIÓN ANTERIOR (SIN BLOQUEAR)
             # ==================================================================
             if user["session_id"]:
-                ultima = user["ultima_actividad"]
-                expirado = True  # por defecto, si no hay registro, consideramos expirado
-
-                if ultima:
-                    try:
-                        ultima_dt = datetime.fromisoformat(ultima) if isinstance(ultima, str) else ultima
-                        delta = datetime.utcnow() - ultima_dt
-                        expirado = delta > timedelta(minutes=TIEMPO_INACTIVIDAD_MINUTOS)
-                    except (ValueError, TypeError) as e:
-                        logger.error(f"❌ Error parseando ultima_actividad: {e}")
-                        expirado = True  # ante duda, liberar
-
-                if not expirado:
-                    logger.warning(f"⚠️ Sesión activa (<4 min) para: {data.correo}")
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="Este usuario ya se encuentra activo en otra sesión. Cierre la sesión en el otro dispositivo para continuar."
-                    )
-
-                # Token huérfano → liberar antes de continuar
-                logger.info(f"♻️ Sesión expirada por inactividad, liberando: {data.correo}")
+                logger.info(f"♻️ Reemplazando sesión anterior para: {data.correo}")
+                # Limpiamos la sesión anterior en la BD antes de crear la nueva
                 conn.execute(
                     text("UPDATE usuarios SET session_id = NULL, ultima_actividad = NULL WHERE id = :id"),
                     {"id": user["id"]}
@@ -231,6 +216,7 @@ def login(data: LoginRequest):
             except Exception as e:
                 logger.error(f"❌ Error guardando session_id en BD: {e}")
 
+            # 👇 AGREGAMOS LOS CAMPOS DE CARGO Y PERMISOS EN EL RETURN
             return {
                 "access_token": access_token,
                 "token_type": "bearer",
@@ -239,7 +225,9 @@ def login(data: LoginRequest):
                     "id": user["id"],
                     "nombre": user["nombre"],
                     "correo": user["correo"],
-                    "rol_id": user["rol_id"]
+                    "rol_id": user["rol_id"],
+                    "cargo": user["cargo_nombre"],
+                    "permisos_cargo": user["cargo_permisos"]
                 }
             }
 
@@ -441,14 +429,33 @@ def cambiar_password(
 
 
 # =========================
-# VERIFICAR TOKEN
+# VERIFICAR TOKEN (HEARTBEAT)
 # =========================
 @router.get("/verify")
 def verify_token(current_user = Depends(get_current_user)):
     """
-    Verificar si el token es válido (también sirve como heartbeat)
+    Verificar si el token es válido y actualizar la última actividad (heartbeat)
     """
     logger.info(f"✅ Token verificado para usuario ID: {current_user.id}")
+    
+    try:
+        with engine.connect() as conn:
+            # 🔧 ACTUALIZAR LA HORA DE ÚLTIMA ACTIVIDAD EN LA BD
+            conn.execute(
+                text("""
+                    UPDATE usuarios
+                    SET ultima_actividad = :now
+                    WHERE id = :id
+                """),
+                {
+                    "now": datetime.utcnow().isoformat(),
+                    "id": current_user.id
+                }
+            )
+            conn.commit()
+    except Exception as e:
+        logger.error(f"Error actualizando ultima_actividad en verify: {e}")
+
     return {
         "success": True,
         "user": {

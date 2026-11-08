@@ -6,7 +6,7 @@ from sqlalchemy import func
 from app.models.cargo import Cargo
 from app.models.usuario import Usuario
 from app.schemas.cargo import CargoCreate, CargoResponse, CargoConUso
-from app.dependencies.auth import get_db, check_role
+from app.dependencies.auth import get_db, check_role, check_admin
 
 
 router = APIRouter(prefix="/cargos", tags=["Cargos"])
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/cargos", tags=["Cargos"])
 @router.get("/", response_model=list[CargoConUso])
 def listar_cargos(
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(check_role([2, 3]))
+    current_user: Usuario = Depends(check_admin()) # 👈 Solo Admin
 ):
     """
     Lista todos los cargos con su conteo de uso (usuarios asignados).
@@ -34,6 +34,7 @@ def listar_cargos(
         CargoConUso(
             id=c.id,
             nombre=c.nombre,
+            permisos=c.permisos or "", # 👈 Incluimos los permisos
             creado_en=c.creado_en,
             uso=conteo.get(c.id, 0)
         )
@@ -48,7 +49,7 @@ def listar_cargos(
 def crear_cargo(
     payload: CargoCreate,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(check_role([2, 3]))
+    current_user: Usuario = Depends(check_admin()) # 👈 Solo Admin
 ):
     nombre = payload.nombre.strip()
     if not nombre:
@@ -58,7 +59,10 @@ def crear_cargo(
     if existe:
         raise HTTPException(400, "Ya existe un cargo con ese nombre")
 
-    nuevo = Cargo(nombre=nombre)
+    nuevo = Cargo(
+        nombre=nombre,
+        permisos=payload.permisos or "" # 👈 Guardamos los permisos
+    )
     db.add(nuevo)
     try:
         db.commit()
@@ -70,13 +74,46 @@ def crear_cargo(
 
 
 # =========================
+# ACTUALIZAR CARGO (NUEVO)
+# =========================
+@router.put("/{cargo_id}", response_model=CargoResponse)
+def actualizar_cargo(
+    cargo_id: int,
+    payload: CargoCreate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(check_admin())
+):
+    cargo = db.query(Cargo).filter(Cargo.id == cargo_id).first()
+    if not cargo:
+        raise HTTPException(404, "Cargo no encontrado")
+
+    nombre = payload.nombre.strip()
+    if not nombre:
+        raise HTTPException(400, "El nombre del cargo no puede estar vacío")
+
+    # Validar que no exista otro cargo con ese nombre
+    existe = db.query(Cargo).filter(
+        func.lower(Cargo.nombre) == nombre.lower(),
+        Cargo.id != cargo_id
+    ).first()
+    if existe:
+        raise HTTPException(400, "Ya existe otro cargo con ese nombre")
+
+    cargo.nombre = nombre
+    cargo.permisos = payload.permisos or "" # 👈 Actualizamos los permisos
+    db.commit()
+    db.refresh(cargo)
+    return cargo
+
+
+# =========================
 # ELIMINAR CARGO
 # =========================
 @router.delete("/{cargo_id}", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_cargo(
     cargo_id: int,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(check_role([2, 3]))
+    current_user: Usuario = Depends(check_admin()) # 👈 Solo Admin
 ):
     cargo = db.query(Cargo).filter(Cargo.id == cargo_id).first()
     if not cargo:

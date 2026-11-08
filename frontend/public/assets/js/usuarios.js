@@ -1,12 +1,13 @@
 /* ==========================================
    VENVIDRIO - USUARIOS
-   usuarios.js - Gestión de usuarios + CRUD de cargos
+   usuarios.js - Gestión de usuarios + CRUD de cargos con Permisos
+   v5 - Filtros avanzados + Bloqueo de eliminación + Chips de permisos
    ========================================== */
 
 (function () {
   'use strict';
 
-  // Detectar la URL de la API (CORREGIDO)
+  // Detectar la URL de la API
   let API_URL;
   if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
     API_URL = "http://127.0.0.1:8000";
@@ -71,6 +72,14 @@
     };
   }
 
+  function obtenerUrlFoto(fotoUrl) {
+    if (!fotoUrl) return null;
+    if (fotoUrl.startsWith('http://') || fotoUrl.startsWith('https://')) {
+      return fotoUrl;
+    }
+    return `${API_URL}${fotoUrl}`;
+  }
+
   function toast(msg, tipo) {
     const t = $('toast-usuarios');
     const txt = $('toast-text');
@@ -102,107 +111,6 @@
   }
 
   // =========================
-  // SESIÓN (CARGA INICIAL)
-  // =========================
-  function cargarUsuarioNav() {
-    const data = localStorage.getItem('user');
-    if (!data) return;
-    try {
-      const u = JSON.parse(data);
-      usuarioActual = u;
-      
-      let avatarHtml = '';
-      if (u.foto_url) {
-        avatarHtml = `<img src="${API_URL}${u.foto_url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
-      } else {
-        avatarHtml = u.nombre ? u.nombre.substring(0, 2).toUpperCase() : 'US';
-      }
-
-      const navAvatar = $('navAvatar');
-      if (navAvatar) navAvatar.innerHTML = avatarHtml;
-      
-      const dropdownAvatar = $('dropdownAvatar');
-      if (dropdownAvatar) dropdownAvatar.innerHTML = avatarHtml;
-
-      setText('navUsername', u.nombre || 'Usuario');
-      setText('dropdownName', u.nombre || 'Usuario');
-      setText('dropdownEmail', u.correo || 'usuario@email.com');
-    } catch (e) { logError('Error cargando usuario:', e); }
-  }
-
-  function mostrarEnlaceUsuarios() {
-    if (rolActual === 3) {
-      const link = $('navUsuariosLink');
-      if (link) link.style.display = 'flex';
-    }
-  }
-
-  function cerrarSesion(msg) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('role');
-    if (msg) alert(msg);
-    window.location.href = '../public/login.html';
-  }
-
-  function initUserControls() {
-    const container = $('navUserContainer');
-    const dropdown  = $('userDropdown');
-    const logoutBtn = $('dropdownLogout');
-
-    if (container && dropdown) {
-      container.addEventListener('click', e => {
-        e.stopPropagation();
-        dropdown.classList.toggle('show');
-      });
-    }
-    document.addEventListener('click', () => dropdown && dropdown.classList.remove('show'));
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && dropdown) dropdown.classList.remove('show');
-    });
-
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', e => {
-        e.preventDefault(); e.stopPropagation();
-        if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
-          cerrarSesion('👋 Sesión cerrada exitosamente.');
-        }
-      });
-    }
-  }
-
-  // =========================
-  // VERIFICAR SESIÓN (INICIALIZADOR)
-  // =========================
-  function verificarSesion() {
-    if (!verificarAcceso()) return;
-
-    fetch(`${API_URL}/auth/verify`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } })
-      .then(async (r) => {
-        if (r.status === 401 || r.status === 403) {
-          cerrarSesion('Sesión expirada.');
-          throw new Error('No autorizado');
-        }
-        return r.ok ? r.json() : {}; 
-      })
-      .then(() => {
-        cargarUsuarioNav();
-        mostrarEnlaceUsuarios();
-        initUserControls();
-        init();
-      })
-      .catch((err) => {
-        if (err.message !== 'No autorizado') {
-          console.error("Fallo en verify. Entrando al módulo para mostrar la interfaz:", err);
-          cargarUsuarioNav();
-          mostrarEnlaceUsuarios();
-          initUserControls();
-          init();
-        }
-      });
-  }
-
-  // =========================
   // CARGA DE CARGOS
   // =========================
   async function cargarCargos() {
@@ -214,7 +122,8 @@
         cargos = lista.map(c => ({
           id: c.id,
           nombre: c.nombre || c.cargo || 'Sin nombre',
-          uso: Number(c.uso || c.total_usuarios || 0)
+          uso: Number(c.uso || c.total_usuarios || 0),
+          permisos: c.permisos || '' 
         }));
         logSuccess(`${cargos.length} cargos cargados`);
         return;
@@ -224,7 +133,7 @@
     }
   }
 
-  async function crearCargo(nombre) {
+  async function crearCargo(nombre, permisos) {
     if (!nombre) return null;
     if (cargos.some(c => c.nombre.toLowerCase() === nombre.toLowerCase())) {
       toast('Ese cargo ya existe', 'error');
@@ -235,11 +144,16 @@
       const response = await fetch(`${API_URL}/cargos/`, {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ nombre })
+        body: JSON.stringify({ nombre, permisos })
       });
       if (response.ok) {
         const data = await response.json();
-        const nuevo = { id: data.id || Date.now(), nombre: data.nombre || nombre, uso: 0 };
+        const nuevo = { 
+          id: data.id || Date.now(), 
+          nombre: data.nombre || nombre, 
+          uso: 0,
+          permisos: data.permisos || permisos
+        };
         cargos.push(nuevo);
         return nuevo;
       }
@@ -249,10 +163,33 @@
     return null;
   }
 
+  async function editarCargo(id, nombre, permisos) {
+    try {
+      const response = await fetch(`${API_URL}/cargos/${id}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ nombre, permisos })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const index = cargos.findIndex(c => String(c.id) === String(id));
+        if (index !== -1) {
+          cargos[index].nombre = data.nombre || nombre;
+          cargos[index].permisos = data.permisos || permisos;
+        }
+        return true;
+      }
+    } catch (e) {
+      logError('No se pudo editar el cargo:', e);
+    }
+    return false;
+  }
+
   async function eliminarCargo(id) {
     const cargo = cargos.find(c => String(c.id) === String(id));
     if (!cargo) return;
 
+    // 👇 BLOQUEO EN EL FRONTEND: No permitir clic si tiene usuarios asignados
     const asignados = usuarios.filter(u => String(u.cargo_id) === String(id)).length;
     if (asignados > 0) {
       toast(`No se puede eliminar "${cargo.nombre}" (${asignados} usuario(s) asignado(s))`, 'error');
@@ -276,6 +213,7 @@
     renderTabla();
   }
 
+  // 👇 RENDERIZADO CON CHIPS DE PERMISOS Y BLOQUEO
   function renderCargos() {
     const cont = $('lista-cargos');
     if (!cont) return;
@@ -293,6 +231,14 @@
 
     cont.innerHTML = cargos.map(c => {
       const asignados = usuarios.filter(u => String(u.cargo_id) === String(c.id)).length;
+      const permisosArr = c.permisos ? c.permisos.split(',').map(p => p.trim()).filter(Boolean) : [];
+      
+      const chipsPermisos = permisosArr.length > 0
+        ? permisosArr.map(p => `<span class="chip-permiso"><i class="ti ti-shield-check"></i> ${esc(p)}</span>`).join('')
+        : `<span class="chip-permiso sin-permisos">Sin permisos especiales</span>`;
+
+      const bloqueado = asignados > 0;
+      
       return `
         <div class="cargo-item" data-id="${esc(c.id)}">
           <div class="cargo-icon"><i class="ti ti-id-badge-2"></i></div>
@@ -301,15 +247,26 @@
             <div class="cargo-uso ${asignados > 0 ? 'tiene-asignados' : ''}">
               ${asignados} usuario${asignados !== 1 ? 's' : ''} asignado${asignados !== 1 ? 's' : ''}
             </div>
+            <div class="cargo-permisos-lista">${chipsPermisos}</div>
           </div>
-          <button class="btn-icon btn-icon-danger" data-eliminar-cargo="${esc(c.id)}" title="Eliminar cargo">
-            <i class="ti ti-trash"></i>
-          </button>
+          <div style="display:flex; gap:4px;">
+            <button class="btn-icon" data-editar-cargo="${esc(c.id)}" title="Editar permisos">
+              <i class="ti ti-edit"></i>
+            </button>
+            <button class="btn-icon btn-icon-danger" data-eliminar-cargo="${esc(c.id)}" title="${bloqueado ? 'No se puede eliminar (tiene usuarios)' : 'Eliminar cargo'}" ${bloqueado ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''}>
+              <i class="ti ti-trash"></i>
+            </button>
+          </div>
         </div>`;
     }).join('');
 
     cont.querySelectorAll('[data-eliminar-cargo]').forEach(btn => {
+      if (btn.hasAttribute('disabled')) return;
       btn.addEventListener('click', () => eliminarCargo(btn.dataset.eliminarCargo));
+    });
+    
+    cont.querySelectorAll('[data-editar-cargo]').forEach(btn => {
+      btn.addEventListener('click', () => abrirModalCargo(btn.dataset.editarCargo));
     });
   }
 
@@ -320,13 +277,9 @@
       if (!nombre) { toast('Escriba el nombre del cargo', 'error'); input?.focus(); return; }
       if (nombre.length < 3) { toast('El nombre debe tener al menos 3 caracteres', 'error'); return; }
 
-      const nuevo = await crearCargo(nombre);
-      if (nuevo) {
-        input.value = '';
-        renderCargos();
-        poblarSelectCargoModal();
-        toast(`Cargo "${nuevo.nombre}" creado`);
-      }
+      // Abrimos el modal de cargo vacío
+      abrirModalCargo(null, nombre);
+      input.value = '';
     });
 
     $('nuevo-cargo')?.addEventListener('keypress', e => {
@@ -361,6 +314,7 @@
         renderTabla();
         actualizarStats();
         poblarCargoDeCargos();
+        poblarFiltroCargos();
         return;
       }
     } catch (e) {
@@ -375,6 +329,26 @@
         u.cargo = c ? c.nombre : null;
       }
     });
+  }
+
+  // 👇 POBLAR EL NUEVO SELECT DE FILTRO POR CARGO
+  function poblarFiltroCargos() {
+    const select = $('filtro-cargo');
+    if (!select) return;
+    const actual = select.value;
+    select.innerHTML = '<option value="">Todos los cargos</option>';
+    
+    // Solo cargos que tienen al menos un usuario asignado
+    const cargosConUso = cargos.filter(c => usuarios.some(u => String(u.cargo_id) === String(c.id)));
+    
+    cargosConUso.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.nombre;
+      select.appendChild(opt);
+    });
+    
+    if (actual) select.value = actual;
   }
 
   // =========================
@@ -395,14 +369,28 @@
     const nombre  = val('filtro-nombre').toLowerCase();
     const correo  = val('filtro-correo').toLowerCase();
     const rol     = val('filtro-rol');
+    const cargo   = val('filtro-cargo');
     const activo  = val('filtro-activo');
+    const inactividadDias = parseInt(val('filtro-inactividad'), 10);
+    const ahora = Date.now();
 
     return usuarios.filter(u => {
       if (nombre && !String(u.nombre).toLowerCase().includes(nombre)) return false;
       if (correo && !String(u.correo).toLowerCase().includes(correo)) return false;
       if (rol    && String(u.rol) !== rol) return false;
+      if (cargo  && String(u.cargo_id) !== cargo) return false;
       if (activo === 'true'  && !u.activo) return false;
       if (activo === 'false' &&  u.activo) return false;
+      
+      // 👇 FILTRO DE INACTIVIDAD
+      if (inactividadDias) {
+        if (!u.ultimo_login) return true; // Si nunca entró, cuenta como inactivo
+        const ultima = new Date(u.ultimo_login).getTime();
+        if (isNaN(ultima)) return true;
+        const dias = Math.floor((ahora - ultima) / (1000 * 60 * 60 * 24));
+        if (dias < inactividadDias) return false;
+      }
+      
       return true;
     });
   }
@@ -427,7 +415,7 @@
       const esSelf = usuarioActual && String(usuarioActual.id) === String(u.id);
 
       const avatarHtml = u.foto_url 
-        ? `<img src="${API_URL}${u.foto_url}" class="avatar-mini" style="object-fit:cover;">`
+        ? `<img src="${obtenerUrlFoto(u.foto_url)}" class="avatar-mini" style="object-fit:cover;">`
         : `<div class="avatar-mini">${esc(iniciales(u.nombre))}</div>`;
 
       return `
@@ -479,7 +467,7 @@
   function initFiltros() {
     $('btn-aplicar-filtros')?.addEventListener('click', renderTabla);
     $('btn-limpiar-filtros')?.addEventListener('click', () => {
-      ['filtro-nombre', 'filtro-correo', 'filtro-rol', 'filtro-activo']
+      ['filtro-nombre', 'filtro-correo', 'filtro-rol', 'filtro-cargo', 'filtro-activo', 'filtro-inactividad']
         .forEach(id => { const el = $(id); if (el) el.value = ''; });
       renderTabla();
     });
@@ -492,7 +480,7 @@
       });
     });
 
-    ['filtro-rol', 'filtro-activo'].forEach(id => {
+    ['filtro-rol', 'filtro-cargo', 'filtro-activo', 'filtro-inactividad'].forEach(id => {
       $(id)?.addEventListener('change', renderTabla);
     });
   }
@@ -575,7 +563,7 @@
     const iconCamara = $('icono-camara');
     
     if (u.foto_url) {
-      previewImg.src = `${API_URL}${u.foto_url}`;
+      previewImg.src = obtenerUrlFoto(u.foto_url);
       previewImg.style.display = 'block';
       iconCamara.style.display = 'none';
     } else {
@@ -706,7 +694,7 @@
           const navAvatar = $('navAvatar');
           if (navAvatar) {
             navAvatar.innerHTML = fotoUrlFinal 
-              ? `<img src="${API_URL}${fotoUrlFinal}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`
+              ? `<img src="${obtenerUrlFoto(fotoUrlFinal)}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`
               : iniciales(nombre);
           }
           setText('navUsername', nombre);
@@ -772,6 +760,113 @@
   }
 
   // =========================
+  // MODAL CREAR/EDITAR CARGO (Permisos)
+  // =========================
+  function abrirModalCargo(id = null, nombre = '') {
+    let modalCargo = $('modalCargo');
+    if (!modalCargo) {
+      const modalHtml = `
+        <div class="modal-overlay" id="modalCargo" style="display:none;">
+          <div class="modal-box" style="max-width:420px;">
+            <div class="modal-header">
+              <h2 id="modal-cargo-title"><i class="ti ti-briefcase"></i> Nuevo Cargo</h2>
+              <button class="modal-close" id="modal-cargo-close"><i class="ti ti-x"></i></button>
+            </div>
+            <div class="modal-body">
+              <div class="field">
+                <label for="modal-cargo-nombre">Nombre del Cargo</label>
+                <input type="text" id="modal-cargo-nombre" placeholder="Ej: Jefe de Calidad" />
+              </div>
+              <div class="field">
+                <label style="margin-bottom:8px;">Permisos de Acceso</label>
+                
+                <!-- 👇 SOLO DEJAMOS AUDITORÍA PRODUCTO (Las otras dos son exclusivas por Rol) -->
+                <label class="label-checkbox">
+                  <input type="checkbox" value="auditoria_producto" class="permiso-check"> Auditoría Producto
+                </label>
+                
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-outline" id="modal-cargo-cancelar">Cancelar</button>
+              <button class="btn btn-primary" id="modal-cargo-guardar"><i class="ti ti-device-floppy"></i> Guardar Cargo</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      modalCargo = $('modalCargo');
+
+      $('modal-cargo-close').addEventListener('click', cerrarModalCargo);
+      $('modal-cargo-cancelar').addEventListener('click', cerrarModalCargo);
+      $('modal-cargo-guardar').addEventListener('click', guardarCargoDesdeModal);
+    }
+
+    const title = $('modal-cargo-title');
+    const inputNombre = $('modal-cargo-nombre');
+    
+    if (id) {
+      const cargo = cargos.find(c => String(c.id) === String(id));
+      if (cargo) {
+        title.innerHTML = '<i class="ti ti-edit"></i> Editar Cargo';
+        inputNombre.value = cargo.nombre;
+        window._editingCargoId = id;
+        
+        const permisos = cargo.permisos ? cargo.permisos.split(',').map(p => p.trim()) : [];
+        document.querySelectorAll('.permiso-check').forEach(chk => {
+          chk.checked = permisos.includes(chk.value);
+        });
+      }
+    } else {
+      title.innerHTML = '<i class="ti ti-plus"></i> Nuevo Cargo';
+      inputNombre.value = nombre || '';
+      window._editingCargoId = null;
+      document.querySelectorAll('.permiso-check').forEach(chk => chk.checked = false);
+    }
+
+    modalCargo.style.display = 'flex';
+  }
+
+  function cerrarModalCargo() {
+    $('modalCargo').style.display = 'none';
+    window._editingCargoId = null;
+  }
+
+  async function guardarCargoDesdeModal() {
+    const nombre = val('modal-cargo-nombre');
+    if (!nombre || nombre.length < 3) {
+      alert('El nombre debe tener al menos 3 caracteres');
+      return;
+    }
+
+    const checks = document.querySelectorAll('.permiso-check:checked');
+    const permisos = Array.from(checks).map(chk => chk.value).join(',');
+
+    const btn = $('modal-cargo-guardar');
+    if (btn) btn.disabled = true;
+
+    let exito = false;
+    if (window._editingCargoId) {
+      exito = await editarCargo(window._editingCargoId, nombre, permisos);
+    } else {
+      const nuevo = await crearCargo(nombre, permisos);
+      exito = !!nuevo;
+    }
+
+    if (btn) btn.disabled = false;
+    
+    if (exito) {
+      toast('Cargo guardado exitosamente');
+      cerrarModalCargo();
+      renderCargos();
+      poblarSelectCargoModal();
+      poblarFiltroCargos();
+    } else {
+      alert('No se pudo guardar el cargo');
+    }
+  }
+
+  // =========================
   // MODAL ELIMINAR
   // =========================
   function abrirModalEliminar(id) {
@@ -807,6 +902,7 @@
     renderTabla();
     renderCargos();
     actualizarStats();
+    poblarFiltroCargos();
     cerrarModalEliminar();
     toast('Usuario eliminado');
   }
@@ -822,10 +918,15 @@
   }
 
   // =========================
-  // INIT
+  // INIT (SIN DUPLICAR SHARED.JS)
   // =========================
-  async function init() {
+  function init() {
     log('Iniciando módulo Usuarios...');
+
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      usuarioActual = JSON.parse(userData);
+    }
 
     initFiltros();
     initCargosUI();
@@ -836,16 +937,16 @@
       await Promise.all([cargarCargos(), cargarUsuarios()]);
       renderCargos();
       poblarSelectCargoModal();
+      poblarFiltroCargos();
       toast('Datos actualizados');
     });
 
-    await cargarCargos();
-    await cargarUsuarios();
-
-    renderCargos();
-    poblarSelectCargoModal();
-
-    log('Usuarios iniciado');
+    Promise.all([cargarCargos(), cargarUsuarios()]).then(() => {
+      renderCargos();
+      poblarSelectCargoModal();
+      poblarFiltroCargos();
+      log('Usuarios iniciado');
+    });
   }
 
   window.recargarUsuarios = async () => {
@@ -853,8 +954,11 @@
     await cargarUsuarios();
     renderCargos();
     renderTabla();
+    poblarFiltroCargos();
   };
 
-  verificarSesion();
+  if (verificarAcceso()) {
+    init();
+  }
 
 })();

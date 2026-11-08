@@ -9,6 +9,10 @@ class Cargo(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(60), unique=True, nullable=False, index=True)
+    
+    # 👇 NUEVA COLUMNA: Guarda los permisos como texto (ej: "auditoria_producto,produccion")
+    permisos = Column(String(255), nullable=True, default="")
+    
     creado_en = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # ==========================================
@@ -23,4 +27,4 @@ class Cargo(Base):
     )
 
     def __repr__(self):
-        return f"<Cargo(id={self.id}, nombre='{self.nombre}')>"
+        return f"<Cargo(id={self.id}, nombre='{self.nombre}', permisos='{self.permisos}')>"

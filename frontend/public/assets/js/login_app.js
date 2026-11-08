@@ -1,7 +1,7 @@
 /* =============================================
    Venvidrio — Sistema de Control de Calidad
    login_app.js (Login + Alertas Elegantes + Sesión 1h)
-   v7 — Reloj liberado + Kick exacto a los 60 min
+   v9 — Permisos de cargo + Anti-bloqueo de sesión
    ============================================= */
 
 (function () {
@@ -15,11 +15,11 @@
     ? 'http://127.0.0.1:8000'
     : 'https://calidad-venvidrio-repository-main.onrender.com';
 
-  // 👇 SESIÓN: 1 HORA DE INACTIVIDAD EXACTA
+  // 👇 SESIÓN: 1 HORA DE INACTIVIDAD
   var TIEMPO_ALERTA_MS       = 55 * 60 * 1000; // Avisar a los 55 min
   var TIEMPO_INACTIVIDAD_MS  = 60 * 60 * 1000; // Cerrar a los 60 min (1 hora)
   var INTERVALO_HEARTBEAT_MS = 60000;          // Verificar servidor cada 1 min
-  var INTERVALO_CHEQUEO_MS   = 5000;           // 👈 Revisar inactividad cada 5 seg (kick exacto)
+  var INTERVALO_CHEQUEO_MS   = 5000;           // Revisar inactividad cada 5 seg
 
   var heartbeatInterval = null;
   var inactivityInterval = null;
@@ -864,7 +864,6 @@
         localStorage.setItem('lastActivity', Date.now());
       }
 
-      // 👇 El chequeo ahora es cada 5 segundos (antes era cada 60s)
       if (inactivityInterval) clearInterval(inactivityInterval);
       inactivityInterval = setInterval(function () {
         var lastActivity = parseInt(localStorage.getItem('lastActivity') || '0', 10);
@@ -874,7 +873,7 @@
           if (!alertaMostrada) { mostrarAlertaInactividad(); alertaMostrada = true; }
         }
         if (inactividad >= TIEMPO_INACTIVIDAD_MS) { cerrarSesionPorInactividad(); }
-      }, INTERVALO_CHEQUEO_MS); // 👈 Revisa cada 5 seg
+      }, INTERVALO_CHEQUEO_MS);
 
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () {
@@ -1025,6 +1024,7 @@
         setLoading(false);
 
         if (status === 200 || status === 201) {
+          // 👇 GUARDAMOS TODOS LOS DATOS, INCLUYENDO PERMISOS
           localStorage.setItem('token', data.access_token);
           localStorage.setItem('user', JSON.stringify(data.user));
           localStorage.setItem('role', data.role);

@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Usuarios — Venvidrio CQ</title>
-  <link rel="stylesheet" href="../assets/css/shared.css" />
-  <link rel="stylesheet" href="../assets/css/usuarios.css" />
+  <link rel="stylesheet" href="../assets/css/shared.css?v=8" />
+  <link rel="stylesheet" href="../assets/css/usuarios.css?v=8" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
   
   <!-- Librería para el confeti de cumpleaños -->
@@ -15,21 +15,27 @@
 
 <!-- ================= NAVBAR ================= -->
 <nav class="navbar">
-  <div class="nav-brand">
-    <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
+  <div class="nav-left-group">
+    <div class="nav-brand">
+      <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
+    </div>
+
+    <!-- RELOJ EN EL NAVBAR (estilos en shared.css, lógica en shared.js) -->
+    <div class="nav-reloj">
+      <i class="ti ti-clock"></i>
+      <span id="reloj-real">--:--:--</span>
+    </div>
   </div>
  
   <!-- Menú de navegación -->
   <ul class="nav-links" id="navLinks">
     <li><a href="../public/dashboard.html"><i class="ti ti-layout-dashboard"></i> Panel Principal</a></li>
-    <li><a href="../pages/produccion.html"><i class="ti ti-building-factory-2"></i> Producción</a></li>
-    <li><a href="../pages/defectos.html"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
-    <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
-    <li><a href="../pages/auditoria_interna.html"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a></li>
-    <li><a href="../pages/auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
-    <li id="navUsuariosLink" class="active">
-      <a href="../pages/usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
-    </li>
+    <li><a href="produccion.html"><i class="ti ti-building-factory-2"></i> Producción</a></li>
+    <li><a href="defectos.html"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
+    <li><a href="etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
+    <li id="navAuditoriaInternaLink"><a href="auditoria_interna.html"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a></li>
+    <li id="navAuditoriaProductoLink"><a href="auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
+    <li id="navUsuariosLink" class="active"><a href="usuarios.html"><i class="ti ti-users"></i> Usuarios</a></li>
   </ul>
 
   <div class="nav-user" id="navUserContainer">
@@ -79,7 +85,7 @@
       </div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon" style="background:#e8f5e9;color:#2e7d32;"><i class="ti ti-user-check"></i></div>
+      <div class="stat-icon stat-icon-success"><i class="ti ti-user-check"></i></div>
       <div class="stat-info">
         <div class="stat-label">Activos</div>
         <div class="stat-value success" id="stat-activos">0</div>
@@ -87,7 +93,7 @@
       </div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon" style="background:#ffebee;color:#b71c1c;"><i class="ti ti-shield-lock"></i></div>
+      <div class="stat-icon stat-icon-danger"><i class="ti ti-shield-lock"></i></div>
       <div class="stat-info">
         <div class="stat-label">Admins</div>
         <div class="stat-value danger" id="stat-admins">0</div>
@@ -95,7 +101,7 @@
       </div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon" style="background:#fff8e1;color:#f57f17;"><i class="ti ti-user-star"></i></div>
+      <div class="stat-icon stat-icon-warning"><i class="ti ti-user-star"></i></div>
       <div class="stat-info">
         <div class="stat-label">Supervisores</div>
         <div class="stat-value warning" id="stat-supervisores">0</div>
@@ -103,7 +109,7 @@
       </div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon" style="background:#e3f2fd;color:#0d47a1;"><i class="ti ti-user"></i></div>
+      <div class="stat-icon stat-icon-info"><i class="ti ti-user"></i></div>
       <div class="stat-info">
         <div class="stat-label">Usuarios</div>
         <div class="stat-value" id="stat-usuarios">0</div>
@@ -132,15 +138,15 @@
       <!-- Filtros compactos -->
       <div class="filtros-bar">
         <div class="filtros-grid">
-          <div class="field" style="margin:0">
+          <div class="field m-0">
             <label for="filtro-nombre" class="filtro-label">Nombre</label>
             <input type="text" id="filtro-nombre" class="input-filtro" placeholder="Buscar..." />
           </div>
-          <div class="field" style="margin:0">
+          <div class="field m-0">
             <label for="filtro-correo" class="filtro-label">Correo</label>
             <input type="text" id="filtro-correo" class="input-filtro" placeholder="Buscar..." />
           </div>
-          <div class="field" style="margin:0">
+          <div class="field m-0">
             <label for="filtro-rol" class="filtro-label">Rol</label>
             <select id="filtro-rol" class="input-filtro">
               <option value="">Todos</option>
@@ -149,12 +155,28 @@
               <option value="3">Administrador</option>
             </select>
           </div>
-          <div class="field" style="margin:0">
+          <div class="field m-0">
+            <label for="filtro-cargo" class="filtro-label">Cargo</label>
+            <select id="filtro-cargo" class="input-filtro">
+              <option value="">Todos los cargos</option>
+              <!-- Se pobla dinámicamente -->
+            </select>
+          </div>
+          <div class="field m-0">
             <label for="filtro-activo" class="filtro-label">Estado</label>
             <select id="filtro-activo" class="input-filtro">
               <option value="">Todos</option>
               <option value="true">Activos</option>
               <option value="false">Inactivos</option>
+            </select>
+          </div>
+          <div class="field m-0">
+            <label for="filtro-inactividad" class="filtro-label">Inactividad</label>
+            <select id="filtro-inactividad" class="input-filtro">
+              <option value="">Cualquiera</option>
+              <option value="7">+7 días sin entrar</option>
+              <option value="30">+30 días sin entrar</option>
+              <option value="90">+90 días sin entrar</option>
             </select>
           </div>
           <div class="filtros-botones">
@@ -182,12 +204,12 @@
               <th>Cargo</th>
               <th>Estado</th>
               <th>Última Sesión</th>
-              <th style="text-align:center;min-width:100px;">Acciones</th>
+              <th class="th-acciones">Acciones</th>
             </tr>
           </thead>
           <tbody id="tabla-usuarios">
             <tr>
-              <td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted)">
+              <td colspan="7" class="table-loading">
                 <i class="ti ti-loader-2 loading-spinner"></i> Cargando usuarios...
               </td>
             </tr>
@@ -203,9 +225,9 @@
         <span class="badge badge-info" id="badge-cargos">0</span>
       </div>
 
-      <div class="card-body" style="padding-bottom:0.75rem;">
-        <p style="font-size:11.5px;color:var(--text-muted);margin:0 0 12px;">
-          <i class="ti ti-info-circle" style="color:var(--navy);"></i>
+      <div class="card-body body-cargos">
+        <p class="info-cargos">
+          <i class="ti ti-info-circle icon-info"></i>
           Los cargos creados aquí quedan disponibles para asignar a los usuarios.
         </p>
 
@@ -217,7 +239,7 @@
         </div>
       </div>
 
-      <div id="lista-cargos" style="padding:0"></div>
+      <div id="lista-cargos" class="lista-cargos-container"></div>
     </div>
 
   </div>
@@ -248,23 +270,22 @@
 
       <div class="field">
         <label for="modal-correo">Correo electrónico *</label>
-        <div style="display: flex; align-items: center; gap: 5px;">
-          <input type="text" id="modal-correo-prefix" placeholder="juan.perez" style="flex: 1;" />
-          <span style="font-weight: 600; color: var(--text-muted); font-size: 13px;">@venvidrio.com</span>
+        <div class="input-group-prefix">
+          <input type="text" id="modal-correo-prefix" placeholder="juan.perez" />
+          <span class="prefix-text">@venvidrio.com</span>
         </div>
         <input type="hidden" id="modal-correo" />
       </div>
 
       <div class="field" id="modal-password-field">
         <label for="modal-password">Contraseña *</label>
-        <div style="position:relative;">
+        <div class="relative-wrapper">
           <input type="password" id="modal-password" placeholder="Mínimo 8 caracteres" />
-          <button type="button" class="pw-toggle-modal" id="modal-pw-toggle"
-            style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);">
+          <button type="button" class="pw-toggle-modal" id="modal-pw-toggle">
             <i class="ti ti-eye" id="modal-pw-icon"></i>
           </button>
         </div>
-        <small style="font-size:10px;color:var(--text-hint);">
+        <small class="hint-password">
           Mín. 8 caracteres, 1 mayúscula, 1 minúscula, 1 número, 1 especial
         </small>
       </div>
@@ -291,7 +312,6 @@
       <div class="grid-2">
         <div class="field">
           <label for="modal-turno">Turno *</label>
-          <!-- 👇 CAMBIO: Solo números del 1 al 4 -->
           <select id="modal-turno">
             <option value="">— Seleccione —</option>
             <option value="1">1</option>
@@ -313,23 +333,23 @@
       </div>
 
       <!-- NUEVA SECCIÓN: Foto de Perfil -->
-      <div class="field" style="align-items: center; margin-bottom: 1rem;">
+      <div class="field field-avatar">
         <label>Foto de Perfil</label>
         
-        <div id="perfil-avatar-container" style="position: relative; cursor: pointer; width: 80px; height: 80px; border-radius: 50%; border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; background: #f8f9fa; overflow: hidden; transition: all 0.2s;" title="Haz clic para subir una foto">
-          <i class="ti ti-camera" style="font-size: 28px; color: var(--text-muted);" id="icono-camara"></i>
-          <img id="preview-foto" src="" alt="Perfil" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+        <div id="perfil-avatar-container" title="Haz clic para subir una foto">
+          <i class="ti ti-camera" id="icono-camara"></i>
+          <img id="preview-foto" src="" alt="Perfil">
         </div>
         
         <input type="file" id="modal-file-foto" accept="image/*" style="display: none;">
-        <small style="font-size:10px;color:var(--text-hint);margin-top:5px;text-align:center;">
+        <small class="hint-avatar">
           Haz clic en el círculo para subir una imagen.
         </small>
       </div>
 
       <div class="field" id="modal-activo-field" style="display:none;">
-        <label>
-          <input type="checkbox" id="modal-activo" checked style="width:auto;margin-right:6px;" />
+        <label class="label-checkbox">
+          <input type="checkbox" id="modal-activo" checked />
           Usuario activo
         </label>
       </div>
@@ -348,19 +368,19 @@
 
 <!-- ================= MODAL CONFIRMAR ELIMINAR USUARIO ================= -->
 <div class="modal-overlay" id="modalEliminar" style="display:none;">
-  <div class="modal-box" style="max-width:420px;">
-    <div class="modal-header" style="background:#fee2e2;">
-      <h2 style="color:#991b1b;"><i class="ti ti-alert-triangle"></i> Eliminar Usuario</h2>
+  <div class="modal-box modal-box-danger">
+    <div class="modal-header header-danger">
+      <h2 class="title-danger"><i class="ti ti-alert-triangle"></i> Eliminar Usuario</h2>
       <button class="modal-close" id="modal-eliminar-close"><i class="ti ti-x"></i></button>
     </div>
     <div class="modal-body">
-      <p style="font-size:14px;color:var(--text-main);margin-bottom:1rem;">
+      <p class="text-eliminar">
         ¿Estás seguro de que deseas eliminar al usuario?
       </p>
-      <p style="font-size:16px;font-weight:600;color:var(--danger);text-align:center;padding:1rem;background:#fef2f2;border-radius:8px;" id="eliminar-nombre">
+      <p class="nombre-eliminar" id="eliminar-nombre">
         Nombre del usuario
       </p>
-      <p style="font-size:12px;color:var(--text-muted);margin-top:1rem;text-align:center;">
+      <p class="advertencia-eliminar">
         ⚠️ Esta acción no se puede deshacer
       </p>
     </div>
@@ -379,12 +399,12 @@
 </div>
 
 <!-- ================= SCRIPTS ================= -->
-<!-- 1. Shared: Inyecta el modal de perfil y maneja el navbar -->
-<script src="../assets/js/shared.js"></script>
-<!-- 2. Login App: Controla el botón "Mi Perfil" y la sesión -->
-<script src="../assets/js/login_app.js"></script>
+<!-- 1. Shared: Reloj, Navbar, Dropdown y Modal de perfil -->
+<script src="../assets/js/shared.js?v=9"></script>
+<!-- 2. Login App: Controla la sesión y el login -->
+<script src="../assets/js/login_app.js?v=9"></script>
 <!-- 3. Usuarios: Lógica exclusiva del CRUD de usuarios -->
-<script src="../assets/js/usuarios.js" defer></script>
+<script src="../assets/js/usuarios.js?v=4" defer></script>
 
 </body>
 </html>

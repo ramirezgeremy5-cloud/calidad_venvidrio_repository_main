@@ -110,11 +110,9 @@
   // =============================================
   // 0. RELOJ EN TIEMPO REAL (A PRUEBA DE FALLOS)
   // =============================================
-  // Se ejecuta INMEDIATAMENTE, fuera del DOMContentLoaded.
   function iniciarReloj() {
     var reloj = document.getElementById('reloj-real');
     
-    // Si el elemento aún no existe, esperamos 100ms y volvemos a intentar
     if (!reloj) {
       setTimeout(iniciarReloj, 100);
       return;
@@ -123,29 +121,21 @@
     var actualizarHora = function() {
       try {
         var ahora = new Date();
-        
-        // Formato de fecha: "Jueves, 6 de Nov"
         var opcionesFecha = { weekday: 'long', day: 'numeric', month: 'short' };
         var fechaStr = ahora.toLocaleDateString('es-VE', opcionesFecha);
-        
-        // Formato de hora: "03:45:10 PM"
         var horaStr = ahora.toLocaleTimeString('es-VE', { 
           hour12: true, 
           hour: '2-digit', 
           minute: '2-digit', 
           second: '2-digit' 
         });
-
-        // Capitalizar la primera letra del día
         var fechaCapitalizada = fechaStr.charAt(0).toUpperCase() + fechaStr.slice(1);
-        
         reloj.textContent = fechaCapitalizada + ' | ' + horaStr;
       } catch (e) {
         console.error("Error actualizando el reloj:", e);
       }
     };
     
-    // Ejecutar inmediatamente y luego cada segundo
     actualizarHora();
     if (window.relojInterval) clearInterval(window.relojInterval);
     window.relojInterval = setInterval(actualizarHora, 1000);
@@ -154,9 +144,52 @@
   iniciarReloj();
 
   // =============================================
+  // CONTROL DE ACCESO AL MENÚ (Roles y Cargos)
+  // =============================================
+  function controlarMenuPorRol() {
+    var rol = parseInt(localStorage.getItem('role'), 10);
+    var userStr = localStorage.getItem('user');
+    
+    // Si no hay datos, no hacemos nada
+    if (isNaN(rol) || !userStr) return;
+
+    var user = JSON.parse(userStr);
+    // Obtenemos el string de permisos que viene del cargo (ej: "auditoria_producto")
+    var permisosCargo = user.permisos_cargo ? String(user.permisos_cargo).toLowerCase().split(',') : [];
+
+    // Capturamos los enlaces del navbar
+    var linkUsuarios = document.getElementById('navUsuariosLink');
+    var linkAuditoriaInterna = document.getElementById('navAuditoriaInternaLink');
+    var linkAuditoriaProducto = document.getElementById('navAuditoriaProductoLink');
+
+    // ==========================================
+    // REGLAS ESTRICTAS
+    // ==========================================
+    
+    // 1. Usuarios: EXCLUSIVO Admin (Rol 3). No importan los permisos de cargo.
+    var puedeVerUsuarios = (rol === 3);
+
+    // 2. Auditoría Interna: EXCLUSIVO Admin (3) y Supervisor (2). No importan los permisos de cargo.
+    var puedeVerAuditoriaInt = (rol === 2 || rol === 3);
+
+    // 3. Auditoría Producto: Admin (3), Supervisor (2) o permiso explícito "auditoria_producto"
+    var puedeVerAuditoriaProd = (rol === 2 || rol === 3 || permisosCargo.includes('auditoria_producto'));
+
+    // ==========================================
+    // APLICAR VISIBILIDAD (Eliminar si no tiene permiso)
+    // ==========================================
+    if (linkUsuarios && !puedeVerUsuarios) linkUsuarios.remove();
+    if (linkAuditoriaInterna && !puedeVerAuditoriaInt) linkAuditoriaInterna.remove();
+    if (linkAuditoriaProducto && !puedeVerAuditoriaProd) linkAuditoriaProducto.remove();
+  }
+
+  // =============================================
   // RESTO DE LA LÓGICA (DOMContentLoaded)
   // =============================================
   document.addEventListener('DOMContentLoaded', function () {
+
+    // 👇 Llamamos a la función de control de roles aquí
+    controlarMenuPorRol();
 
     // ---------- MENÚ HAMBURGUESA (RESPONSIVE) ----------
     const navbar = document.querySelector('.navbar');

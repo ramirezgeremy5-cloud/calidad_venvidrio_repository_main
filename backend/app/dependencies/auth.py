@@ -7,12 +7,13 @@ from typing import Optional
 
 from app.database.connection import SessionLocal
 from app.models.usuario import Usuario
+from app.models.cargo import Cargo # 👈 Importamos el modelo de Cargo
 from app.dependencies.security import decode_access_token, verify_token
 
 security = HTTPBearer()
 
-# Tiempo de inactividad permitido antes de expirar la sesión (debe coincidir con auth.py)
-TIEMPO_INACTIVIDAD_MINUTOS = 4
+# 👇 TIEMPO DE INACTIVIDAD: 60 MINUTOS (1 HORA)
+TIEMPO_INACTIVIDAD_MINUTOS = 60
 
 
 # =========================
@@ -53,6 +54,8 @@ def _validar_sesion_y_actividad(usuario: Usuario, sid: Optional[str], db: Sessio
     if ultima:
         try:
             ultima_dt = datetime.fromisoformat(ultima) if isinstance(ultima, str) else ultima
+            
+            # Si la diferencia es mayor a 60 minutos, expira
             if datetime.utcnow() - ultima_dt > timedelta(minutes=TIEMPO_INACTIVIDAD_MINUTOS):
                 # Liberar sesión expirada
                 usuario.session_id = None
@@ -82,13 +85,6 @@ def get_current_user(
 ) -> Usuario:
     """
     Obtener usuario actual desde el token JWT
-
-    Valida:
-      - Firma y expiración del JWT
-      - Que el usuario exista y esté activo
-      - Que el sid del token coincida con el session_id en BD
-      - Que no haya expirado por inactividad (>4 min)
-      - Renueva ultima_actividad en cada request (sliding window)
     """
     token = credentials.credentials
 
@@ -98,40 +94,32 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    # Decodificar token
     payload = decode_access_token(token)
-
     if payload is None:
         raise credentials_exception
 
-    # Obtener ID y sid del usuario desde el token
     user_id = payload.get("sub")
     sid = payload.get("sid")
 
     if user_id is None:
         raise credentials_exception
 
-    # Buscar usuario en la base de datos
     try:
         user_id_int = int(user_id)
     except ValueError:
         raise credentials_exception
 
-    usuario = db.query(Usuario).filter(
-        Usuario.id == user_id_int
-    ).first()
+    usuario = db.query(Usuario).filter(Usuario.id == user_id_int).first()
 
     if usuario is None:
         raise credentials_exception
 
-    # Verificar si el usuario está activo
     if not usuario.activo:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Usuario desactivado. Contacte al administrador"
         )
 
-    # Validar sesión (sid + inactividad + renovar ultima_actividad)
     _validar_sesion_y_actividad(usuario, sid, db)
 
     return usuario
@@ -142,8 +130,6 @@ def get_current_active_user(
 ) -> Usuario:
     """
     Obtener usuario activo actual
-
-    Esta dependencia verifica que el usuario esté activo.
     """
     if not current_user.activo:
         raise HTTPException(
@@ -159,22 +145,17 @@ def get_current_user_optional(
 ) -> Optional[Usuario]:
     """
     Obtener usuario actual opcionalmente (sin requerir autenticación)
-
-    Retorna None si no hay token válido, si la sesión expiró,
-    o si el sid no coincide con la BD.
     """
     if not credentials:
         return None
 
     token = credentials.credentials
     payload = decode_access_token(token)
-
     if not payload:
         return None
 
     user_id = payload.get("sub")
     sid = payload.get("sid")
-
     if not user_id:
         return None
 
@@ -183,14 +164,11 @@ def get_current_user_optional(
     except ValueError:
         return None
 
-    usuario = db.query(Usuario).filter(
-        Usuario.id == user_id_int
-    ).first()
+    usuario = db.query(Usuario).filter(Usuario.id == user_id_int).first()
 
     if not usuario or not usuario.activo:
         return None
 
-    # Validar sesión e inactividad (silencioso: si falla, devolvemos None)
     try:
         _validar_sesion_y_actividad(usuario, sid, db)
     except HTTPException:
@@ -200,73 +178,72 @@ def get_current_user_optional(
 
 
 # =========================
-# DEPENDENCIAS DE ROLES
+# DEPENDENCIAS DE ROLES Y CARGOS
 # =========================
 
-def check_role(allowed_roles: list):
+def check_role(allowed_roles: list, required_permission: Optional[str] = None):
     """
-    Dependencia para verificar roles de usuario
-
-    Args:
-        allowed_roles: Lista de roles permitidos (ej: [1, 2])
-
-    Returns:
-        Función que verifica el rol del usuario autenticado
-
-    Uso:
-        @router.get("/admin")
-        def admin_only(current_user: Usuario = Depends(check_role([1, 2]))):
-            return {"message": "Solo admin"}
+    Dependencia general para verificar roles.
+    Si se especifica 'required_permission', también permite el paso si el cargo del usuario tiene ese permiso.
     """
     async def role_checker(
-        current_user: Usuario = Depends(get_current_active_user)
+        current_user: Usuario = Depends(get_current_active_user),
+        db: Session = Depends(get_db)
     ) -> Usuario:
-        if current_user.rol_id not in allowed_roles:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"No tienes permisos para esta acción. Roles permitidos: {allowed_roles}"
-            )
-        return current_user
+        
+        # 1. Validar por Rol permitido
+        if current_user.rol_id in allowed_roles:
+            return current_user
+
+        # 2. Validar por Permiso del Cargo
+        if required_permission and current_user.cargo_id:
+            cargo = db.query(Cargo).filter(Cargo.id == current_user.cargo_id).first()
+            
+            if cargo and cargo.permisos:
+                # Separamos por comas y limpiamos espacios (ej: "auditoria_producto, produccion")
+                permisos = [p.strip().lower() for p in cargo.permisos.split(',')]
+                if required_permission.lower() in permisos:
+                    return current_user
+
+        # 3. Si no cumple ninguna, bloqueamos
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos suficientes para acceder a este módulo."
+        )
     return role_checker
 
 
 def check_admin():
-    """
-    Dependencia para verificar que el usuario sea administrador (rol 3)
-
-    Uso:
-        @router.get("/admin")
-        def admin_only(current_user: Usuario = Depends(check_admin())):
-            return {"message": "Solo admin"}
-    """
+    """Exclusivo para Administradores (Rol 3)"""
     return check_role([3])
 
 
 def check_supervisor():
-    """
-    Dependencia para verificar que el usuario sea supervisor o admin (rol 2 o 3)
-
-    Uso:
-        @router.get("/super-admin")
-        def super_admin_only(current_user: Usuario = Depends(check_supervisor())):
-            return {"message": "Solo supervisor/admin"}
-    """
+    """Exclusivo para Supervisores y Administradores (Rol 2 y 3)"""
     return check_role([2, 3])
 
 
 def check_roles(roles: list):
-    """
-    Dependencia para verificar roles específicos
-
-    Args:
-        roles: Lista de roles permitidos
-
-    Uso:
-        @router.get("/moderator")
-        def moderator_only(current_user: Usuario = Depends(check_roles([1, 2, 3]))):
-            return {"message": "Solo moderadores"}
-    """
     return check_role(roles)
+
+
+# =========================
+# DEPENDENCIAS ESPECÍFICAS DE MÓDULOS (NUEVAS)
+# =========================
+
+def check_auditoria_interna():
+    """
+    Auditoría Interna: Exclusivo Admin (3) y Supervisor (2).
+    Ningún cargo puede acceder a este módulo.
+    """
+    return check_role([2, 3])
+
+
+def check_auditoria_producto():
+    """
+    Auditoría Producto: Admin (3), Supervisor (2), o cargos con permiso explícito "auditoria_producto"
+    """
+    return check_role([2, 3], required_permission="auditoria_producto")
 
 
 # =========================
@@ -276,17 +253,6 @@ def check_roles(roles: list):
 def check_user_ownership(user_id_param: str = "usuario_id"):
     """
     Dependencia para verificar que el usuario sea propietario del recurso
-
-    Args:
-        user_id_param: Nombre del parámetro en la ruta que contiene el ID del usuario
-
-    Uso:
-        @router.get("/usuario/{usuario_id}")
-        def get_usuario(
-            usuario_id: int,
-            current_user: Usuario = Depends(check_user_ownership("usuario_id"))
-        ):
-            return {"message": "Tu propio perfil"}
     """
     async def ownership_checker(
         current_user: Usuario = Depends(get_current_active_user),
@@ -300,11 +266,9 @@ def check_user_ownership(user_id_param: str = "usuario_id"):
                 detail=f"Parámetro '{user_id_param}' no encontrado"
             )
 
-        # Si es admin o supervisor, puede acceder a cualquier usuario
         if current_user.rol_id in [2, 3]:
             return current_user
 
-        # Si no es admin, solo puede acceder a su propio perfil
         if current_user.id != target_user_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -324,9 +288,6 @@ def get_token_data(
 ) -> dict:
     """
     Obtener datos del token JWT sin verificar usuario en BD
-
-    Útil para validar tokens sin hacer consultas a la base de datos.
-    OJO: No valida session_id ni inactividad. Solo firma y expiración del JWT.
     """
     token = credentials.credentials
     payload = decode_access_token(token)
@@ -346,7 +307,6 @@ def get_token_data(
 # =========================
 
 class Roles:
-    """Constantes para roles de usuario"""
     USUARIO = 1
     SUPERVISOR = 2
     ADMIN = 3

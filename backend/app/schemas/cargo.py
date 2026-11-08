@@ -5,6 +5,8 @@ from typing import Optional
 
 class CargoBase(BaseModel):
     nombre: str = Field(..., min_length=3, max_length=60)
+    # 👇 NUEVO CAMPO: Permisos como texto (ej: "auditoria_producto,produccion")
+    permisos: Optional[str] = ""
 
 
 class CargoCreate(CargoBase):
