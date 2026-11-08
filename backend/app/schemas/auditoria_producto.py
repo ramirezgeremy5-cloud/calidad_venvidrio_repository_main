@@ -28,18 +28,22 @@ class AuditoriaProductoBase(BaseModel):
     paletas_aprobadas: int
     paletas_rechazadas: int
     observaciones: Optional[str] = None
-    defectos_ids: Optional[List[int]] = None
+    # 👇 QUITAMOS defectos_ids porque no existe en el modelo
+    # defectos_ids: Optional[List[int]] = None
 
 
 class AuditoriaProductoCreate(AuditoriaProductoBase):
+    """Esquema para crear una auditoría de producto."""
     pass
 
 
 class AuditoriaProductoResponse(AuditoriaProductoBase):
+    """Esquema para devolver una auditoría de producto con sus IDs."""
     id: int
     fecha_registro: datetime
-    # ✅ Si no existe fecha_actualizacion, lo comentamos o eliminamos
-    # fecha_actualizacion: Optional[datetime] = None
+    # fecha_actualizacion: Optional[datetime] = None  # Omitido si no existe en el modelo
+    auditor_id: Optional[int] = None
+    auditor_nombre: Optional[str] = None
 
     class Config:
         from_attributes = True

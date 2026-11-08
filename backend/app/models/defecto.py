@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, Integer, String, Text, DateTime, Float,
-    ForeignKey, Boolean, Index
+    ForeignKey, Boolean, Index, Table
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -141,13 +141,23 @@ class Defecto(Base):
     )
 
     # ==========================================
+    # RELACIÓN CON AUDITORÍAS DE PRODUCTO (Muchos a Muchos)
+    # ==========================================
+    # 👇 AGREGA ESTO PARA ROMPER EL ERROR 500
+    auditorias = relationship(
+        "AuditoriaProducto",
+        secondary="auditorias_defectos",
+        back_populates="defectos"
+    )
+
+    # ==========================================
     # ÍNDICES COMPUESTOS (rendimiento)
     # ==========================================
     __table_args__ = (
         Index("ix_defectos_lote_clasificacion", "codigo_lote", "clasificacion"),
         Index("ix_defectos_lote_resultado", "codigo_lote", "resultado_lote"),
         Index("ix_defectos_fecha_clasificacion", "fecha_registro", "clasificacion"),
-        Index("ix_defectos_lote_grupo", "codigo_lote", "grupo_id"), # 👈 Nuevo índice para agrupar rápido
+        Index("ix_defectos_lote_grupo", "codigo_lote", "grupo_id"),
     )
 
     # ==========================================

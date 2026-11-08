@@ -18,6 +18,10 @@ from app.schemas.defecto import (
     DefectoTipoResponse,
 )
 
+# 👇 IMPORTAMOS LAS DEPENDENCIAS DE AUTENTICACIÓN
+from app.dependencies.auth import get_current_active_user, check_admin
+from app.models.usuario import Usuario
+
 router = APIRouter(
     prefix="/defectos",
     tags=["Defectos"]
@@ -51,7 +55,9 @@ def listar_defectos(
     incluir_semillas: bool = Query(False, description="Incluir registros semilla del catálogo"),
     skip: int = Query(0),
     limit: int = Query(500),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    # 👇 SOLO USUARIOS AUTENTICADOS PUEDEN VER LOS DEFECTOS
+    current_user: Usuario = Depends(get_current_active_user)
 ):
     """Lista defectos con filtros opcionales. Excluye registros semilla por defecto."""
     query = db.query(Defecto)
@@ -136,7 +142,9 @@ def obtener_tipos_por_clasificacion(
 @router.post("/tipos", response_model=DefectoTipoResponse, status_code=201)
 def registrar_tipo_defecto(
     datos: TipoDefectoCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    # 👇 SOLO ADMIN O SUPERVISOR PUEDEN CREAR TIPOS
+    current_user: Usuario = Depends(check_admin())
 ):
     """
     Registra un nuevo tipo de defecto en la tabla maestra `tipos_defecto`.
@@ -195,7 +203,11 @@ def obtener_estadisticas(db: Session = Depends(get_db)):
 # OBTENER UN DEFECTO
 # =========================
 @router.get("/{defecto_id}", response_model=DefectoResponse)
-def obtener_defecto(defecto_id: int, db: Session = Depends(get_db)):
+def obtener_defecto(
+    defecto_id: int, 
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
+):
     defecto = db.query(Defecto).filter(Defecto.id == defecto_id).first()
     if not defecto:
         raise HTTPException(status_code=404, detail="Defecto no encontrado.")
@@ -209,7 +221,9 @@ def obtener_defecto(defecto_id: int, db: Session = Depends(get_db)):
 @router.post("", response_model=List[DefectoResponse], status_code=201)
 def crear_defectos(
     datos: List[DefectoCreate],
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    # 👇 SOLO USUARIOS AUTENTICADOS PUEDEN CREAR DEFECTOS
+    current_user: Usuario = Depends(get_current_active_user)
 ):
     """
     Registra un conjunto de defectos vinculados a un lote.
@@ -303,7 +317,11 @@ def crear_defectos(
 # ELIMINAR DEFECTOS DE UN LOTE (Devolver a Evaluación)
 # ========================================================
 @router.delete("/lote/{lote_id}", status_code=204)
-def eliminar_defectos_por_lote(lote_id: int, db: Session = Depends(get_db)):
+def eliminar_defectos_por_lote(
+    lote_id: int, 
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
+):
     """
     Elimina todos los defectos asociados a un lote y devuelve el lote a estatus 100.
     Útil para corregir errores de registro.
@@ -331,7 +349,8 @@ def eliminar_defectos_por_lote(lote_id: int, db: Session = Depends(get_db)):
 def actualizar_defecto(
     defecto_id: int,
     datos: DefectoUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
 ):
     defecto = db.query(Defecto).filter(Defecto.id == defecto_id).first()
     if not defecto:
@@ -356,7 +375,11 @@ def actualizar_defecto(
 # ELIMINAR UN DEFECTO INDIVIDUAL
 # =========================
 @router.delete("/{defecto_id}", status_code=204)
-def eliminar_defecto(defecto_id: int, db: Session = Depends(get_db)):
+def eliminar_defecto(
+    defecto_id: int, 
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
+):
     defecto = db.query(Defecto).filter(Defecto.id == defecto_id).first()
     if not defecto:
         raise HTTPException(status_code=404, detail="Defecto no encontrado.")
@@ -372,7 +395,8 @@ def eliminar_defecto(defecto_id: int, db: Session = Depends(get_db)):
 def marcar_lote_apto(
     lote_id: int,
     datos: MarcarLoteAptoRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
 ):
     lote = db.query(Produccion).filter(Produccion.id == lote_id).first()
     if not lote:
@@ -408,7 +432,8 @@ def marcar_lote_apto(
 def marcar_lote_retenido(
     lote_id: int,
     datos: MarcarLoteRetenidoRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
 ):
     lote = db.query(Produccion).filter(Produccion.id == lote_id).first()
     if not lote:

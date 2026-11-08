@@ -15,9 +15,11 @@ from app.database.connection import engine, Base
 # =========================
 # MODELOS (ORDEN CRÍTICO)
 # =========================
-
+# 👇 IMPORTANTE: Importar TODOS los modelos que tienen relaciones
 from app.models.usuario import Usuario
 from app.models.cargo import Cargo
+from app.models.defecto import Defecto
+from app.models.auditoria_producto import AuditoriaProducto
 
 
 # =========================
@@ -157,8 +159,8 @@ origins = [
     "http://127.0.0.1:3000",
     "http://localhost:3000",
     # 👇 DOMINIOS DE PRODUCCIÓN EN RENDER
-    "https://venvidrio-calidad.onrender.com",           # Tu Frontend
-    "https://calidad-venvidrio-repository-main.onrender.com", # Tu Backend
+    "https://venvidrio-calidad.onrender.com",
+    "https://calidad-venvidrio-repository-main.onrender.com",
 ]
 
 app.add_middleware(
