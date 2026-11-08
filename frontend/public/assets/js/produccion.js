@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v20 (Fix definitivo de captura y PDF expandido)
+   produccion.js - v21 (Alineado con nueva etiqueta HTML)
    ========================================== */
 
 (function () {
@@ -531,27 +531,25 @@
     try { const d = new Date(fechaStr + 'T00:00:00'); return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (e) { return fechaStr; }
   }
 
-  // --- FUNCIONES PARA DESCARGAR IMAGEN Y PDF (CORREGIDAS) ---
+  // --- FUNCIONES PARA DESCARGAR IMAGEN Y PDF (CORREGIDAS PARA TICKET EXPANDIDO) ---
   function descargarEtiquetaJPG() {
     const elementoCaptura = document.getElementById("ticket-para-captura");
-    const contenedorOculto = document.getElementById("div-oculto-para-captura");
-    if (!elementoCaptura || !contenedorOculto) { mostrarToast("No se encontró la etiqueta visual", true); return; }
+    if (!elementoCaptura) return;
 
-    // 1. Hacemos visible el contenedor pero fuera de la pantalla
-    contenedorOculto.style.display = 'block';
-    
-    // 2. Forzamos dimensiones exactas para la captura
-    elementoCaptura.style.width = '700px'; 
-    elementoCaptura.style.height = 'auto'; 
+    const btn = document.getElementById("btn-descargar-jpg");
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="ti ti-loader"></i> Generando...';
+    btn.disabled = true;
 
-    // 3. Damos tiempo al navegador para calcular los estilos
+    // Forzamos un ancho de 420px para que la tirilla se vea perfecta
+    elementoCaptura.style.width = '420px';
+
     setTimeout(() => {
       html2canvas(elementoCaptura, { 
         scale: 3, 
         useCORS: true, 
         backgroundColor: '#ffffff',
-        width: 700,
-        windowWidth: 1000
+        width: 420
       }).then(canvas => {
         const imgData = canvas.toDataURL("image/jpeg", 1.0);
         const enlace = document.createElement('a');
@@ -561,56 +559,59 @@
         enlace.click();
         document.body.removeChild(enlace);
         
-        contenedorOculto.style.display = 'none';
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
       }).catch(err => { 
         console.error(err); 
         mostrarToast("Error al generar la imagen", true); 
-        contenedorOculto.style.display = 'none';
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
       });
-    }, 150);
+    }, 100);
   }
 
   function descargarEtiquetaPDF() {
     const elementoCaptura = document.getElementById("ticket-para-captura");
-    const contenedorOculto = document.getElementById("div-oculto-para-captura");
-    if (!elementoCaptura || !contenedorOculto) { mostrarToast("No se encontró la etiqueta visual", true); return; }
+    if (!elementoCaptura) return;
 
-    contenedorOculto.style.display = 'block';
-    elementoCaptura.style.width = '700px'; 
-    elementoCaptura.style.height = 'auto'; 
+    const btn = document.getElementById("btn-descargar-pdf");
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="ti ti-loader"></i> Generando...';
+    btn.disabled = true;
+
+    elementoCaptura.style.width = '420px';
 
     setTimeout(() => {
       html2canvas(elementoCaptura, { 
         scale: 3, 
         useCORS: true, 
         backgroundColor: '#ffffff',
-        width: 700,
-        windowWidth: 1000
+        width: 420
       }).then(canvas => {
         const imgData = canvas.toDataURL("image/jpeg", 1.0);
         const { jsPDF } = window.jspdf;
         
         const pdf = new jsPDF('p', 'mm', 'a4');
         
-        // Forzamos el ancho al 90% de la hoja
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const imgWidth = pageWidth - 20; // 190mm
-        
-        let imgHeight = (canvas.height * imgWidth) / canvas.width; 
+        // Ancho de 100mm para simular el tamaño de una etiqueta térmica real
+        const imgWidth = 100; 
+        const imgHeight = (canvas.height * imgWidth) / canvas.width; 
 
-        const x = 10; 
-        const y = 15; 
+        const x = (pdf.internal.pageSize.getWidth() - imgWidth) / 2;
+        const y = 20;
 
         pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
         pdf.save("etiqueta_lote_" + (document.getElementById("modal-lote-codigo").innerText || "sin_id") + ".pdf");
         
-        contenedorOculto.style.display = 'none';
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
       }).catch(err => { 
         console.error(err); 
         mostrarToast("Error al generar el PDF", true); 
-        contenedorOculto.style.display = 'none';
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
       });
-    }, 150);
+    }, 100);
   }
   // ---------------------------------------------
 
@@ -692,27 +693,28 @@
     // ACTUALIZAR Y ENLAZAR BOTONES DE DESCARGA
     // ==========================================
     
-    // 1. Inyectar los datos en el ticket visual oculto
+    // 1. Inyectar los datos en el ticket visual oculto (NUEVOS IDs)
     const setInText = (id, valor, defecto) => {
       const el = document.getElementById(id);
       if (el) el.innerText = valor || defecto;
     };
 
     setInText("ticket-title-code", lote.ticket_carga, "TICKET-PRUEBA-123");
+    setInText("ticket-planta", `VENVIDRIO ${lote.planta.toUpperCase()}`, "VENVIDRIO VALERA");
     setInText("ticket-cliente", lote.cliente, "CLIENTE STOCK");
     setInText("ticket-orden", lote.orden, "NO APLICA");
+    setInText("ticket-obs", lote.observaciones, "NO APLICA"); 
+    setInText("ticket-fecha", formatearFechaProd(lote.fecha_prod), "07/11/2026");
     
-    setInText("ticket-fecha", formatearFechaProd(lote.fecha_prod), "06/11/2026");
-    setInText("ticket-bpp", lote.bpp, "—");
-    setInText("ticket-cap", etiquetaCapacidad(lote.capacidad_ml, lote.unidad_capacidad), "—");
-
-    const maquinaStr = `${lote.maquina || "A1"}    ${lote.turno || "1"}    ${lote.grupo || "A"}`;
-    setInText("ticket-maquina", maquinaStr, "A1    1    A");
+    const maquinaStr = `${lote.maquina || "A1"}   ${lote.turno || "1"}   ${lote.grupo || "A"}`;
+    setInText("ticket-maquina", maquinaStr, "A1   1   A");
     setInText("ticket-producto", lote.prod, "BOTELLA PRUEBA 500ML");
     setInText("ticket-acabado", lote.acabado, "26-600-BEAD");
     setInText("ticket-item-code", lote.item, "V-TEST-001");
     setInText("ticket-molde", lote.molde, "MOLDE-PRUEBA-01");
-    setInText("ticket-lote", lote.codigo, "20261106A1001");
+    setInText("ticket-lote", lote.codigo, "20261107A1001");
+    setInText("ticket-bpp", lote.bpp, "—");
+    setInText("ticket-cap", etiquetaCapacidad(lote.capacidad_ml, lote.unidad_capacidad), "—");
     setInText("ticket-barcode-text", lote.ticket_carga, "TICKET-PRUEBA-123");
 
     if (typeof JsBarcode !== 'undefined' && document.getElementById("barcode-svg")) {

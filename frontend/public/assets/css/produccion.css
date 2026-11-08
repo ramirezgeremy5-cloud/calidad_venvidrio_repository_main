@@ -1,6 +1,6 @@
 /* ==========================================================
    PRODUCCIÓN — VENVIDRIO
-   produccion.css — v8 (Diseño de captura idéntico a etiquetas.css)
+   produccion.css — v10 (Diseño de captura idéntico a la foto)
    ========================================================== */
 
 /* ================= VARIABLES DE MARCA ================= */
@@ -601,10 +601,9 @@ body {
 }
 
 /* ==========================================================
-   DISEÑO DE LA ETIQUETA (IDÉNTICO A etiquetas.css)
+   DISEÑO DE LA ETIQUETA (IDÉNTICO A LA FOTO)
    ========================================================== */
 
-/* ================= TICKET (etiqueta física) ================= */
 .ticket-preview-container {
   background: #fff;
   width: 100%;
@@ -620,12 +619,6 @@ body {
   color: #111;
   box-sizing: border-box;
   position: relative;
-}
-
-/* ================= TIPOGRAFÍA DEL TICKET ================= */
-.ticket-content {
-  display: flex;
-  flex-direction: column;
 }
 
 .ticket-header {
@@ -694,13 +687,6 @@ body {
   color: #111;
   line-height: 1.35;
   word-break: break-word;
-}
-
-.ticket-row-flex {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 10px;
 }
 
 .ticket-grid-2 {
