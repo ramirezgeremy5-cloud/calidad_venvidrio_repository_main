@@ -107,14 +107,21 @@
 
   injectAnimationStyles();
 
-  document.addEventListener('DOMContentLoaded', function () {
-
-    // =============================================
-    // 0. RELOJ EN TIEMPO REAL (12 Horas + Fecha)
-    // =============================================
+  // =============================================
+  // 0. RELOJ EN TIEMPO REAL (A PRUEBA DE FALLOS)
+  // =============================================
+  // Se ejecuta INMEDIATAMENTE, fuera del DOMContentLoaded.
+  function iniciarReloj() {
     var reloj = document.getElementById('reloj-real');
-    if (reloj) {
-      var actualizarHora = function() {
+    
+    // Si el elemento aún no existe, esperamos 100ms y volvemos a intentar
+    if (!reloj) {
+      setTimeout(iniciarReloj, 100);
+      return;
+    }
+
+    var actualizarHora = function() {
+      try {
         var ahora = new Date();
         
         // Formato de fecha: "Jueves, 6 de Nov"
@@ -133,15 +140,25 @@
         var fechaCapitalizada = fechaStr.charAt(0).toUpperCase() + fechaStr.slice(1);
         
         reloj.textContent = fechaCapitalizada + ' | ' + horaStr;
-      };
-      
-      actualizarHora();
-      setInterval(actualizarHora, 1000);
-    }
+      } catch (e) {
+        console.error("Error actualizando el reloj:", e);
+      }
+    };
+    
+    // Ejecutar inmediatamente y luego cada segundo
+    actualizarHora();
+    if (window.relojInterval) clearInterval(window.relojInterval);
+    window.relojInterval = setInterval(actualizarHora, 1000);
+  }
 
-    // =============================================
-    // 1. MENÚ HAMBURGUESA (RESPONSIVE)
-    // =============================================
+  iniciarReloj();
+
+  // =============================================
+  // RESTO DE LA LÓGICA (DOMContentLoaded)
+  // =============================================
+  document.addEventListener('DOMContentLoaded', function () {
+
+    // ---------- MENÚ HAMBURGUESA (RESPONSIVE) ----------
     const navbar = document.querySelector('.navbar');
     const navBrand = document.querySelector('.nav-brand');
     const navLinks = document.getElementById('navLinks');
@@ -158,7 +175,7 @@
       }
 
       navToggle.addEventListener('click', function(e) {
-        e.stopPropagation(); // Evitar que el clic se propague
+        e.stopPropagation();
         navLinks.classList.toggle('active');
         const icon = navToggle.querySelector('i');
         icon.className = navLinks.classList.contains('active') ? 'ti ti-x' : 'ti ti-menu-2';
@@ -174,7 +191,6 @@
         });
       });
 
-      // Cerrar el menú al hacer clic fuera (en móvil)
       document.addEventListener('click', function(e) {
         if (window.innerWidth <= 900 && navLinks.classList.contains('active')) {
           if (!navLinks.contains(e.target) && !navToggle.contains(e.target)) {
@@ -186,39 +202,26 @@
       });
     }
 
-    // =============================================
-    // 2. LÓGICA DEL DROPDOWN (EL CORAZÓN DEL PROBLEMA)
-    // =============================================
-    
-    // Usamos delegación de eventos en el body para capturar el clic de forma segura
+    // ---------- LÓGICA DEL DROPDOWN ----------
     document.body.addEventListener('click', function(e) {
       var navUser = e.target.closest('#navUserContainer');
       var userDropdown = document.getElementById('userDropdown');
       
       if (!userDropdown) return;
 
-      // Si el clic fue en el botón del usuario
       if (navUser) {
-        // Prevenir el cierre inmediato por burbujeo
         e.stopPropagation(); 
-        
-        // Alternar el menú
         userDropdown.classList.toggle('show');
-        
-        // Forzar z-index para que aparezca arriba de todo
         if (userDropdown.classList.contains('show')) {
           userDropdown.style.zIndex = '99999';
         }
       } 
-      // Si el clic fue en cualquier otro lado, cerramos el menú
       else if (!e.target.closest('#userDropdown')) {
         userDropdown.classList.remove('show');
       }
     });
 
-    // =============================================
-    // 3. INYECTAR MODAL "MI PERFIL" (Solo si no existe)
-    // =============================================
+    // ---------- MODAL "MI PERFIL" ----------
     if (!document.getElementById('modalMiPerfil')) {
       var modalHtml = `
         <div class="modal-overlay" id="modalMiPerfil" style="display:none; z-index: 99999;">
@@ -282,10 +285,7 @@
       document.body.insertAdjacentHTML('beforeend', modalHtml);
     }
 
-    // =============================================
-    // 4. LOGOUT (Lógica directa)
-    // =============================================
-    // Usamos delegación para el botón de logout
+    // ---------- LOGOUT ----------
     document.body.addEventListener('click', function(e) {
       var logoutBtn = e.target.closest('#dropdownLogout');
       if (logoutBtn) {
@@ -310,18 +310,14 @@
       }
     });
 
-    // =============================================
-    // 5. ANIMACIÓN DE TRANSICIÓN DE PÁGINA (SOLO PC)
-    // =============================================
+    // ---------- ANIMACIÓN DE TRANSICIÓN DE PÁGINA (SOLO PC) ----------
     if (window.innerWidth > 900) {
-      // Interceptar clics en enlaces internos para animar la salida
       document.body.addEventListener('click', function(e) {
         var link = e.target.closest('a');
         if (!link) return;
 
         var href = link.getAttribute('href');
 
-        // Ignorar enlaces vacíos, anclas, externos, mailto, tel, target _blank o con modificadores
         if (!href ||
             href.startsWith('#') ||
             href.startsWith('javascript:') ||
@@ -334,19 +330,16 @@
           return;
         }
 
-        // Evitar doble transición
         if (document.body.classList.contains('page-transition-out')) return;
 
         e.preventDefault();
         document.body.classList.add('page-transition-out');
 
-        // Navegar tras la animación
         setTimeout(function() {
           window.location.href = href;
         }, 280);
       });
 
-      // Al volver con el botón "atrás" del navegador, quitar la clase de salida
       window.addEventListener('pageshow', function(event) {
         if (event.persisted) {
           document.body.classList.remove('page-transition-out');
