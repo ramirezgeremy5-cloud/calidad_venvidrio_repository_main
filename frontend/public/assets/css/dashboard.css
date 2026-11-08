@@ -1,6 +1,6 @@
 /* =============================================
    DASHBOARD — VENVIDRIO
-   dashboard.css — v3 (Compatible con Android + Mejoras)
+   dashboard.css — v4 (Reloj visible + Compatibilidad)
    ============================================= */
 
 /* ================= VARIABLES DE MARCA ================= */
@@ -243,7 +243,6 @@ body {
   margin-bottom: 1.5rem;
 }
 
-/* 🔧 Reemplaza los style="margin-top:1.5rem;" que quitamos del HTML */
 .dashboard-layout + .dashboard-layout,
 .dashboard-layout-2col + .dashboard-layout,
 .dashboard-layout + .dashboard-layout-2col,
@@ -405,7 +404,6 @@ body {
   text-align: center;
 }
 
-/* 🔧 NUEVAS clases que reemplazan los style="..." inline de los canvas */
 .chart-production {
   width: 100% !important;
   max-height: 280px;
@@ -423,7 +421,6 @@ body {
   max-height: 200px;
 }
 
-/* Compatibilidad con reglas antiguas basadas en ID */
 #productionChart,
 #lineasChart,
 #eficienciaChart {
@@ -434,7 +431,6 @@ body {
   #productionChart, #lineasChart, #eficienciaChart { max-height: 260px; }
 }
 
-/* 🔧 NUEVAS clases que reemplazan los style="padding:..." inline */
 .pie-chart-body {
   padding: 1rem 1.5rem 1.5rem;
   display: flex;
@@ -551,7 +547,7 @@ body {
   white-space: nowrap;
   letter-spacing: 0.2px;
 }
-.badge i { font-size: 10px; } /* 🔧 Reemplaza los style="font-size:10px;" inline */
+.badge i { font-size: 10px; }
 .badge-success { background: #e8f5e9; color: #1b5e20; }
 .badge-danger  { background: #ffebee; color: #b71c1c; }
 .badge-info    { background: #e3f2fd; color: #0d47a1; }
@@ -701,7 +697,6 @@ body {
 }
 .alert-item-desc { font-size: 10.5px; color: var(--text-muted); line-height: 1.4; }
 
-/* 🔧 NUEVO: reemplaza el style="..." inline del li de "Cargando alertas..." */
 .alert-loading {
   padding: 10px 0;
   color: var(--text-muted);
@@ -742,7 +737,6 @@ body {
 .table-wrap tbody tr:hover, .table-dash tbody tr:hover { background: #f5f7ff; }
 .table-wrap tbody tr:last-child td, .table-dash tbody tr:last-child td { border-bottom: none; }
 
-/* 🔧 NUEVO: reemplaza el style="..." inline de la fila "Cargando registros..." */
 .table-loading {
   text-align: center;
   padding: 2rem;
