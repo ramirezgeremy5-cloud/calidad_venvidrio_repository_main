@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - ETIQUETAS Y TRAZABILIDAD
-   etiquetas.js — v9 (Impresión en 1 sola hoja A4)
+   etiquetas.js — v10 (Impresión en 1 sola hoja A4 garantizada)
    ========================================== */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const btnCerrarCamara = document.getElementById('btn-cerrar-camara-etiqueta');
 
   let cargando = false;
-  let loteActual = null; // Guardamos el lote cargado para actualizar su estatus
+  let loteActual = null; 
 
   // =========================
   // UTILIDADES
@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // =========================
   function llenarEtiqueta(data) {
     ocultarError();
-    loteActual = data; // Guardamos los datos del lote
+    loteActual = data; 
 
     setVisible(ticketEmpty, false);
     setVisible(ticketContent, true, 'flex');
@@ -176,7 +176,6 @@ document.addEventListener('DOMContentLoaded', function () {
     ocultarError();
     setLoadingBtn(true);
 
-    // Usamos el endpoint público que busca por código de lote o ticket
     fetch(`${API_URL}/produccion/publico/${encodeURIComponent(lote)}`)
     .then(function (res) {
       if (!res.ok) {
@@ -220,12 +219,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     EscanerApp.onScanSuccess(async (codigoEscaneado) => {
       if (inputLote) inputLote.value = codigoEscaneado;
-      cargarLote(codigoEscaneado); // Cargamos el lote automáticamente
+      cargarLote(codigoEscaneado);
     });
   }
 
   // =========================
-  // IMPRIMIR COMO IMAGEN EXACTA Y MARCAR LOTE (1 SOLA HOJA A4)
+  // IMPRIMIR COMO IMAGEN (AJUSTADO PARA 1 SOLA HOJA)
   // =========================
   function imprimirEtiquetaComoImagen() {
     if (!ticketPreview || !ticketContent || ticketContent.style.display === 'none') {
@@ -255,7 +254,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const doc = iframe.contentWindow.document;
       doc.open();
       
-      // 👇 AQUÍ ESTÁ EL TRUCO PARA QUE NO SE CORTE Y QUEDE EN 1 SOLA HOJA
+      // 👇 CORRECCIÓN: Eliminamos flexbox y limitamos el alto máximo al 90% de la hoja
       doc.write(`
         <html>
           <head>
@@ -263,36 +262,26 @@ document.addEventListener('DOMContentLoaded', function () {
             <style>
               @page {
                 size: A4 portrait;
-                margin: 0; 
+                margin: 10mm; /* Margen para que la impresora no corte */
               }
               html, body {
                 margin: 0;
                 padding: 0;
-                width: 210mm;
-                height: 297mm; /* Alto exacto de A4 */
                 background: #fff;
-                overflow: hidden; /* Evita que se genere otra página */
-              }
-              .contenedor {
-                width: 100%;
-                height: 100%;
-                display: flex;
-                justify-content: center;
-                align-items: center;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
               }
               img {
-                max-width: 100%;     /* No se pasa del ancho */
-                max-height: 100%;    /* No se pasa del alto */
-                object-fit: contain; /* Se adapta sin deformarse */
-                border: none;      
-                box-sizing: border-box;
+                width: 100%;           /* Ocupa todo el ancho */
+                max-height: 250mm;     /* Límite para que no empuje a otra hoja */
+                object-fit: contain;   /* Mantiene la proporción */
+                display: block;
+                margin: 0 auto;
               }
             </style>
           </head>
           <body>
-            <div class="contenedor">
-              <img src="${imgData}" onload="setTimeout(function(){ window.print(); window.frameElement.remove(); }, 150);">
-            </div>
+            <img src="${imgData}" onload="setTimeout(function(){ window.print(); window.frameElement.remove(); }, 200);">
           </body>
         </html>
       `);
@@ -301,9 +290,6 @@ document.addEventListener('DOMContentLoaded', function () {
       btnImprimir.innerHTML = textoOriginal;
       btnImprimir.disabled = false;
 
-      // ==========================================
-      // ACTUALIZAR ESTATUS DEL LOTE (Marcar como Impreso/Apto)
-      // ==========================================
       if (loteActual && loteActual.id) {
         marcarLoteComoImpreso(loteActual.id);
       }
@@ -355,6 +341,5 @@ document.addEventListener('DOMContentLoaded', function () {
 
   if (btnImprimir) btnImprimir.addEventListener('click', imprimirEtiquetaComoImagen);
 
-  // Inicializamos el escáner
   initEscanerEtiquetas();
 });
