@@ -1,7 +1,7 @@
 /* =============================================
    Venvidrio — Sistema de Control de Calidad
    login_app.js (Login + Alertas Elegantes + Sesión 1h)
-   v5
+   v6 — Verificado
    ============================================= */
 
 (function () {
@@ -32,114 +32,56 @@
     var style = document.createElement('style');
     style.id = 'sys-alertas-styles';
     style.textContent = `
-      /* OVERLAY GENERAL */
       .sys-modal-overlay {
-        position: fixed;
-        inset: 0;
+        position: fixed; inset: 0;
         background: rgba(15, 23, 42, 0.55);
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 999999;
-        padding: 20px;
-        opacity: 0;
-        transition: opacity 0.25s ease;
+        backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 999999; padding: 20px;
+        opacity: 0; transition: opacity 0.25s ease;
       }
       .sys-modal-overlay.show { opacity: 1; }
-
-      /* CAJA DEL MODAL */
       .sys-modal-box {
-        background: #fff;
-        width: 100%;
-        max-width: 420px;
-        border-radius: 16px;
+        background: #fff; width: 100%; max-width: 420px;
+        border-radius: 16px; overflow: hidden;
         box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.4);
-        overflow: hidden;
-        transform: translateY(20px) scale(0.96);
-        opacity: 0;
+        transform: translateY(20px) scale(0.96); opacity: 0;
         transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
       }
-      .sys-modal-overlay.show .sys-modal-box {
-        transform: translateY(0) scale(1);
-        opacity: 1;
-      }
-
-      /* CABECERA (Depende del tipo) */
+      .sys-modal-overlay.show .sys-modal-box { transform: translateY(0) scale(1); opacity: 1; }
       .sys-modal-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 18px 20px;
-        color: #fff;
-        font-weight: 700;
-        font-size: 15px;
+        display: flex; align-items: center; gap: 12px;
+        padding: 18px 20px; color: #fff; font-weight: 700; font-size: 15px;
       }
       .sys-modal-header i { font-size: 22px; }
       .sys-modal-header.info    { background: linear-gradient(135deg, #1e3a8a, #3b82f6); }
       .sys-modal-header.success { background: linear-gradient(135deg, #15803d, #22c55e); }
       .sys-modal-header.warning { background: linear-gradient(135deg, #b45309, #f59e0b); }
       .sys-modal-header.error   { background: linear-gradient(135deg, #b91c1c, #ef4444); }
-
-      /* CUERPO */
       .sys-modal-body {
-        padding: 22px 20px;
-        color: #334155;
-        font-size: 14px;
-        line-height: 1.55;
-        text-align: center;
+        padding: 22px 20px; color: #334155; font-size: 14px; line-height: 1.55; text-align: center;
       }
       .sys-modal-body strong { color: #0f172a; }
-
-      /* PIE DE PÁGINA (Botones) */
       .sys-modal-footer {
-        display: flex;
-        gap: 10px;
-        padding: 0 20px 20px;
-        justify-content: center;
+        display: flex; gap: 10px; padding: 0 20px 20px; justify-content: center;
       }
       .sys-modal-btn {
-        padding: 10px 22px;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 14px;
-        cursor: pointer;
-        border: none;
-        transition: all 0.2s ease;
-        flex: 1;
+        padding: 10px 22px; border-radius: 8px; font-weight: 600; font-size: 14px;
+        cursor: pointer; border: none; transition: all 0.2s ease; flex: 1;
       }
       .sys-modal-btn:hover { transform: translateY(-1px); }
       .sys-modal-btn:active { transform: scale(0.97); }
-      
-      .sys-modal-btn-primary {
-        background: #1e3a8a;
-        color: #fff;
-        box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
-      }
+      .sys-modal-btn-primary { background: #1e3a8a; color: #fff; box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3); }
       .sys-modal-btn-primary:hover { background: #1e40af; }
-
-      .sys-modal-btn-outline {
-        background: #fff;
-        border: 1.5px solid #e2e8f0;
-        color: #475569;
-      }
+      .sys-modal-btn-outline { background: #fff; border: 1.5px solid #e2e8f0; color: #475569; }
       .sys-modal-btn-outline:hover { background: #f8fafc; }
-
-      /* Aviso pequeño dentro del modal para casos de advertencia */
       .sys-modal-warning-text {
-        margin-top: 12px;
-        padding: 10px;
-        background: #fffbeb;
-        border: 1px solid #fde68a;
-        border-radius: 8px;
-        color: #92400e;
-        font-size: 13px;
+        margin-top: 12px; padding: 10px; background: #fffbeb;
+        border: 1px solid #fde68a; border-radius: 8px; color: #92400e; font-size: 13px;
       }
     `;
     document.head.appendChild(style);
 
-    // Contenedor vacío para inyectar los modales
     if (!document.getElementById('sys-alertas-container')) {
       var cont = document.createElement('div');
       cont.id = 'sys-alertas-container';
@@ -147,13 +89,6 @@
     }
   }
 
-  /**
-   * Muestra un modal elegante en lugar de usar alert() o confirm().
-   * @param {string} mensaje - Texto principal.
-   * @param {string} tipo - 'info', 'success', 'warning' o 'error'.
-   * @param {boolean} esConfirmacion - Si es true, muestra botones de "Sí/No" y devuelve un Promise<boolean>.
-   * @param {string} [textoAdicional] - Texto opcional debajo del mensaje.
-   */
   window.mostrarAlertaPersonalizada = function (mensaje, tipo, esConfirmacion, textoAdicional) {
     return new Promise(function (resolve) {
       inyectarSistemaDeAlertas();
@@ -162,23 +97,13 @@
       var overlay = document.createElement('div');
       overlay.className = 'sys-modal-overlay';
 
-      var iconos = {
-        info: 'ti-info-circle',
-        success: 'ti-circle-check',
-        warning: 'ti-alert-triangle',
-        error: 'ti-alert-circle'
-      };
-      var titulos = {
-        info: 'Información',
-        success: 'Éxito',
-        warning: 'Advertencia',
-        error: 'Error'
-      };
+      var iconos = { info: 'ti-info-circle', success: 'ti-circle-check', warning: 'ti-alert-triangle', error: 'ti-alert-circle' };
+      var titulos = { info: 'Información', success: 'Éxito', warning: 'Advertencia', error: 'Error' };
 
       var icono = iconos[tipo] || iconos.info;
       var titulo = titulos[tipo] || titulos.info;
 
-      var html = `
+      overlay.innerHTML = `
         <div class="sys-modal-box">
           <div class="sys-modal-header ${tipo}">
             <i class="ti ${icono}"></i>
@@ -191,7 +116,6 @@
           <div class="sys-modal-footer" id="sys-modal-actions"></div>
         </div>
       `;
-      overlay.innerHTML = html;
 
       var actions = overlay.querySelector('#sys-modal-actions');
 
@@ -354,230 +278,114 @@
     style.id = 'perfil-redesign-styles';
     style.textContent = `
       #modalMiPerfil.modal-overlay {
-        align-items: center;
-        justify-content: center;
-        padding: 16px;
+        align-items: center; justify-content: center; padding: 16px;
         background: rgba(15, 23, 42, 0.55);
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
-        opacity: 0;
-        transition: opacity 0.25s ease;
+        backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+        opacity: 0; transition: opacity 0.25s ease;
       }
       #modalMiPerfil.modal-overlay.show { opacity: 1; }
       #modalMiPerfil .modal-box {
-        width: 100%;
-        max-width: 580px;
-        max-height: 92vh;
-        display: flex;
-        flex-direction: column;
-        border-radius: 20px;
-        overflow: hidden;
-        background: #fff;
-        box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.35),
-                    0 0 0 1px rgba(15, 23, 42, 0.04);
-        transform: translateY(24px) scale(0.97);
-        opacity: 0;
-        transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-                    opacity 0.3s ease;
+        width: 100%; max-width: 580px; max-height: 92vh;
+        display: flex; flex-direction: column;
+        border-radius: 20px; overflow: hidden; background: #fff;
+        box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(15, 23, 42, 0.04);
+        transform: translateY(24px) scale(0.97); opacity: 0;
+        transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
       }
-      #modalMiPerfil.modal-overlay.show .modal-box {
-        transform: translateY(0) scale(1);
-        opacity: 1;
-      }
+      #modalMiPerfil.modal-overlay.show .modal-box { transform: translateY(0) scale(1); opacity: 1; }
       #modalMiPerfil .modal-header {
         position: relative;
         background: linear-gradient(135deg, #1a237e 0%, #3949ab 55%, #5c6bc0 100%);
-        color: #fff;
-        padding: 22px 24px;
-        border-bottom: none;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+        color: #fff; padding: 22px 24px; border-bottom: none;
+        display: flex; align-items: center; justify-content: space-between;
       }
       #modalMiPerfil .modal-header::after {
-        content: '';
-        position: absolute;
-        right: -40px; top: -40px;
+        content: ''; position: absolute; right: -40px; top: -40px;
         width: 140px; height: 140px;
         background: radial-gradient(circle, rgba(255,255,255,0.22), transparent 70%);
-        border-radius: 50%;
-        pointer-events: none;
+        border-radius: 50%; pointer-events: none;
       }
       #modalMiPerfil .modal-header h2 {
-        font-size: 1.15rem;
-        font-weight: 700;
-        letter-spacing: 0.2px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin: 0;
-        color: #fff;
+        font-size: 1.15rem; font-weight: 700; letter-spacing: 0.2px;
+        display: flex; align-items: center; gap: 10px; margin: 0; color: #fff;
       }
       #modalMiPerfil .modal-header h2 i { font-size: 1.4rem; }
       #modalMiPerfil .modal-close {
-        position: relative;
-        z-index: 1;
-        background: rgba(255,255,255,0.15);
-        color: #fff;
-        border: none;
-        width: 36px; height: 36px;
-        border-radius: 50%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: background 0.2s ease, transform 0.2s ease;
+        position: relative; z-index: 1; background: rgba(255,255,255,0.15); color: #fff;
+        border: none; width: 36px; height: 36px; border-radius: 50%;
+        display: inline-flex; align-items: center; justify-content: center;
+        cursor: pointer; transition: background 0.2s ease, transform 0.2s ease;
       }
-      #modalMiPerfil .modal-close:hover {
-        background: rgba(255,255,255,0.28);
-        transform: rotate(90deg);
-      }
+      #modalMiPerfil .modal-close:hover { background: rgba(255,255,255,0.28); transform: rotate(90deg); }
       #modalMiPerfil .modal-body {
-        padding: 24px;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
+        padding: 24px; overflow-y: auto; -webkit-overflow-scrolling: touch;
         background: linear-gradient(180deg, #f8fafc 0%, #ffffff 40%);
       }
       #modalMiPerfil .modal-body::-webkit-scrollbar { width: 8px; }
       #modalMiPerfil .modal-body::-webkit-scrollbar-thumb { background: #c7cbe0; border-radius: 8px; }
-      #miPerfil-avatar-wrap {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin-bottom: 22px;
-      }
+      #miPerfil-avatar-wrap { display: flex; flex-direction: column; align-items: center; margin-bottom: 22px; }
       #miPerfil-avatar-container {
-        position: relative;
-        width: 112px;
-        height: 112px;
-        border-radius: 50%;
-        cursor: pointer;
-        background: linear-gradient(135deg, #e8eaf6, #c5cae9);
-        border: 3px solid #fff;
-        box-shadow: 0 8px 22px rgba(26, 35, 126, 0.18),
-                    0 0 0 4px rgba(57, 73, 171, 0.10);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
+        position: relative; width: 112px; height: 112px; border-radius: 50%;
+        cursor: pointer; background: linear-gradient(135deg, #e8eaf6, #c5cae9);
+        border: 3px solid #fff; box-shadow: 0 8px 22px rgba(26, 35, 126, 0.18), 0 0 0 4px rgba(57, 73, 171, 0.10);
+        display: flex; align-items: center; justify-content: center; overflow: hidden;
         transition: transform 0.25s ease, box-shadow 0.25s ease;
       }
       #miPerfil-avatar-container:hover {
         transform: scale(1.04);
-        box-shadow: 0 12px 28px rgba(26, 35, 126, 0.28),
-                    0 0 0 5px rgba(57, 73, 171, 0.18);
+        box-shadow: 0 12px 28px rgba(26, 35, 126, 0.28), 0 0 0 5px rgba(57, 73, 171, 0.18);
       }
       #miPerfil-avatar-container::after {
-        content: '\\F3C5';
-        font-family: 'tabler-icons';
-        position: absolute;
-        right: 2px; bottom: 2px;
-        width: 30px; height: 30px;
-        border-radius: 50%;
-        background: #3949ab;
-        color: #fff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 15px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        pointer-events: none;
+        content: '\\F3C5'; font-family: 'tabler-icons';
+        position: absolute; right: 2px; bottom: 2px; width: 30px; height: 30px;
+        border-radius: 50%; background: #3949ab; color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); pointer-events: none;
       }
-      #miPerfil-avatar-container img {
-        width: 100%; height: 100%;
-        object-fit: cover;
-        border-radius: 50%;
-      }
-      #miPerfil-icono-camara {
-        font-size: 34px;
-        color: #5c6bc0;
-        transition: transform 0.25s ease;
-      }
+      #miPerfil-avatar-container img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+      #miPerfil-icono-camara { font-size: 34px; color: #5c6bc0; transition: transform 0.25s ease; }
       #miPerfil-avatar-container:hover #miPerfil-icono-camara { transform: scale(1.12); }
       #miPerfil-avatar-hint {
-        margin-top: 10px;
-        font-size: 11.5px;
-        color: #64748b;
-        background: #eef2ff;
-        padding: 4px 12px;
-        border-radius: 999px;
-        font-weight: 600;
-        letter-spacing: 0.2px;
+        margin-top: 10px; font-size: 11.5px; color: #64748b; background: #eef2ff;
+        padding: 4px 12px; border-radius: 999px; font-weight: 600; letter-spacing: 0.2px;
       }
       #modalMiPerfil .perfil-section {
-        background: #fff;
-        border: 1px solid #e9edf5;
-        border-radius: 14px;
-        padding: 16px 18px;
-        margin-bottom: 16px;
-        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+        background: #fff; border: 1px solid #e9edf5; border-radius: 14px;
+        padding: 16px 18px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
       }
       #modalMiPerfil .perfil-section-title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 0.78rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.6px;
-        color: #3949ab;
-        margin-bottom: 14px;
+        display: flex; align-items: center; gap: 8px; font-size: 0.78rem;
+        font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
+        color: #3949ab; margin-bottom: 14px;
       }
       #modalMiPerfil .perfil-section-title i { font-size: 1rem; }
       #modalMiPerfil .field { margin-bottom: 14px; }
       #modalMiPerfil .field:last-child { margin-bottom: 0; }
       #modalMiPerfil .field label {
-        display: block;
-        font-size: 11.5px;
-        font-weight: 600;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.4px;
-        margin-bottom: 6px;
+        display: block; font-size: 11.5px; font-weight: 600; color: #64748b;
+        text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px;
       }
       #modalMiPerfil .field input {
-        width: 100%;
-        padding: 11px 14px;
-        border: 1.5px solid #dde3ee;
-        border-radius: 10px;
-        font-size: 14px;
-        color: #1e293b;
-        background: #fbfcfe;
+        width: 100%; padding: 11px 14px; border: 1.5px solid #dde3ee; border-radius: 10px;
+        font-size: 14px; color: #1e293b; background: #fbfcfe; box-sizing: border-box;
         transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-        box-sizing: border-box;
       }
       #modalMiPerfil .field input:focus {
-        outline: none;
-        border-color: #3949ab;
-        background: #fff;
-        box-shadow: 0 0 0 4px rgba(57, 73, 171, 0.12);
+        outline: none; border-color: #3949ab; background: #fff; box-shadow: 0 0 0 4px rgba(57, 73, 171, 0.12);
       }
       #modalMiPerfil .field input:disabled {
-        background: #f1f5f9;
-        color: #64748b;
-        cursor: not-allowed;
-        border-color: #e2e8f0;
+        background: #f1f5f9; color: #64748b; cursor: not-allowed; border-color: #e2e8f0;
       }
       #modalMiPerfil .input-icon-wrap { position: relative; }
       #modalMiPerfil .input-icon-wrap i {
-        position: absolute;
-        left: 13px; top: 50%;
-        transform: translateY(-50%);
-        color: #94a3b8;
-        font-size: 1rem;
-        pointer-events: none;
+        position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+        color: #94a3b8; font-size: 1rem; pointer-events: none;
       }
       #modalMiPerfil .input-icon-wrap input { padding-left: 38px; }
       #modalMiPerfil .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
       #modalMiPerfil .modal-error {
-        background: #fef2f2;
-        color: #b91c1c;
-        border: 1px solid #fecaca;
-        border-radius: 10px;
-        padding: 10px 14px;
-        font-size: 13px;
-        font-weight: 500;
-        margin-top: 4px;
+        background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 10px;
+        padding: 10px 14px; font-size: 13px; font-weight: 500; margin-top: 4px;
         animation: shakeError 0.35s ease;
       }
       @keyframes shakeError {
@@ -586,56 +394,34 @@
         75% { transform: translateX(5px); }
       }
       #modalMiPerfil .modal-footer {
-        display: flex;
-        gap: 10px;
-        justify-content: flex-end;
-        padding: 16px 22px;
-        background: #f8fafc;
-        border-top: 1px solid #e9edf5;
+        display: flex; gap: 10px; justify-content: flex-end;
+        padding: 16px 22px; background: #f8fafc; border-top: 1px solid #e9edf5;
       }
       #modalMiPerfil .modal-footer .btn {
-        border-radius: 10px;
-        font-weight: 600;
-        padding: 11px 22px;
-        font-size: 14px;
+        border-radius: 10px; font-weight: 600; padding: 11px 22px; font-size: 14px;
         transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
       }
       #modalMiPerfil .modal-footer .btn:active { transform: scale(0.97); }
       #modalMiPerfil .modal-footer .btn-primary {
-        background: linear-gradient(135deg, #3949ab, #1a237e);
-        border: none;
+        background: linear-gradient(135deg, #3949ab, #1a237e); border: none;
         box-shadow: 0 6px 16px -4px rgba(57, 73, 171, 0.5);
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
+        display: inline-flex; align-items: center; gap: 8px;
       }
       #modalMiPerfil .modal-footer .btn-primary:hover {
-        box-shadow: 0 10px 22px -4px rgba(57, 73, 171, 0.6);
-        transform: translateY(-1px);
+        box-shadow: 0 10px 22px -4px rgba(57, 73, 171, 0.6); transform: translateY(-1px);
       }
       #modalMiPerfil .modal-footer .btn-primary:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        transform: none;
-        box-shadow: none;
+        opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none;
       }
       #modalMiPerfil .modal-footer .btn-outline {
-        background: #fff;
-        border: 1.5px solid #dde3ee;
-        color: #475569;
+        background: #fff; border: 1.5px solid #dde3ee; color: #475569;
       }
-      #modalMiPerfil .modal-footer .btn-outline:hover {
-        background: #f1f5f9;
-        border-color: #cbd5e1;
-      }
+      #modalMiPerfil .modal-footer .btn-outline:hover { background: #f1f5f9; border-color: #cbd5e1; }
       @media (max-width: 600px) {
         #modalMiPerfil.modal-overlay { padding: 0; align-items: flex-end; }
         #modalMiPerfil .modal-box {
-          max-width: 100%;
-          width: 100%;
-          max-height: 94vh;
-          border-radius: 22px 22px 0 0;
-          transform: translateY(100%);
+          max-width: 100%; width: 100%; max-height: 94vh;
+          border-radius: 22px 22px 0 0; transform: translateY(100%);
         }
         #modalMiPerfil.modal-overlay.show .modal-box { transform: translateY(0); }
         #modalMiPerfil .modal-header { padding: 18px 20px; border-radius: 22px 22px 0 0; }
@@ -650,8 +436,7 @@
       }
       @media (prefers-reduced-motion: reduce) {
         #modalMiPerfil *, #modalMiPerfil *::before, #modalMiPerfil *::after {
-          animation-duration: 0.001ms !important;
-          transition-duration: 0.001ms !important;
+          animation-duration: 0.001ms !important; transition-duration: 0.001ms !important;
         }
       }
     `;
