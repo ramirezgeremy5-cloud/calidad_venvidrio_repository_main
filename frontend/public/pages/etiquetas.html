@@ -10,8 +10,9 @@
   <link rel="stylesheet" href="../assets/css/etiquetas.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
   
-  <!-- Librería para generar el código de barras -->
+  <!-- Librerías -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 <body>
 
@@ -80,22 +81,39 @@
       <div class="card-body">
         <div class="etq-info">
           <i class="ti ti-info-circle"></i>
-          <span>Ingrese el código de lote generado en el módulo de Producción para cargar los datos y previsualizar la etiqueta.</span>
+          <span>Ingrese el código de lote o ticket, o escanee el código de barras para cargar los datos.</span>
         </div>
 
         <div class="field">
-          <label for="buscar-lote">Código de Lote *</label>
+          <label for="buscar-lote">Código de Lote o Ticket *</label>
           <div class="select-with-button">
-            <input type="text" id="buscar-lote" placeholder="Ej: 20260810A1" style="font-family:monospace; text-transform:uppercase;">
+            <input type="text" id="buscar-lote" placeholder="Ej: 20260810A1 o 05-003104461" style="font-family:monospace; text-transform:uppercase;">
             <button type="button" class="btn btn-primary" id="btn-buscar-lote">
               <i class="ti ti-search"></i> Cargar
             </button>
           </div>
-          <small class="field-hint">Ingrese el código y presione Enter o "Cargar"</small>
+          <small class="field-hint">Presione Enter o haga clic en Cargar</small>
+        </div>
+
+        <!-- BOTÓN DE ESCANEO -->
+        <button type="button" class="btn btn-outline" id="btn-escanear-etiqueta" style="width: 100%; margin-top: 10px;">
+          <i class="ti ti-scan"></i> Escanear Código de Barras
+        </button>
+
+        <!-- CONTENEDOR DE LA CÁMARA (Oculto) -->
+        <div id="reader-container-etiqueta" style="display: none; margin-top: 15px; padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <div id="reader-etiqueta" style="width: 100%; border-radius: 8px; overflow: hidden;"></div>
+          <button type="button" class="btn btn-outline" id="btn-cerrar-camara-etiqueta" style="width: 100%; margin-top: 10px; color: #ef4444; border-color: #fecaca;">
+            <i class="ti ti-x"></i> Cancelar Escaneo
+          </button>
         </div>
         
-        <div id="error-lote" style="display:none;">
+        <div id="error-lote" style="display:none; margin-top: 15px; padding: 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; color: #b91c1c; font-size: 13px; font-weight: 600;">
           <i class="ti ti-alert-circle"></i> Lote no encontrado.
+        </div>
+        
+        <div id="success-lote" style="display:none; margin-top: 15px; padding: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; color: #15803d; font-size: 13px; font-weight: 600;">
+          <i class="ti ti-circle-check"></i> Lote cargado correctamente.
         </div>
       </div>
     </div>
@@ -107,8 +125,8 @@
           <i class="ti ti-printer"></i> Vista Previa de Impresión
         </div>
         <div id="btn-actions" style="opacity:0; pointer-events:none;">
-          <button class="btn btn-outline btn-sm" id="btn-imprimir">
-            <i class="ti ti-printer"></i> Imprimir
+          <button class="btn btn-primary btn-sm" id="btn-imprimir">
+            <i class="ti ti-printer"></i> Imprimir y Marcar
           </button>
         </div>
       </div>
@@ -231,8 +249,10 @@
 </main>
 
 <!-- ================= SCRIPTS ================= -->
+<!-- Importante: El orden de los scripts es crucial -->
 <script src="../assets/js/shared.js"></script>
 <script src="../assets/js/login_app.js"></script>
+<script src="../assets/js/escaner.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="../assets/js/etiquetas.js"></script>
 

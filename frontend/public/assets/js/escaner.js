@@ -1,6 +1,6 @@
 /* ==========================================
    ESCANER.JS - Módulo de Escaneo QR/Código de Barras
-   (Reutilizable para Producción, Defectos, etc.)
+   (Reutilizable para Producción, Defectos, Etiquetas, etc.)
    ========================================== */
 
 const EscanerApp = (function() {
@@ -12,23 +12,33 @@ const EscanerApp = (function() {
 
   /**
    * Inicializa el escáner en los elementos del DOM indicados.
-   * @param {string} containerId - ID del div que contiene la cámara (ej. "reader-container-global").
-   * @param {string} btnId - ID del botón que abre la cámara (ej. "btn-escanear-global").
-   * @param {string} btnCerrarId - ID del botón para cerrar la cámara (ej. "btn-cerrar-camara-global").
-   * @param {string} readerDivId - ID del div interno donde se renderiza el video (ej. "reader-global").
+   * @param {string} containerId - ID del div que contiene la cámara (ej. "reader-container-etiqueta").
+   * @param {string} btnId - ID del botón que abre la cámara (ej. "btn-escanear-etiqueta").
+   * @param {string} btnCerrarId - ID del botón para cerrar la cámara (ej. "btn-cerrar-camara-etiqueta").
+   * @param {string} readerDivId - ID del div interno donde se renderiza el video (ej. "reader-etiqueta").
    */
-  function init(containerId, btnId, btnCerrarId, readerDivId = "reader-global") {
+  function init(containerId, btnId, btnCerrarId, readerDivId) {
     uiContainer = document.getElementById(containerId);
     btnEscanear = document.getElementById(btnId);
     btnCerrar = document.getElementById(btnCerrarId);
 
-    if (!btnEscanear || !uiContainer) return;
+    // Validación por si falta algún elemento en el DOM
+    if (!uiContainer || !btnEscanear) {
+      console.warn("EscanerApp: No se encontraron los elementos necesarios en el DOM para inicializar la cámara.");
+      return;
+    }
+
+    // Verificamos que se haya proporcionado el ID del div de lectura
+    if (!readerDivId) {
+      console.warn("EscanerApp: Debes proporcionar el ID del div donde se renderizará el video.");
+      return;
+    }
 
     btnEscanear.addEventListener('click', () => {
       uiContainer.style.display = 'block';
       btnEscanear.style.display = 'none';
 
-      // Usamos el ID dinámico para crear la instancia de la cámara
+      // Creamos la instancia de la cámara usando el ID dinámico
       html5QrCode = new Html5Qrcode(readerDivId);
       
       const config = { 
@@ -45,11 +55,11 @@ const EscanerApp = (function() {
         { facingMode: "environment" }, 
         config,
         (decodedText) => {
+          // Al leer con éxito, detenemos la cámara y ejecutamos el callback
           html5QrCode.stop().then(() => {
             uiContainer.style.display = 'none';
             btnEscanear.style.display = 'flex';
             
-            // Si hay una función de callback registrada, la ejecutamos
             if (callbackExito) callbackExito(decodedText);
           }).catch(err => console.error("Error al detener cámara:", err));
         },
@@ -62,13 +72,14 @@ const EscanerApp = (function() {
       });
     });
 
+    // Lógica del botón de cerrar
     if (btnCerrar) {
       btnCerrar.addEventListener('click', () => {
         if (html5QrCode) {
           html5QrCode.stop().then(() => {
             uiContainer.style.display = 'none';
             btnEscanear.style.display = 'flex';
-          });
+          }).catch(err => console.error("Error al cerrar cámara:", err));
         }
       });
     }

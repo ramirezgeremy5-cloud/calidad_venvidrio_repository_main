@@ -1,6 +1,6 @@
 /* =============================================
    Venvidrio — Etiquetas y Trazabilidad
-   etiquetas.css — Diseño unificado y previsualización exacta
+   etiquetas.css — v7 (Soporte para escáner y cámara)
    ============================================= */
 
 /* ================= VARIABLES LOCALES ================= */
@@ -263,7 +263,35 @@ body {
   box-shadow: none;
 }
 
-/* ================= ERROR ================= */
+/* ================= BOTÓN DE ESCANEAR ================= */
+#btn-escanear-etiqueta {
+  background: #fff;
+  color: var(--brand-2);
+  border: 1.5px solid var(--brand-line);
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+#btn-escanear-etiqueta:hover {
+  background: var(--brand-soft);
+  border-color: var(--brand-3);
+  transform: translateY(-1px);
+}
+
+#btn-escanear-etiqueta:active {
+  transform: scale(0.98);
+}
+
+/* ================= ERROR Y ÉXITO ================= */
 #error-lote {
   display: flex;
   align-items: center;
@@ -277,6 +305,20 @@ body {
   font-weight: 600;
   margin-top: 0.5rem;
   animation: shakeError 0.35s ease;
+}
+
+#success-lote {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 10px 13px;
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-top: 0.5rem;
 }
 
 @keyframes shakeError {
@@ -306,7 +348,6 @@ body {
   min-height: 500px;
   padding: 20px;
   border-radius: 10px;
-  /* AQUÍ ESTÁ EL BORDE NEGRO */
   border: 2px solid #000; 
   box-shadow:
     0 18px 40px -16px rgba(15, 23, 42, 0.35),
@@ -533,12 +574,6 @@ body {
     gap: 8px;
   }
 }
-
-/* 
-  NOTA: La impresión se maneja desde JS (html2canvas).
-  El borde negro ya está aplicado a .ticket-preview, por lo que 
-  html2canvas capturará la imagen con el marco incluido.
-*/
 
 /* ================= ACCESIBILIDAD ================= */
 @media (prefers-reduced-motion: reduce) {

@@ -1,39 +1,42 @@
 /* ==========================================
    VENVIDRIO - ETIQUETAS Y TRAZABILIDAD
-   etiquetas.js — v6 (Conexión Real + Sin Simulación)
+   etiquetas.js — v7 (Conexión Real + Escáner Global + Marcado de Impresión)
    ========================================== */
 
 document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
 
-  // Detectar la URL de la API correctamente (igual que en produccion.js)
   const hostname = window.location.hostname;
-  let API_URL;
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    API_URL = 'http://127.0.0.1:8000';
-  } else {
-    API_URL = 'https://calidad-venvidrio-repository-main.onrender.com';
-  }
+  let API_URL = (hostname === 'localhost' || hostname === '127.0.0.1')
+    ? 'http://127.0.0.1:8000'
+    : 'https://calidad-venvidrio-repository-main.onrender.com';
 
   // Referencias al DOM
-  var btnBuscar     = document.getElementById('btn-buscar-lote');
-  var inputLote     = document.getElementById('buscar-lote');
-  var btnImprimir   = document.getElementById('btn-imprimir');
-  var btnActions    = document.getElementById('btn-actions');
-  var errorMsg      = document.getElementById('error-lote');
-  var ticketEmpty   = document.getElementById('ticket-empty');
-  var ticketContent = document.getElementById('ticket-content');
-  var ticketPreview = document.getElementById('ticket-preview');
-  var barcodeSvg    = document.getElementById('barcode');
+  const btnBuscar     = document.getElementById('btn-buscar-lote');
+  const inputLote     = document.getElementById('buscar-lote');
+  const btnImprimir   = document.getElementById('btn-imprimir');
+  const btnActions    = document.getElementById('btn-actions');
+  const errorMsg      = document.getElementById('error-lote');
+  const ticketEmpty   = document.getElementById('ticket-empty');
+  const ticketContent = document.getElementById('ticket-content');
+  const ticketPreview = document.getElementById('ticket-preview');
+  const barcodeSvg    = document.getElementById('barcode');
 
-  // Bandera anti doble clic
-  var cargando = false;
+  // Referencias al escáner
+  const btnEscanear   = document.getElementById('btn-escanear-etiqueta');
+  const readerContainer = document.getElementById('reader-container-etiqueta');
+  const readerDiv     = document.getElementById('reader-etiqueta');
+  const btnCerrarCamara = document.getElementById('btn-cerrar-camara-etiqueta');
+
+  let cargando = false;
+  let loteActual = null; // Guardamos el lote cargado para actualizar su estatus
 
   // =========================
   // UTILIDADES
   // =========================
 
   if (!document.getElementById('spin-keyframes')) {
-    var st = document.createElement('style');
+    const st = document.createElement('style');
     st.id = 'spin-keyframes';
     st.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
     document.head.appendChild(st);
@@ -41,8 +44,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function formatearFecha(fechaStr) {
     if (!fechaStr) return '--/--/----';
-    var soloFecha = fechaStr.split('T')[0];
-    var partes = soloFecha.split('-');
+    const soloFecha = fechaStr.split('T')[0];
+    const partes = soloFecha.split('-');
     if (partes.length === 3) {
       return partes[2] + '/' + partes[1] + '/' + partes[0];
     }
@@ -64,17 +67,15 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!btnBuscar) return;
     if (loading) {
       btnBuscar.disabled = true;
-      btnBuscar.setAttribute('aria-busy', 'true');
       btnBuscar.innerHTML = '<i class="ti ti-loader-2" style="display:inline-block;animation:spin 1s linear infinite;"></i> Cargando...';
     } else {
       btnBuscar.disabled = false;
-      btnBuscar.removeAttribute('aria-busy');
       btnBuscar.innerHTML = '<i class="ti ti-search"></i> Cargar';
     }
   }
 
   // =========================
-  // MOSTRAR / OCULTAR ERROR
+  // MOSTRAR / OCULTAR MENSAJES
   // =========================
   function mostrarError(mensaje) {
     if (!mensaje) mensaje = "Lote no encontrado.";
@@ -82,20 +83,11 @@ document.addEventListener('DOMContentLoaded', function () {
       errorMsg.innerHTML = '<i class="ti ti-alert-circle"></i> ' + mensaje;
       setVisible(errorMsg, true);
     }
-
     setVisible(ticketEmpty, true, 'flex');
     setVisible(ticketContent, false);
     limpiarBarcode();
-
-    if (btnActions) {
-      btnActions.style.opacity = '0';
-      btnActions.style.pointerEvents = 'none';
-    }
-
-    if (inputLote) {
-      inputLote.focus();
-      inputLote.select();
-    }
+    if (btnActions) { btnActions.style.opacity = '0'; btnActions.style.pointerEvents = 'none'; }
+    if (inputLote) { inputLote.focus(); inputLote.select(); }
   }
 
   function ocultarError() {
@@ -107,12 +99,13 @@ document.addEventListener('DOMContentLoaded', function () {
   // =========================
   function llenarEtiqueta(data) {
     ocultarError();
+    loteActual = data; // Guardamos los datos del lote
 
     setVisible(ticketEmpty, false);
     setVisible(ticketContent, true, 'flex');
 
     function setVal(id, val, defaultVal) {
-      var el = document.getElementById(id);
+      const el = document.getElementById(id);
       if (el) el.textContent = (val !== null && val !== undefined && val !== '') ? val : defaultVal;
     }
 
@@ -129,7 +122,7 @@ document.addEventListener('DOMContentLoaded', function () {
     setVal('tk-acabado',  data.acabado, '---');
     setVal('tk-item',     data.item, '---');
 
-    var bppText = data.bpp;
+    let bppText = data.bpp;
     if (typeof bppText === 'number') {
       bppText = bppText.toLocaleString('es-VE');
     }
@@ -139,7 +132,7 @@ document.addEventListener('DOMContentLoaded', function () {
     setVal('tk-lote',  data.codigo_lote, '---');
 
     // Código de barras
-    var barcodeText = data.ticket_carga || data.ticket || data.codigo_lote;
+    const barcodeText = data.ticket_carga || data.ticket || data.codigo_lote;
     setVal('tk-barcode-text', barcodeText, '---');
 
     limpiarBarcode();
@@ -169,13 +162,13 @@ document.addEventListener('DOMContentLoaded', function () {
   // =========================
   // CARGAR LOTE (CONEXIÓN REAL)
   // =========================
-  function cargarLote() {
+  function cargarLote(codigoBusqueda) {
     if (cargando) return;
 
-    var lote = inputLote ? inputLote.value.trim().toUpperCase() : '';
+    const lote = codigoBusqueda || (inputLote ? inputLote.value.trim().toUpperCase() : '');
 
     if (!lote) {
-      mostrarError('Por favor, ingrese un código de lote.');
+      mostrarError('Por favor, ingrese un código de lote o ticket.');
       return;
     }
 
@@ -183,16 +176,8 @@ document.addEventListener('DOMContentLoaded', function () {
     ocultarError();
     setLoadingBtn(true);
 
-    var token = localStorage.getItem('token');
-
-    // Hacemos la petición al endpoint de etiquetas
-    fetch(API_URL + '/produccion/lote/' + lote, {
-      method: 'GET',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json'
-      }
-    })
+    // Usamos el endpoint público que busca por código de lote o ticket
+    fetch(`${API_URL}/produccion/publico/${encodeURIComponent(lote)}`)
     .then(function (res) {
       if (!res.ok) {
         if (res.status === 404) throw new Error('El lote no existe en la base de datos. Verifique el código.');
@@ -208,7 +193,6 @@ document.addEventListener('DOMContentLoaded', function () {
       llenarEtiqueta(loteData);
     })
     .catch(function (error) {
-      // SI HAY ERROR, MOSTRAMOS EL MENSAJE REAL (Ya no hay simulación falsa)
       console.error('Error cargando lote:', error.message);
       mostrarError(error.message);
     })
@@ -219,7 +203,32 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // =========================
-  // IMPRIMIR COMO IMAGEN EXACTA
+  // ESCÁNER (CONEXIÓN CON EL MÓDULO GLOBAL)
+  // =========================
+  function initEscanerEtiquetas() {
+    // Verificamos si el objeto EscanerApp existe (definido en escaner.js)
+    if (typeof EscanerApp === 'undefined') {
+      console.warn('La librería EscanerApp no está cargada. El botón de escanear no funcionará.');
+      return;
+    }
+
+    // Inicializamos el escáner pasando los IDs de los elementos en etiquetas.html
+    EscanerApp.init(
+      'reader-container-etiqueta', 
+      'btn-escanear-etiqueta', 
+      'btn-cerrar-camara-etiqueta', 
+      'reader-etiqueta'
+    );
+
+    // Cuando el escáner detecte un código, ejecutamos esta función
+    EscanerApp.onScanSuccess(async (codigoEscaneado) => {
+      if (inputLote) inputLote.value = codigoEscaneado;
+      cargarLote(codigoEscaneado); // Cargamos el lote automáticamente
+    });
+  }
+
+  // =========================
+  // IMPRIMIR COMO IMAGEN EXACTA Y MARCAR LOTE
   // =========================
   function imprimirEtiquetaComoImagen() {
     if (!ticketPreview || !ticketContent || ticketContent.style.display === 'none') {
@@ -227,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
 
-    var textoOriginal = btnImprimir.innerHTML;
+    const textoOriginal = btnImprimir.innerHTML;
     btnImprimir.disabled = true;
     btnImprimir.innerHTML = '<i class="ti ti-loader-2" style="display:inline-block;animation:spin 1s linear infinite;"></i> Preparando...';
 
@@ -237,16 +246,16 @@ document.addEventListener('DOMContentLoaded', function () {
       backgroundColor: '#ffffff',
       logging: false
     }).then(function (canvas) {
-      var imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/png');
 
-      var iframe = document.createElement('iframe');
+      const iframe = document.createElement('iframe');
       iframe.style.position = 'absolute';
       iframe.style.width = '0px';
       iframe.style.height = '0px';
       iframe.style.border = 'none';
       document.body.appendChild(iframe);
 
-      var doc = iframe.contentWindow.document;
+      const doc = iframe.contentWindow.document;
       doc.open();
       
       doc.write(`
@@ -286,6 +295,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
       btnImprimir.innerHTML = textoOriginal;
       btnImprimir.disabled = false;
+
+      // ==========================================
+      // ACTUALIZAR ESTATUS DEL LOTE (Marcar como Impreso/Apto)
+      // ==========================================
+      if (loteActual && loteActual.id) {
+        marcarLoteComoImpreso(loteActual.id);
+      }
       
     }).catch(function (err) {
       console.error('Error al generar la imagen de la etiqueta:', err);
@@ -295,13 +311,35 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  // Función para enviar la actualización al backend
+  function marcarLoteComoImpreso(id) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // Cambiamos el estatus a "200" (Apto) o al que definas para "Impreso"
+    fetch(`${API_URL}/produccion/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ estatus: "200" })
+    })
+    .then(res => {
+      if (res.ok) {
+        console.log(`✅ Lote ${id} marcado como IMPRESO (Estatus 200).`);
+      } else {
+        console.warn("No se pudo actualizar el estatus del lote.");
+      }
+    })
+    .catch(err => console.error("Error actualizando estatus:", err));
+  }
+
   // =========================
   // EVENTOS
   // =========================
-  if (btnBuscar) {
-    btnBuscar.addEventListener('click', cargarLote);
-  }
-
+  if (btnBuscar) btnBuscar.addEventListener('click', () => cargarLote());
+  
   if (inputLote) {
     inputLote.addEventListener('keypress', function (e) {
       if (e.key === 'Enter') {
@@ -311,8 +349,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  if (btnImprimir) {
-    btnImprimir.addEventListener('click', imprimirEtiquetaComoImagen);
-  }
+  if (btnImprimir) btnImprimir.addEventListener('click', imprimirEtiquetaComoImagen);
 
+  // Inicializamos el escáner
+  initEscanerEtiquetas();
 });
