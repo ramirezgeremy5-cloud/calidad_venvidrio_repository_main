@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
+from sqlalchemy.orm import configure_mappers
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
 import os
@@ -179,11 +180,15 @@ app.add_middleware(
 # =========================
 
 try:
+    # 👇 FORZAMOS A SQLALCHEMY A MAPEAR TODOS LOS MODELOS ANTES DE CREAR TABLAS
+    configure_mappers()
+    print("✅ Mapeo de modelos verificado correctamente.")
+    
     Base.metadata.create_all(bind=engine)
     print("✅ Tablas creadas/verificadas exitosamente.")
 except Exception as e:
-    print(f"⚠️ Advertencia al crear tablas (puede ser normal si ya existen): {e}")
-    print("⚠️ Si el error es de tipo de dato (ej. turno String vs Integer), deberás borrar la tabla y reiniciar.")
+    print(f"⚠️ Error al configurar mappers o crear tablas: {e}")
+    print("⚠️ Si el error es de relación, revisa que los modelos tengan los back_populates correctos.")
 
 
 # =========================
