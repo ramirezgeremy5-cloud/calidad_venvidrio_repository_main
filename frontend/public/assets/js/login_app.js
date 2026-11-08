@@ -1,7 +1,7 @@
 /* =============================================
    Venvidrio — Sistema de Control de Calidad
    login_app.js (Login + Alertas Elegantes + Sesión 1h)
-   v6 — Verificado
+   v7 — Reloj liberado + Kick exacto a los 60 min
    ============================================= */
 
 (function () {
@@ -15,12 +15,14 @@
     ? 'http://127.0.0.1:8000'
     : 'https://calidad-venvidrio-repository-main.onrender.com';
 
-  // 👇 SESIÓN: 1 HORA DE INACTIVIDAD
+  // 👇 SESIÓN: 1 HORA DE INACTIVIDAD EXACTA
   var TIEMPO_ALERTA_MS       = 55 * 60 * 1000; // Avisar a los 55 min
-  var TIEMPO_INACTIVIDAD_MS  = 60 * 60 * 1000; // Cerrar a los 60 min
-  var INTERVALO_HEARTBEAT_MS = 60000;
+  var TIEMPO_INACTIVIDAD_MS  = 60 * 60 * 1000; // Cerrar a los 60 min (1 hora)
+  var INTERVALO_HEARTBEAT_MS = 60000;          // Verificar servidor cada 1 min
+  var INTERVALO_CHEQUEO_MS   = 5000;           // 👈 Revisar inactividad cada 5 seg (kick exacto)
 
   var heartbeatInterval = null;
+  var inactivityInterval = null;
   var alertaMostrada = false;
 
   // =========================
@@ -636,7 +638,6 @@
             actualizarNavbar();
             cerrar();
 
-            // Toast de éxito elegante
             window.mostrarAlertaPersonalizada('Perfil actualizado correctamente.', 'success');
           } else {
             var errorData = await res.json().catch(() => ({}));
@@ -800,6 +801,7 @@
       .then(function (response) {
         if (response.status === 401) {
           clearInterval(heartbeatInterval);
+          clearInterval(inactivityInterval);
           localStorage.clear();
           window.mostrarAlertaPersonalizada('Tu sesión ha finalizado (expirada).', 'warning').then(function() {
             window.location.href = '../public/login.html';
@@ -828,6 +830,7 @@
 
   function cerrarSesionPorInactividad() {
     clearInterval(heartbeatInterval);
+    clearInterval(inactivityInterval);
     localStorage.clear();
     window.mostrarAlertaPersonalizada('Tu sesión ha expirado por inactividad. Por favor, inicia sesión de nuevo.', 'error').then(function() {
       window.location.href = '../public/login.html';
@@ -861,7 +864,9 @@
         localStorage.setItem('lastActivity', Date.now());
       }
 
-      setInterval(function () {
+      // 👇 El chequeo ahora es cada 5 segundos (antes era cada 60s)
+      if (inactivityInterval) clearInterval(inactivityInterval);
+      inactivityInterval = setInterval(function () {
         var lastActivity = parseInt(localStorage.getItem('lastActivity') || '0', 10);
         var inactividad = Date.now() - lastActivity;
 
@@ -869,7 +874,7 @@
           if (!alertaMostrada) { mostrarAlertaInactividad(); alertaMostrada = true; }
         }
         if (inactividad >= TIEMPO_INACTIVIDAD_MS) { cerrarSesionPorInactividad(); }
-      }, 60000);
+      }, INTERVALO_CHEQUEO_MS); // 👈 Revisa cada 5 seg
 
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () {
