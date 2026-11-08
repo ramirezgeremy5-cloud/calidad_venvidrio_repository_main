@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - DASHBOARD
-   JS v9 - Lógica anti-fantasmas + Normalización de gráficas
+   JS v10 - Fix reloj + Lógica anti-fantasmas + Normalización
    ========================================== */
 
 // Detectar dinámicamente la URL del servidor
@@ -17,10 +17,11 @@ let aptoChart = null;
 let lineasChart = null;
 let eficienciaChart = null;
 let intervaloCarga = null;
+let intervaloCargaFallback = null;
 let datosDashboard = null;
 let periodoActual = 7;
 let filtroGrafico = 'ambos';
-let filtroPlanta = ''; 
+let filtroPlanta = '';
 let abortController = null;
 
 // Colores de clasificación
@@ -93,7 +94,7 @@ function filtrarPorDias(lista, campoFecha) {
   });
 }
 
-// 🔧 NORMALIZADOR DE CLASIFICACIÓN (Soluciona el gráfico en 0%)
+// 🔧 NORMALIZADOR DE CLASIFICACIÓN
 function normalizarClase(claseStr) {
   if (!claseStr) return 'Menor';
   const c = String(claseStr).toLowerCase().trim();
@@ -101,7 +102,42 @@ function normalizarClase(claseStr) {
   if (c.includes('b+') || c.includes('b +')) return 'Mayor B+';
   if (c.includes('b-') || c.includes('b -')) return 'Mayor B-';
   if (c.includes('menor')) return 'Menor';
-  return 'Menor'; // Fallback
+  return 'Menor';
+}
+
+/* ==========================================
+   RELOJ (FALLBACK LOCAL)
+   Por si shared.js falla o no se ejecuta.
+========================================== */
+function iniciarRelojFallback() {
+  const reloj = document.getElementById('reloj-real');
+  if (!reloj) {
+    // Si aún no existe el elemento, reintentar en 200ms
+    setTimeout(iniciarRelojFallback, 200);
+    return;
+  }
+
+  // Si ya hay un intervalo corriendo, no duplicar
+  if (intervaloCargaFallback) clearInterval(intervaloCargaFallback);
+
+  const actualizar = () => {
+    try {
+      const ahora = new Date();
+      const fecha = ahora.toLocaleDateString('es-VE', {
+        weekday: 'long', day: 'numeric', month: 'short'
+      });
+      const hora = ahora.toLocaleTimeString('es-VE', {
+        hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+      reloj.textContent = fecha.charAt(0).toUpperCase() + fecha.slice(1) + ' | ' + hora;
+    } catch (e) {
+      // Silencioso
+    }
+  };
+
+  actualizar();
+  intervaloCargaFallback = setInterval(actualizar, 1000);
+  logSuccess('Reloj (fallback) iniciado');
 }
 
 /* ==========================================
@@ -124,7 +160,7 @@ function renderError(contenedorId, mensaje, callbackReintentar) {
 }
 
 /* ==========================================
-   CARGA PRINCIPAL DE DATOS (CON FILTRO DE PLANTA)
+   CARGA PRINCIPAL DE DATOS
 ========================================== */
 async function cargarDashboard(isBackground = false) {
   if (abortController) abortController.abort();
@@ -144,7 +180,7 @@ async function cargarDashboard(isBackground = false) {
 
     let urlLotes = `${API_URL}/produccion?limit=2000`;
     let urlDefectos = `${API_URL}/defectos?limit=2000`;
-    
+
     if (filtroPlanta) {
       urlLotes += `&planta=${encodeURIComponent(filtroPlanta)}`;
       urlDefectos += `&planta=${encodeURIComponent(filtroPlanta)}`;
@@ -184,8 +220,7 @@ async function cargarDashboard(isBackground = false) {
     renderTopTiposDefecto(defectosFiltrados);
     renderChartEficiencia(lotes, defectosFiltrados);
     renderTopClientesRetencion(lotes);
-    // 🔧 PASAMOS LOS DEFECTOS AQUÍ PARA VALIDAR LOS FANTASMAS
-    renderAuditoriasPendientes(lotes, defectosFiltrados); 
+    renderAuditoriasPendientes(lotes, defectosFiltrados);
     renderAlertas(lotes, defectosFiltrados);
     renderTablaUltimosRegistros(lotes);
 
@@ -194,11 +229,11 @@ async function cargarDashboard(isBackground = false) {
   } catch (error) {
     if (error.name === 'AbortError') return;
     logError('Error cargando dashboard:', error);
-    
+
     ['top-productos', 'top-tipos-defecto', 'top-clientes-retencion', 'auditorias-pendientes', 'dashboard-alerts', 'dashboard-table'].forEach(id => {
       renderError(id, 'No se pudieron cargar los datos', () => cargarDashboard());
     });
-    
+
     mostrarErrorKPI();
   } finally {
     document.getElementById('btn-refresh')?.classList.remove('loading');
@@ -222,7 +257,7 @@ function renderKPIs(lotes, defectos) {
   const totalUnidades = lotesFiltrados.reduce((a, l) => a + (l.cantidad || 0), 0);
   const totalLotes = lotesFiltrados.length;
   const totalDefectos = defectosFiltrados.length;
-  
+
   const pendientes = lotesFiltrados.filter(l => String(l.estatus || '100') === '100').length;
 
   const retenidos = lotesFiltrados.filter(l => String(l.estatus) === '300');
@@ -246,9 +281,8 @@ function renderKPIs(lotes, defectos) {
 }
 
 /* ==========================================
-   GRÁFICAS INTERACTIVAS
+   GRÁFICA: PRODUCCIÓN
 ========================================== */
-
 function renderChartProduccion(lotes) {
   const canvas = document.getElementById('productionChart');
   if (!canvas) return;
@@ -311,7 +345,7 @@ function renderChartProduccion(lotes) {
       },
       plugins: {
         legend: { position: 'top', labels: { usePointStyle: true, padding: 20, font: { size: 12, weight: '500' } } },
-        tooltip: { 
+        tooltip: {
           backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1a237e', bodyColor: '#333', borderColor: '#e0e0e0', borderWidth: 1, cornerRadius: 8, padding: 12,
           callbacks: { afterBody: () => 'Haz clic para ver detalle' }
         }
@@ -325,6 +359,9 @@ function renderChartProduccion(lotes) {
   });
 }
 
+/* ==========================================
+   GRÁFICA: DEFECTOS POR CLASIFICACIÓN
+========================================== */
 function renderChartDefectos(defectos) {
   const canvas = document.getElementById('defectosChart');
   if (!canvas) return;
@@ -362,8 +399,7 @@ function renderChartDefectos(defectos) {
       },
       plugins: {
         legend: {
-          position: 'bottom',
-          align: 'center',
+          position: 'bottom', align: 'center',
           labels: {
             usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 8, font: { size: 10, weight: '500' },
             generateLabels: function (chart) {
@@ -378,7 +414,7 @@ function renderChartDefectos(defectos) {
         },
         tooltip: {
           backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1a237e', bodyColor: '#333', borderColor: '#e0e0e0', borderWidth: 1, cornerRadius: 8, padding: 12,
-          callbacks: { 
+          callbacks: {
             label: ctx => {
               const v = ctx.raw || 0;
               const pct = total > 0 ? Math.round((v / total) * 100) : 0;
@@ -396,6 +432,9 @@ function renderChartDefectos(defectos) {
   if (centerVal) centerVal.textContent = fmtNum(total);
 }
 
+/* ==========================================
+   GRÁFICA: APTO vs RETENIDO
+========================================== */
 function renderChartApto(lotes) {
   const canvas = document.getElementById('aptoChart');
   if (!canvas) return;
@@ -425,8 +464,7 @@ function renderChartApto(lotes) {
       },
       plugins: {
         legend: {
-          position: 'bottom',
-          align: 'center',
+          position: 'bottom', align: 'center',
           labels: {
             usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 8, font: { size: 10, weight: '500' },
             generateLabels: function (chart) {
@@ -441,7 +479,7 @@ function renderChartApto(lotes) {
         },
         tooltip: {
           backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1a237e', bodyColor: '#333', borderColor: '#e0e0e0', borderWidth: 1, cornerRadius: 8, padding: 12,
-          callbacks: { 
+          callbacks: {
             label: ctx => {
               const v = ctx.raw || 0;
               const pct = total > 0 ? Math.round((v / total) * 100) : 0;
@@ -458,13 +496,16 @@ function renderChartApto(lotes) {
   if (centerVal) centerVal.textContent = fmtNum(total);
 }
 
+/* ==========================================
+   GRÁFICA: PRODUCCIÓN POR LÍNEA
+========================================== */
 function renderChartLineas(lotes) {
   const canvas = document.getElementById('lineasChart');
   if (!canvas) return;
 
   const lotesFiltrados = filtrarPorDias(lotes, 'fecha_produccion');
   const porLinea = {};
-  
+
   lotesFiltrados.forEach(l => {
     const linea = l.linea_produccion || 'Sin línea';
     if (!porLinea[linea]) porLinea[linea] = 0;
@@ -719,13 +760,12 @@ function renderTopClientesRetencion(lotes) {
 }
 
 /* ==========================================
-   AUDITORÍAS PENDIENTES (CON VALIDACIÓN ANTI-FANTASMAS)
+   AUDITORÍAS PENDIENTES (ANTI-FANTASMAS)
 ========================================== */
 function renderAuditoriasPendientes(lotes, defectos) {
   const el = document.getElementById('auditorias-pendientes');
   if (!el) return;
 
-  // Filtramos por fecha
   const lotesFiltrados = filtrarPorDias(lotes, 'fecha_produccion');
 
   let pendientes = 0;
@@ -736,18 +776,15 @@ function renderAuditoriasPendientes(lotes, defectos) {
 
   lotesFiltrados.forEach(l => {
     const est = String(l.estatus || '100').trim();
-    
-    // ¿Este lote tiene algún defecto registrado en el sistema?
     const tieneDefectos = defectos.some(d => String(d.produccion_id) === String(l.id) || String(d.lote_id) === String(l.id));
-    
+
     if (est === '100') {
       pendientes++;
     } else if (est === '200') {
-      // Si dice ser APTO pero no tiene ningún registro de inspección, es un fantasma
       if (!tieneDefectos && !l.inspector && !l.observaciones) {
-         pendientes++; // Lo forzamos a pendiente
+        pendientes++;
       } else {
-         aptos++;
+        aptos++;
       }
     } else if (est === '300') {
       retenidos++;
@@ -893,7 +930,7 @@ function initFiltrosTiempo() {
         renderTopTiposDefecto(defectos);
         renderChartEficiencia(lotes, defectos);
         renderTopClientesRetencion(lotes);
-        renderAuditoriasPendientes(lotes, defectos); // 🔧 PASAMOS DEFECTOS AL FILTRAR
+        renderAuditoriasPendientes(lotes, defectos);
       }
     });
   });
@@ -914,10 +951,10 @@ function initFiltroPlanta() {
   const select = document.getElementById('filtro-planta');
   if (!select) return;
 
-  select.addEventListener('change', function() {
+  select.addEventListener('change', function () {
     filtroPlanta = this.value;
     log(`🔄 Filtro de planta cambiado a: ${filtroPlanta || 'Todas'}`);
-    cargarDashboard(); 
+    cargarDashboard();
   });
 }
 
@@ -950,12 +987,20 @@ function recargarDashboard() {
 }
 
 /* ==========================================
-   INIT (LIMPIO)
+   INIT
 ========================================== */
 function iniciarDashboard() {
   log('🚀 Dashboard Venvidrio iniciado');
 
-  // El reloj y el usuario ahora los maneja 100% shared.js. 
+  // 🔧 FIX DEL RELOJ: Si shared.js no lo arrancó, lo arrancamos localmente
+  setTimeout(() => {
+    const relojEl = document.getElementById('reloj-real');
+    if (relojEl && (relojEl.textContent === '--:--:--' || relojEl.textContent.trim() === '')) {
+      log('⚠️ Reloj no inicializado por shared.js. Aplicando fallback...');
+      iniciarRelojFallback();
+    }
+  }, 800);
+
   initFiltrosTiempo();
   initFiltrosGrafico();
   initFiltroPlanta();
@@ -988,6 +1033,7 @@ document.addEventListener('DOMContentLoaded', iniciarDashboard);
 ========================================== */
 window.addEventListener('beforeunload', () => {
   if (intervaloCarga) clearInterval(intervaloCarga);
+  if (intervaloCargaFallback) clearInterval(intervaloCargaFallback);
   if (abortController) abortController.abort();
   if (productionChart) productionChart.destroy();
   if (defectosChart) defectosChart.destroy();
