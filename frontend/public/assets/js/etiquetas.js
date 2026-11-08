@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - ETIQUETAS Y TRAZABILIDAD
-   etiquetas.js — v11 (Historial, Descargas, Validación)
+   etiquetas.js — v12 (Impresión en 1 hoja y sin cortes)
    ========================================== */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   let cargando = false;
   let loteActual = null;
-  let historial = []; // Array para guardar los lotes de la sesión
+  let historial = []; 
 
   // =========================
   // UTILIDADES
@@ -118,17 +118,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     historialCont.innerHTML = historial.map(function(item) {
       return `
-        <button type="button" class="hist-item" data-codigo="${item.codigo}" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; text-align: left; transition: all 0.15s;">
+        <button type="button" class="hist-item" data-codigo="${item.codigo}">
           <div style="display: flex; flex-direction: column; gap: 2px;">
-            <span style="font-size: 12px; font-weight: 700; color: #1e293b;">${item.codigo}</span>
-            <span style="font-size: 10px; color: #64748b;">${item.ticket || 'Sin ticket'}</span>
+            <span class="hist-codigo">${item.codigo}</span>
+            <span class="hist-ticket">${item.ticket || 'Sin ticket'}</span>
           </div>
-          <i class="ti ti-refresh" style="color: #94a3b8;"></i>
+          <i class="ti ti-refresh"></i>
         </button>
       `;
     }).join('');
 
-    // Asignar eventos de clic a los items del historial
     historialCont.querySelectorAll('.hist-item').forEach(function(btn) {
       btn.addEventListener('click', function() {
         const codigo = this.getAttribute('data-codigo');
@@ -139,16 +138,10 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function agregarAlHistorial(data) {
-    // Evitar duplicados en la sesión
     const existe = historial.find(function(h) { return h.codigo === data.codigo_lote; });
     if (existe) return;
 
-    historial.unshift({
-      codigo: data.codigo_lote,
-      ticket: data.ticket_carga
-    });
-
-    // Limitar a 5 elementos para no saturar
+    historial.unshift({ codigo: data.codigo_lote, ticket: data.ticket_carga });
     if (historial.length > 5) historial.pop();
     
     renderHistorial();
@@ -202,7 +195,6 @@ document.addEventListener('DOMContentLoaded', function () {
       } catch (err) { console.error('Error generando código de barras:', err); }
     }
 
-    // Mostrar/Ocultar advertencia según el estatus
     if (data.estatus === '600') {
       warningText.textContent = 'Este lote ya fue DESPACHADO. Reimprimir solo si es estrictamente necesario.';
       setVisible(warningMsg, true);
@@ -250,7 +242,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!loteData) throw new Error('No se encontraron datos para este lote.');
       
       llenarEtiqueta(loteData);
-      agregarAlHistorial(loteData); // Guardar en historial
+      agregarAlHistorial(loteData);
     })
     .catch(function (error) {
       console.error('Error cargando lote:', error.message);
@@ -279,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // =========================
-  // IMPRIMIR Y MARCAR (1 HOJA A4)
+  // IMPRIMIR Y MARCAR (1 HOJA A4, SIN CORTES)
   // =========================
   function imprimirEtiquetaComoImagen() {
     if (!ticketPreview || !ticketContent || ticketContent.style.display === 'none') {
@@ -291,27 +283,61 @@ document.addEventListener('DOMContentLoaded', function () {
     btnImprimir.disabled = true;
     btnImprimir.innerHTML = '<i class="ti ti-loader-2" style="display:inline-block;animation:spin 1s linear infinite;"></i> Preparando...';
 
-    html2canvas(ticketPreview, { scale: 3, useCORS: true, backgroundColor: '#ffffff', logging: false })
+    html2canvas(ticketPreview, { 
+      scale: 3, 
+      useCORS: true, 
+      backgroundColor: '#ffffff', 
+      logging: false 
+    })
     .then(function (canvas) {
       const imgData = canvas.toDataURL('image/png');
       const iframe = document.createElement('iframe');
-      iframe.style.position = 'absolute'; iframe.style.width = '0px'; iframe.style.height = '0px'; iframe.style.border = 'none';
+      
+      iframe.style.position = 'absolute'; 
+      iframe.style.width = '0px'; 
+      iframe.style.height = '0px'; 
+      iframe.style.border = 'none';
       document.body.appendChild(iframe);
+
       const doc = iframe.contentWindow.document;
       doc.open();
       
+      // 👇 CSS CORREGIDO PARA QUE NO SE CORTE EN 2 HOJAS
       doc.write(`
         <html>
           <head>
-            <title>Imprimir Etiqueta</title>
+            <title></title>
             <style>
-              @page { size: A4 portrait; margin: 10mm; }
-              body { margin: 0; padding: 0; background: #fff; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-              img { width: 100%; height: auto; display: block; page-break-inside: avoid; }
+              @page {
+                size: A4 portrait;
+                margin: 10mm; /* Margen para que no salga el link arriba ni abajo */
+              }
+              html, body {
+                margin: 0;
+                padding: 0;
+                background: #fff;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              .wrapper {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100%;
+                width: 100%;
+              }
+              img {
+                width: 100%;           /* Ocupa todo el ancho disponible */
+                max-height: 260mm;     /* Límite para que no empuje a otra hoja */
+                object-fit: contain; 
+                display: block;
+              }
             </style>
           </head>
           <body>
-            <img src="${imgData}" onload="setTimeout(function(){ window.print(); window.frameElement.remove(); }, 200);">
+            <div class="wrapper">
+              <img src="${imgData}" onload="setTimeout(function(){ window.print(); window.frameElement.remove(); }, 200);">
+            </div>
           </body>
         </html>
       `);
@@ -320,7 +346,6 @@ document.addEventListener('DOMContentLoaded', function () {
       btnImprimir.innerHTML = textoOriginal;
       btnImprimir.disabled = false;
 
-      // Marcar en el backend y mostrar feedback
       if (loteActual && loteActual.id) {
         marcarLoteComoImpreso(loteActual.id);
       }
@@ -380,7 +405,7 @@ document.addEventListener('DOMContentLoaded', function () {
       
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageWidth = pdf.internal.pageSize.getWidth();
-      const imgWidth = pageWidth - 20; // Margen de 10mm a cada lado
+      const imgWidth = pageWidth - 20; 
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
       pdf.addImage(imgData, 'JPEG', 10, 10, imgWidth, imgHeight);
@@ -412,7 +437,6 @@ document.addEventListener('DOMContentLoaded', function () {
     .then(res => {
       if (res.ok) {
         mostrarToast('Etiqueta impresa y lote marcado como Apto.');
-        // Actualizamos el estado en el objeto local y en el historial
         if (loteActual) loteActual.estatus = '200';
       } else {
         mostrarToast('No se pudo actualizar el estatus del lote.', true);

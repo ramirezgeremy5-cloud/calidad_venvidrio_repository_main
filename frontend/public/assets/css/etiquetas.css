@@ -1,6 +1,6 @@
 /* =============================================
    Venvidrio — Etiquetas y Trazabilidad
-   etiquetas.css — v8 (Historial, Banner y Acciones)
+   etiquetas.css — v9 (Soporte para Impresión)
    ============================================= */
 
 /* ================= VARIABLES LOCALES ================= */
@@ -693,6 +693,28 @@ body {
   .ticket-grid-2 {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+}
+
+/* ================= IMPRESIÓN LIMPIA ================= */
+@media print {
+  /* Ocultar todo excepto el ticket */
+  body * {
+    visibility: hidden;
+  }
+  .ticket-preview, .ticket-preview * {
+    visibility: visible;
+  }
+  .ticket-preview {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: 100%;
+    border: none;
+    box-shadow: none;
+    margin: 0;
+    padding: 0;
   }
 }
 
