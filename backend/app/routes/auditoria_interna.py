@@ -6,10 +6,11 @@ from datetime import datetime
 from pathlib import Path
 from fastapi.responses import Response
 
-from app.models.auditoria_calidad import AuditoriaCalidad
+# 👇 CORRECCIÓN: Rutas de importación estandarizadas
+from app.models.auditoria_interna import AuditoriaCalidad
 from app.models.usuario import Usuario
-from app.schemas.auditoria_calidad import AuditoriaCalidadCreate, AuditoriaCalidadResponse
-from app.dependencies.auth import get_db, check_role
+from app.schemas.auditoria_interna import AuditoriaCalidadCreate, AuditoriaCalidadResponse
+from app.dependencies.auth import get_db, check_auditoria_interna
 
 router = APIRouter(
     prefix="/auditorias/calidad",
@@ -26,7 +27,8 @@ LOGO_PATH = BASE_DIR / "static" / "logo.png"
 @router.get("/evaluaciones", response_model=List[AuditoriaCalidadResponse])
 def listar_evaluaciones(
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(check_role([2, 3]))
+    # 👇 Usamos la nueva dependencia (valida roles 2 y 3)
+    current_user: Usuario = Depends(check_auditoria_interna())
 ):
     auditorias = db.query(AuditoriaCalidad).order_by(AuditoriaCalidad.fecha.desc()).all()
     
@@ -59,7 +61,7 @@ def listar_evaluaciones(
 def crear_evaluacion(
     data: AuditoriaCalidadCreate,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(check_role([2, 3]))
+    current_user: Usuario = Depends(check_auditoria_interna())
 ):
     evaluado = db.query(Usuario).filter(Usuario.id == data.evaluado_id).first()
     if not evaluado:
@@ -100,7 +102,7 @@ def crear_evaluacion(
 def exportar_pdf(
     evaluacion_id: int,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(check_role([2, 3]))
+    current_user: Usuario = Depends(check_auditoria_interna())
 ):
     evaluacion = db.query(AuditoriaCalidad).filter(AuditoriaCalidad.id == evaluacion_id).first()
     if not evaluacion:
@@ -174,7 +176,7 @@ def exportar_pdf(
 def exportar_word(
     evaluacion_id: int,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(check_role([2, 3]))
+    current_user: Usuario = Depends(check_auditoria_interna())
 ):
     evaluacion = db.query(AuditoriaCalidad).filter(AuditoriaCalidad.id == evaluacion_id).first()
     if not evaluacion:
@@ -231,7 +233,7 @@ def exportar_word(
 @router.get("/evaluaciones/exportar/pdf")
 def exportar_todas_pdf(
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(check_role([2, 3]))
+    current_user: Usuario = Depends(check_auditoria_interna())
 ):
     evaluaciones = db.query(AuditoriaCalidad).order_by(AuditoriaCalidad.fecha.desc()).all()
     if not evaluaciones:
@@ -307,7 +309,7 @@ def exportar_todas_pdf(
 @router.get("/evaluaciones/exportar/word")
 def exportar_todas_word(
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(check_role([2, 3]))
+    current_user: Usuario = Depends(check_auditoria_interna())
 ):
     evaluaciones = db.query(AuditoriaCalidad).order_by(AuditoriaCalidad.fecha.desc()).all()
     if not evaluaciones:
@@ -374,7 +376,8 @@ def exportar_todas_word(
 def eliminar_evaluacion(
     evaluacion_id: int,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(check_role([3])) # 👈 Solo Admin
+    # 👇 Solo Admin (Rol 3) puede eliminar
+    current_user: Usuario = Depends(check_role([3])) 
 ):
     evaluacion = db.query(AuditoriaCalidad).filter(AuditoriaCalidad.id == evaluacion_id).first()
     if not evaluacion:
