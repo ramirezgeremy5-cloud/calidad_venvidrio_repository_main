@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v21 (Alineado con nueva etiqueta HTML)
+   produccion.js - v22 (PDF Expandido al 100% de A4)
    ========================================== */
 
 (function () {
@@ -531,7 +531,7 @@
     try { const d = new Date(fechaStr + 'T00:00:00'); return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (e) { return fechaStr; }
   }
 
-  // --- FUNCIONES PARA DESCARGAR IMAGEN Y PDF (CORREGIDAS PARA TICKET EXPANDIDO) ---
+  // --- FUNCIONES PARA DESCARGAR IMAGEN Y PDF (AHORA OCUPA TODA LA HOJA A4) ---
   function descargarEtiquetaJPG() {
     const elementoCaptura = document.getElementById("ticket-para-captura");
     if (!elementoCaptura) return;
@@ -541,7 +541,6 @@
     btn.innerHTML = '<i class="ti ti-loader"></i> Generando...';
     btn.disabled = true;
 
-    // Forzamos un ancho de 420px para que la tirilla se vea perfecta
     elementoCaptura.style.width = '420px';
 
     setTimeout(() => {
@@ -593,12 +592,12 @@
         
         const pdf = new jsPDF('p', 'mm', 'a4');
         
-        // Ancho de 100mm para simular el tamaño de una etiqueta térmica real
-        const imgWidth = 100; 
+        // 👇 AQUÍ ESTÁ EL CAMBIO: Ancho de 190mm (deja 10mm de margen a cada lado)
+        const imgWidth = 190; 
         const imgHeight = (canvas.height * imgWidth) / canvas.width; 
 
-        const x = (pdf.internal.pageSize.getWidth() - imgWidth) / 2;
-        const y = 20;
+        const x = 10; 
+        const y = 10; 
 
         pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
         pdf.save("etiqueta_lote_" + (document.getElementById("modal-lote-codigo").innerText || "sin_id") + ".pdf");
