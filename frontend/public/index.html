@@ -3,23 +3,13 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Venvidrio | Calidad y Precisión</title>
+    <title>Venvidrio | Sistema de Control de Calidad Industrial</title>
     
     <!-- Iconos Tabler -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
     
     <!-- CSS Externo -->
     <link rel="stylesheet" href="../assets/css/landing.css" />
-
-    <!-- CSS INLINE PARA EL FONDO PERSONALIZADO -->
-    <style>
-        .hero {
-            background-image: url('../assets/img/fondo-venvidrio-fabrica.jpeg') !important;
-            background-size: cover;
-            background-position: center bottom;
-            background-repeat: no-repeat;
-        }
-    </style>
 </head>
 <body>
 
@@ -29,13 +19,14 @@
             <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo" class="nav-logo" />
         </div>
 
-        <button class="menu-toggle">
+        <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">
             <i class="ti ti-menu-2"></i>
         </button>
 
-        <ul class="nav-links">
+        <ul class="nav-links" id="navLinks">
             <li><a href="#inicio">Inicio</a></li>
             <li><a href="#nosotros">Nosotros</a></li>
+            <li><a href="#beneficios">Beneficios</a></li>
             <li><a href="#contacto">Contacto</a></li>
             <li>
                 <a href="login.html" class="btn-nav-primary">
@@ -66,39 +57,29 @@
         </div>
     </section>
 
-    <!-- ================= NOSOTROS / MISIÓN Y VISIÓN ================= -->
+    <!-- ================= NOSOTROS / POLÍTICA ================= -->
     <section class="section-nosotros" id="nosotros">
         <div class="container">
             
-            <!-- Descripción y Reseña -->
             <div class="about-header text-center">
                 <h2>Política Integral</h2>
+                <p class="subtitle">Nuestro compromiso con la excelencia y la sostenibilidad.</p>
             </div>
 
             <div class="about-grid">
-                <div class="about-text text-center">
+                <div class="about-text">
                     <h3>Venezolana del Vidrio</h3>
                     <p>
                         En aras de fortalecer y contribuir con la soberanía alimentaria, el desarrollo económico de la Patria y la preservación de la vida en el planeta, en Venezolana del Vidrio, C.A., trabajamos con Calidad, inocuidad, Control y Seguridad a través de:
                     </p>
-                    <p>
-                        -La Fabricación de Envases de Vidrio que cumplan con los requisitos aplicables, legales, reglamentarios y del Cliente.
-                    </p>
-                    <p>
-                        -La Seguridad de los procesos y la prevención de actividades ilícitas.
-                    </p>
-                    <p>
-                        -El mejoramiento continuo de los Sistemas de Gestion.
-                    </p>
-                    <p>
-                        -Una comunicación interna y externa eficaz.
-                    </p>
-                    <p>
-                        -La gestión de las competencias y el desarrollo de las Personas.
-                    </p>
-                    <p>
-                        -La protección del medio ambiente.
-                    </p>
+                    <ul class="about-list">
+                        <li><i class="ti ti-check"></i> La Fabricación de Envases de Vidrio que cumplan con los requisitos aplicables, legales, reglamentarios y del Cliente.</li>
+                        <li><i class="ti ti-check"></i> La Seguridad de los procesos y la prevención de actividades ilícitas.</li>
+                        <li><i class="ti ti-check"></i> El mejoramiento continuo de los Sistemas de Gestión.</li>
+                        <li><i class="ti ti-check"></i> Una comunicación interna y externa eficaz.</li>
+                        <li><i class="ti ti-check"></i> La gestión de las competencias y el desarrollo de las Personas.</li>
+                        <li><i class="ti ti-check"></i> La protección del medio ambiente.</li>
+                    </ul>
                 </div>
             </div>
 
@@ -117,13 +98,68 @@
         </div>
     </section>
 
+    <!-- ================= BENEFICIOS / ¿POR QUÉ ELEGIRNOS? ================= -->
+    <section class="section-beneficios" id="beneficios">
+        <div class="container">
+            <div class="section-header text-center">
+                <h2>¿Por qué elegir Venvidrio?</h2>
+                <p class="subtitle">Tecnología diseñada para garantizar la excelencia en cada lote.</p>
+            </div>
+
+            <div class="beneficios-grid">
+                <div class="beneficio-card">
+                    <div class="beneficio-icon">
+                        <i class="ti ti-clock"></i>
+                    </div>
+                    <h3>Control en Tiempo Real</h3>
+                    <p>Monitorea la producción y los defectos al instante desde cualquier dispositivo.</p>
+                </div>
+
+                <div class="beneficio-card">
+                    <div class="beneficio-icon">
+                        <i class="ti ti-qrcode"></i>
+                    </div>
+                    <h3>Trazabilidad Total</h3>
+                    <p>Sigue el recorrido de cada lote, desde su creación hasta la entrega al cliente.</p>
+                </div>
+
+                <div class="beneficio-card">
+                    <div class="beneficio-icon">
+                        <i class="ti ti-clipboard-check"></i>
+                    </div>
+                    <h3>Auditorías Automáticas</h3>
+                    <p>Agiliza los procesos de auditoría interna y de producto con reportes precisos.</p>
+                </div>
+
+                <div class="beneficio-card">
+                    <div class="beneficio-icon">
+                        <i class="ti ti-file-spreadsheet"></i>
+                    </div>
+                    <h3>Reportes en Word y Excel</h3>
+                    <p>Exporta la información clave para la toma de decisiones gerenciales en segundos.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= CTA FINAL ================= -->
+    <section class="section-cta">
+        <div class="container text-center">
+            <h2>¿Listo para optimizar tu control de calidad?</h2>
+            <p>Accede a la plataforma y lleva la gestión de tu producción al siguiente nivel.</p>
+            <a href="login.html" class="btn btn-primary btn-lg">
+                <i class="ti ti-login"></i> Iniciar Sesión Ahora
+            </a>
+        </div>
+    </section>
+
     <!-- ================= CONTACTO / PIE DE PÁGINA ================= -->
     <footer class="footer" id="contacto">
         <div class="container footer-grid">
-            <div>
-                <h4>Venvidrio</h4>
+            <div class="footer-brand">
+                <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo" class="footer-logo" />
                 <p>Sistema de Control de Calidad</p>
-                <p style="font-size: 13px; color: #94a3b8; margin-top: 4px;">
+                <p class="copyright">
                     © 2026 Todos los derechos reservados.
                 </p>
             </div>
@@ -133,11 +169,12 @@
                     <li><a href="login.html">Iniciar Sesión</a></li>
                     <li><a href="#inicio">Inicio</a></li>
                     <li><a href="#nosotros">Nosotros</a></li>
+                    <li><a href="#beneficios">Beneficios</a></li>
                 </ul>
             </div>
             <div>
                 <h4>Contacto</h4>
-                <ul>
+                <ul class="footer-contact">
                     <li><i class="ti ti-mail"></i> contacto@venvidrio.com</li>
                     <li><i class="ti ti-phone"></i> +58 (212) 555-0199</li>
                     <li><i class="ti ti-map-pin"></i> Valera, estado Trujillo</li>

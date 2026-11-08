@@ -17,6 +17,7 @@ from app.database.connection import engine, Base
 # =========================
 
 from app.models.usuario import Usuario
+from app.models.cargo import Cargo
 
 
 # =========================
@@ -31,7 +32,8 @@ from app.routes import produccion
 from app.routes import etiqueta
 from app.routes import defecto
 from app.routes import defecto_tipos
-from app.routes import auditoria_calidad
+from app.routes import auditoria_interna
+from app.routes import auditoria_producto  # 👈 NUEVO ROUTER
 from app.routes import dashboard
 from app.routes import reportes
 from app.routes import reportes_defectos
@@ -43,8 +45,8 @@ from app.routes import escaner
 # SCHEDULER: LIMPIEZA DE SESIONES EXPIRADAS
 # =========================
 
-# 👇 AUMENTADO A 8 HORAS (480 minutos) PARA CUBRIR UN TURNO COMPLETO
-TIEMPO_INACTIVIDAD_MINUTOS = 480 
+# 👇 ALINEADO CON auth.py Y dependencies/auth.py: 60 MINUTOS
+TIEMPO_INACTIVIDAD_MINUTOS = 60
 
 scheduler = BackgroundScheduler()
 
@@ -92,7 +94,7 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(
         limpiar_sesiones_expiradas,
         "interval",
-        minutes=5, # Lo revisamos cada 5 min en lugar de 1, para no saturar
+        minutes=5,
         id="limpiar_sesiones",
         replace_existing=True
     )
@@ -195,7 +197,11 @@ app.include_router(produccion.router)
 app.include_router(etiqueta.router)
 app.include_router(defecto_tipos.router)
 app.include_router(defecto.router)
-app.include_router(auditoria_calidad.router)
+
+# 👇 ROUTERS DE AUDITORÍA
+app.include_router(auditoria_interna.router)
+app.include_router(auditoria_producto.router)  # 👈 NUEVO
+
 app.include_router(dashboard.router)
 
 app.include_router(reportes.router)
