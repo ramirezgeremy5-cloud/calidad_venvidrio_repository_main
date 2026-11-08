@@ -8,7 +8,8 @@ import os
 from pathlib import Path
 
 from app.database.connection import SessionLocal
-from app.models.auditoria_calidad import AuditoriaCalidad
+# 👇 CORRECCIÓN: Importación estandarizada
+from app.models.auditoria_interna import AuditoriaInterna
 
 router = APIRouter(
     prefix="/reportes",
@@ -65,7 +66,8 @@ def descargar_excel(
 ):
     """Genera un reporte Excel profesional de una evaluación de calidad específica"""
     
-    auditoria = db.query(AuditoriaCalidad).filter(AuditoriaCalidad.id == auditoria_id).first()
+    # 👇 CORRECCIÓN: Usando AuditoriaInterna
+    auditoria = db.query(AuditoriaInterna).filter(AuditoriaInterna.id == auditoria_id).first()
     if not auditoria:
         raise HTTPException(status_code=404, detail="Evaluación no encontrada")
     
@@ -153,7 +155,7 @@ def descargar_excel(
         ws.cell(row=row, column=1).border = thin_border
         row += 1
         
-        # Adaptado a los campos de AuditoriaCalidad
+        # Adaptado a los campos de AuditoriaInterna
         datos = [
             ("ID Evaluación", auditoria.id),
             ("Periodo", auditoria.periodo),
@@ -296,7 +298,8 @@ def descargar_pdf(
 ):
     """Genera un reporte PDF profesional de una evaluación de calidad específica"""
     
-    auditoria = db.query(AuditoriaCalidad).filter(AuditoriaCalidad.id == auditoria_id).first()
+    # 👇 CORRECCIÓN: Usando AuditoriaInterna
+    auditoria = db.query(AuditoriaInterna).filter(AuditoriaInterna.id == auditoria_id).first()
     if not auditoria:
         raise HTTPException(status_code=404, detail="Evaluación no encontrada")
     
@@ -484,7 +487,8 @@ def descargar_excel_todas(
 ):
     """Genera un reporte Excel con todas las evaluaciones de calidad"""
     
-    auditorias = db.query(AuditoriaCalidad).order_by(AuditoriaCalidad.id.desc()).all()
+    # 👇 CORRECCIÓN: Usando AuditoriaInterna
+    auditorias = db.query(AuditoriaInterna).order_by(AuditoriaInterna.id.desc()).all()
     
     if not auditorias:
         raise HTTPException(status_code=404, detail="No hay evaluaciones registradas")
@@ -611,7 +615,8 @@ def descargar_pdf_todas(
 ):
     """Genera un reporte PDF con todas las evaluaciones de calidad"""
     
-    auditorias = db.query(AuditoriaCalidad).order_by(AuditoriaCalidad.id.desc()).all()
+    # 👇 CORRECCIÓN: Usando AuditoriaInterna
+    auditorias = db.query(AuditoriaInterna).order_by(AuditoriaInterna.id.desc()).all()
     
     if not auditorias:
         raise HTTPException(status_code=404, detail="No hay evaluaciones registradas")
