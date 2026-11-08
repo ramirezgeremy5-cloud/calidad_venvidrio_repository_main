@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - ETIQUETAS Y TRAZABILIDAD
-   etiquetas.js — v7 (Conexión Real + Escáner Global + Marcado de Impresión)
+   etiquetas.js — v8 (Impresión al 100% de la hoja)
    ========================================== */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -206,13 +206,11 @@ document.addEventListener('DOMContentLoaded', function () {
   // ESCÁNER (CONEXIÓN CON EL MÓDULO GLOBAL)
   // =========================
   function initEscanerEtiquetas() {
-    // Verificamos si el objeto EscanerApp existe (definido en escaner.js)
     if (typeof EscanerApp === 'undefined') {
       console.warn('La librería EscanerApp no está cargada. El botón de escanear no funcionará.');
       return;
     }
 
-    // Inicializamos el escáner pasando los IDs de los elementos en etiquetas.html
     EscanerApp.init(
       'reader-container-etiqueta', 
       'btn-escanear-etiqueta', 
@@ -220,7 +218,6 @@ document.addEventListener('DOMContentLoaded', function () {
       'reader-etiqueta'
     );
 
-    // Cuando el escáner detecte un código, ejecutamos esta función
     EscanerApp.onScanSuccess(async (codigoEscaneado) => {
       if (inputLote) inputLote.value = codigoEscaneado;
       cargarLote(codigoEscaneado); // Cargamos el lote automáticamente
@@ -228,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // =========================
-  // IMPRIMIR COMO IMAGEN EXACTA Y MARCAR LOTE
+  // IMPRIMIR COMO IMAGEN EXACTA Y MARCAR LOTE (OCUPANDO TODA LA HOJA)
   // =========================
   function imprimirEtiquetaComoImagen() {
     if (!ticketPreview || !ticketContent || ticketContent.style.display === 'none') {
@@ -258,31 +255,34 @@ document.addEventListener('DOMContentLoaded', function () {
       const doc = iframe.contentWindow.document;
       doc.open();
       
+      // 👇 AQUÍ ESTÁ EL CAMBIO CLAVE: 
+      // El @page ahora es A4 con margen 0, y la imagen ocupa el 100% del ancho
       doc.write(`
         <html>
           <head>
             <title>Imprimir Etiqueta</title>
             <style>
               @page {
-                size: 100mm 150mm;
-                margin: 0; 
+                size: A4 portrait; /* Tamaño estándar de hoja */
+                margin: 0;          /* Elimina los márgenes blancos */
               }
               body {
                 margin: 0;
                 padding: 0;
                 display: flex;
                 justify-content: center;
-                align-items: center;
+                align-items: flex-start;
                 background: #fff;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
               }
               img {
-                width: 100%;
-                height: 100%;
-                object-fit: fill;
-                border: 2px solid #000;
+                width: 100%;       /* Ocupa todo el ancho de la hoja */
+                height: auto;      /* Mantiene la proporción */
+                object-fit: contain; 
+                border: none;      /* Quitamos el borde extra del iframe */
                 box-sizing: border-box;
+                margin-top: 10mm;  /* Un pequeño margen superior para que no se corte */
               }
             </style>
           </head>
@@ -316,7 +316,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    // Cambiamos el estatus a "200" (Apto) o al que definas para "Impreso"
     fetch(`${API_URL}/produccion/${id}`, {
       method: 'PUT',
       headers: {
