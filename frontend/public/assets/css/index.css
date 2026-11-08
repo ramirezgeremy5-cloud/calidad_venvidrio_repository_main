@@ -1,6 +1,7 @@
 /* ==========================================
    VENVIDRIO - LANDING PAGE
    landing.css - Index
+   v3 - Navbar blanco y ajustes de contraste
    ========================================== */
 
 /* ==========================================================
@@ -27,7 +28,7 @@ body {
 }
 
 /* ==========================================================
-   2. NAVBAR
+   2. NAVBAR (Blanco y limpio)
    ========================================================== */
 .navbar {
     position: fixed;
@@ -37,13 +38,14 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 2rem;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    padding: 0.8rem 2rem;
+    background: rgba(255, 255, 255, 0.95); /* Blanco semitransparente */
+    backdrop-filter: blur(12px); /* Efecto cristal */
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); /* Sombra suave */
     z-index: 1000;
     box-sizing: border-box;
+    transition: all 0.3s ease;
 }
 
 .nav-brand {
@@ -54,8 +56,9 @@ body {
 .nav-logo {
     height: 45px;
     width: auto;
-    max-width: 160px;
+    max-width: 180px;
     object-fit: contain;
+    filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.1));
 }
 
 .menu-toggle {
@@ -63,7 +66,7 @@ body {
     background: transparent;
     border: none;
     font-size: 1.5rem;
-    color: var(--navy);
+    color: #1a237e; /* Azul Venvidrio */
     cursor: pointer;
     padding: 5px;
     min-width: 44px;
@@ -83,31 +86,33 @@ body {
 
 .nav-links a {
     text-decoration: none;
-    color: var(--text-main);
+    color: #1e293b; /* Gris oscuro para contraste */
     font-size: 0.95rem;
-    font-weight: 500;
+    font-weight: 600;
     transition: color 0.2s ease;
 }
 
 .nav-links a:hover {
-    color: var(--navy);
+    color: #1a237e;
 }
 
 .btn-nav-primary {
-    background: var(--navy);
-    color: #fff !important;
-    padding: 8px 18px;
-    border-radius: 6px;
+    background: #1a237e;
+    color: #ffffff !important;
+    padding: 8px 20px;
+    border-radius: 8px;
     display: inline-flex;
     align-items: center;
     gap: 6px;
     font-weight: 600;
     transition: background 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 4px 10px rgba(26, 35, 126, 0.2);
 }
 
 .btn-nav-primary:hover {
-    background: var(--navy-dark, #0d1b52);
-    transform: translateY(-1px);
+    background: #0d1b52;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(26, 35, 126, 0.3);
 }
 
 /* ==========================================================
@@ -120,16 +125,19 @@ body {
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 100px 20px 60px;
+    padding: 120px 20px 60px;
     color: #ffffff;
-    /* El fondo se maneja desde el HTML o landing.css */
-    background-color: var(--navy); /* Fallback */
+    background-image: url('../assets/img/fondo-venvidrio-fabrica.jpeg');
+    background-size: cover;
+    background-position: center bottom;
+    background-repeat: no-repeat;
+    background-color: #1a237e; /* Fallback */
 }
 
 .hero-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.85));
+    background: linear-gradient(to bottom, rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.85));
     z-index: 1;
 }
 
@@ -153,8 +161,8 @@ body {
 }
 
 .ven-amarillo { color: var(--ven-amarillo); }
-.vi-azul      { color: #60a5fa; } /* Un azul más claro para contraste sobre el fondo oscuro */
-.drio-rojo    { color: #f87171; } /* Un rojo más claro para contraste sobre el fondo oscuro */
+.vi-azul      { color: #60a5fa; }
+.drio-rojo    { color: #f87171; }
 
 .hero-subtitle {
     font-size: 1.1rem;
@@ -187,12 +195,14 @@ body {
 }
 
 .btn-primary {
-    background: var(--navy);
+    background: #1a237e;
     color: #fff;
+    border-color: #1a237e;
 }
 
 .btn-primary:hover {
-    background: var(--navy-dark, #0d1b52);
+    background: #0d1b52;
+    border-color: #0d1b52;
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(26, 35, 126, 0.3);
 }
@@ -212,7 +222,7 @@ body {
 
 .about-header h2 {
     font-size: 2rem;
-    color: var(--navy);
+    color: #1a237e;
     margin-bottom: 0.5rem;
 }
 
@@ -225,7 +235,7 @@ body {
 
 .about-grid {
     display: grid;
-    grid-template-columns: 1fr; /* Texto centrado, si quieres dos columnas cambia a 1fr 1fr */
+    grid-template-columns: 1fr;
     gap: 2rem;
     max-width: 900px;
     margin: 0 auto 3rem;
@@ -234,7 +244,7 @@ body {
 
 .about-text h3 {
     font-size: 1.4rem;
-    color: var(--navy);
+    color: #1a237e;
     margin-bottom: 1rem;
 }
 
@@ -280,7 +290,7 @@ body {
     width: 60px;
     height: 60px;
     background: #eef2ff;
-    color: var(--navy);
+    color: #1a237e;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -291,7 +301,7 @@ body {
 
 .card-info h3 {
     font-size: 1.4rem;
-    color: var(--navy);
+    color: #1a237e;
     margin-bottom: 1rem;
 }
 
@@ -316,7 +326,7 @@ body {
 
 .section-header h2 {
     font-size: 2rem;
-    color: var(--navy);
+    color: #1a237e;
     margin-bottom: 0.5rem;
 }
 
@@ -345,7 +355,7 @@ body {
     height: 60px;
     margin: 0 auto 1.5rem;
     background: #eef2ff;
-    color: var(--navy);
+    color: #1a237e;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -389,13 +399,14 @@ body {
 
 .section-cta .btn-primary {
     background: #ffffff;
-    color: var(--navy);
+    color: #1a237e;
     border-color: #ffffff;
 }
 
 .section-cta .btn-primary:hover {
     background: #f1f5f9;
-    color: var(--navy);
+    color: #1a237e;
+    border-color: #f1f5f9;
 }
 
 /* ==========================================================
@@ -517,7 +528,8 @@ body {
         gap: 0;
         padding: 1rem 0;
         box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
-        display: none; /* Oculto por defecto */
+        display: none;
+        border-top: 1px solid var(--border);
     }
 
     .nav-links.active {
@@ -553,7 +565,7 @@ body {
 /* --- Móviles (<= 600px) --- */
 @media (max-width: 600px) {
     .hero {
-        padding: 80px 15px 40px;
+        padding: 100px 15px 40px;
     }
 
     .hero h1 {
