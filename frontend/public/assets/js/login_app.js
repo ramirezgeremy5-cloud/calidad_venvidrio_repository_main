@@ -1,7 +1,7 @@
 /* =============================================
    Venvidrio — Sistema de Control de Calidad
-   login_app.js (Login + Control Global de Perfil)
-   v3 — Mobile-first, sesión 8h, fix foto
+   login_app.js (Login + Alertas Elegantes + Sesión 1h)
+   v5
    ============================================= */
 
 (function () {
@@ -11,24 +11,227 @@
   // CONFIGURACIÓN DINÁMICA DE API
   // =========================
   var hostname = window.location.hostname;
-  var API_URL;
+  var API_URL = (hostname === 'localhost' || hostname === '127.0.0.1')
+    ? 'http://127.0.0.1:8000'
+    : 'https://calidad-venvidrio-repository-main.onrender.com';
 
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    API_URL = 'http://127.0.0.1:8000';
-  } else {
-    API_URL = 'https://calidad-venvidrio-repository-main.onrender.com';
-  }
-
-  // 👇 SESIÓN: 8 HORAS (480 minutos) para cubrir un turno completo
-  var TIEMPO_ALERTA_MS      = 470 * 60 * 1000; // Avisar a los 7h 50m
-  var TIEMPO_INACTIVIDAD_MS = 480 * 60 * 1000; // Cerrar a las 8h
+  // 👇 SESIÓN: 1 HORA DE INACTIVIDAD
+  var TIEMPO_ALERTA_MS       = 55 * 60 * 1000; // Avisar a los 55 min
+  var TIEMPO_INACTIVIDAD_MS  = 60 * 60 * 1000; // Cerrar a los 60 min
   var INTERVALO_HEARTBEAT_MS = 60000;
 
   var heartbeatInterval = null;
   var alertaMostrada = false;
 
   // =========================
-  // REFERENCIAS AL DOM (LOGIN)
+  // 0. SISTEMA DE ALERTAS PERSONALIZADAS (MODALES)
+  // =========================
+  function inyectarSistemaDeAlertas() {
+    if (document.getElementById('sys-alertas-styles')) return;
+
+    var style = document.createElement('style');
+    style.id = 'sys-alertas-styles';
+    style.textContent = `
+      /* OVERLAY GENERAL */
+      .sys-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999999;
+        padding: 20px;
+        opacity: 0;
+        transition: opacity 0.25s ease;
+      }
+      .sys-modal-overlay.show { opacity: 1; }
+
+      /* CAJA DEL MODAL */
+      .sys-modal-box {
+        background: #fff;
+        width: 100%;
+        max-width: 420px;
+        border-radius: 16px;
+        box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.4);
+        overflow: hidden;
+        transform: translateY(20px) scale(0.96);
+        opacity: 0;
+        transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
+      }
+      .sys-modal-overlay.show .sys-modal-box {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+      }
+
+      /* CABECERA (Depende del tipo) */
+      .sys-modal-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 18px 20px;
+        color: #fff;
+        font-weight: 700;
+        font-size: 15px;
+      }
+      .sys-modal-header i { font-size: 22px; }
+      .sys-modal-header.info    { background: linear-gradient(135deg, #1e3a8a, #3b82f6); }
+      .sys-modal-header.success { background: linear-gradient(135deg, #15803d, #22c55e); }
+      .sys-modal-header.warning { background: linear-gradient(135deg, #b45309, #f59e0b); }
+      .sys-modal-header.error   { background: linear-gradient(135deg, #b91c1c, #ef4444); }
+
+      /* CUERPO */
+      .sys-modal-body {
+        padding: 22px 20px;
+        color: #334155;
+        font-size: 14px;
+        line-height: 1.55;
+        text-align: center;
+      }
+      .sys-modal-body strong { color: #0f172a; }
+
+      /* PIE DE PÁGINA (Botones) */
+      .sys-modal-footer {
+        display: flex;
+        gap: 10px;
+        padding: 0 20px 20px;
+        justify-content: center;
+      }
+      .sys-modal-btn {
+        padding: 10px 22px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s ease;
+        flex: 1;
+      }
+      .sys-modal-btn:hover { transform: translateY(-1px); }
+      .sys-modal-btn:active { transform: scale(0.97); }
+      
+      .sys-modal-btn-primary {
+        background: #1e3a8a;
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+      }
+      .sys-modal-btn-primary:hover { background: #1e40af; }
+
+      .sys-modal-btn-outline {
+        background: #fff;
+        border: 1.5px solid #e2e8f0;
+        color: #475569;
+      }
+      .sys-modal-btn-outline:hover { background: #f8fafc; }
+
+      /* Aviso pequeño dentro del modal para casos de advertencia */
+      .sys-modal-warning-text {
+        margin-top: 12px;
+        padding: 10px;
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        border-radius: 8px;
+        color: #92400e;
+        font-size: 13px;
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Contenedor vacío para inyectar los modales
+    if (!document.getElementById('sys-alertas-container')) {
+      var cont = document.createElement('div');
+      cont.id = 'sys-alertas-container';
+      document.body.appendChild(cont);
+    }
+  }
+
+  /**
+   * Muestra un modal elegante en lugar de usar alert() o confirm().
+   * @param {string} mensaje - Texto principal.
+   * @param {string} tipo - 'info', 'success', 'warning' o 'error'.
+   * @param {boolean} esConfirmacion - Si es true, muestra botones de "Sí/No" y devuelve un Promise<boolean>.
+   * @param {string} [textoAdicional] - Texto opcional debajo del mensaje.
+   */
+  window.mostrarAlertaPersonalizada = function (mensaje, tipo, esConfirmacion, textoAdicional) {
+    return new Promise(function (resolve) {
+      inyectarSistemaDeAlertas();
+
+      var container = document.getElementById('sys-alertas-container');
+      var overlay = document.createElement('div');
+      overlay.className = 'sys-modal-overlay';
+
+      var iconos = {
+        info: 'ti-info-circle',
+        success: 'ti-circle-check',
+        warning: 'ti-alert-triangle',
+        error: 'ti-alert-circle'
+      };
+      var titulos = {
+        info: 'Información',
+        success: 'Éxito',
+        warning: 'Advertencia',
+        error: 'Error'
+      };
+
+      var icono = iconos[tipo] || iconos.info;
+      var titulo = titulos[tipo] || titulos.info;
+
+      var html = `
+        <div class="sys-modal-box">
+          <div class="sys-modal-header ${tipo}">
+            <i class="ti ${icono}"></i>
+            <span>${titulo}</span>
+          </div>
+          <div class="sys-modal-body">
+            <p>${mensaje}</p>
+            ${textoAdicional ? '<div class="sys-modal-warning-text">' + textoAdicional + '</div>' : ''}
+          </div>
+          <div class="sys-modal-footer" id="sys-modal-actions"></div>
+        </div>
+      `;
+      overlay.innerHTML = html;
+
+      var actions = overlay.querySelector('#sys-modal-actions');
+
+      function cerrar(resultado) {
+        overlay.classList.remove('show');
+        setTimeout(function () {
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          resolve(resultado);
+        }, 250);
+      }
+
+      if (esConfirmacion) {
+        var btnNo = document.createElement('button');
+        btnNo.className = 'sys-modal-btn sys-modal-btn-outline';
+        btnNo.textContent = 'Cancelar';
+        btnNo.addEventListener('click', function () { cerrar(false); });
+
+        var btnSi = document.createElement('button');
+        btnSi.className = 'sys-modal-btn sys-modal-btn-primary';
+        btnSi.textContent = 'Aceptar';
+        btnSi.addEventListener('click', function () { cerrar(true); });
+
+        actions.appendChild(btnNo);
+        actions.appendChild(btnSi);
+      } else {
+        var btnOk = document.createElement('button');
+        btnOk.className = 'sys-modal-btn sys-modal-btn-primary';
+        btnOk.textContent = 'Entendido';
+        btnOk.addEventListener('click', function () { cerrar(true); });
+        actions.appendChild(btnOk);
+      }
+
+      container.appendChild(overlay);
+      void overlay.offsetWidth;
+      overlay.classList.add('show');
+    });
+  };
+
+  // =========================
+  // 1. REFERENCIAS AL DOM (LOGIN)
   // =========================
   var usernameInput   = document.getElementById('username-prefix');
   var passwordInput   = document.getElementById('password');
@@ -45,25 +248,19 @@
   var esPaginaLogin = !!(usernameInput && passwordInput && submitBtn);
 
   // =========================
-  // FUNCIÓN CORREGIDA: Normaliza la URL de la foto
+  // 2. FUNCIÓN: Normaliza la URL de la foto
   // =========================
   function obtenerUrlFoto(fotoUrl) {
     if (!fotoUrl) return null;
-    
-    // 1. Arreglar el error de tipeo "https//" o "http//"
     let urlLimpia = fotoUrl.replace(/^(https?)\/\//, '$1://');
-    
-    // 2. Si ya es una URL completa y válida, devolverla
     if (urlLimpia.startsWith('http://') || urlLimpia.startsWith('https://')) {
       return urlLimpia;
     }
-    
-    // 3. Si es una ruta relativa, pegarla a la API
     return `${API_URL}${urlLimpia}`;
   }
 
   // =========================
-  // 1. ACTUALIZAR NAVBAR (con foto)
+  // 3. ACTUALIZAR NAVBAR
   // =========================
   function actualizarNavbar() {
     var data = localStorage.getItem('user');
@@ -93,7 +290,6 @@
 
       pintarAvatar(u);
 
-      // Refrescar con datos frescos del backend
       var token = localStorage.getItem('token');
       if (token && u.id) {
         fetch(API_URL + '/usuarios/' + u.id, {
@@ -122,7 +318,7 @@
   }
 
   // =========================
-  // 2. VERIFICAR CUMPLEAÑOS
+  // 4. VERIFICAR CUMPLEAÑOS
   // =========================
   function verificarCumpleanos() {
     var data = localStorage.getItem('user');
@@ -137,7 +333,10 @@
 
       if (nacimiento.getMonth() === hoy.getMonth() && nacimiento.getDate() === hoy.getDate()) {
         setTimeout(function () {
-          alert('🎉 ¡Feliz Cumpleaños, ' + (u.nombre || 'compañero').split(' ')[0] + '! 🎂\n\nTodo el equipo de Control de Calidad de Venvidrio te desea un excelente día.');
+          window.mostrarAlertaPersonalizada(
+            '¡Feliz Cumpleaños, <strong>' + (u.nombre || 'compañero').split(' ')[0] + '</strong>! 🎂<br>Todo el equipo de Control de Calidad de Venvidrio te desea un excelente día.',
+            'success'
+          );
           if (typeof confetti === 'function') {
             confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
           }
@@ -147,14 +346,13 @@
   }
 
   // =========================
-  // 2.5 ESTILOS DEL MODAL PERFIL (REDISEÑO)
+  // 5. MODAL "MI PERFIL" (Rediseñado)
   // =========================
   function injectPerfilStyles() {
     if (document.getElementById('perfil-redesign-styles')) return;
     var style = document.createElement('style');
     style.id = 'perfil-redesign-styles';
     style.textContent = `
-      /* ---------- OVERLAY ---------- */
       #modalMiPerfil.modal-overlay {
         align-items: center;
         justify-content: center;
@@ -166,8 +364,6 @@
         transition: opacity 0.25s ease;
       }
       #modalMiPerfil.modal-overlay.show { opacity: 1; }
-
-      /* ---------- CAJA DEL MODAL ---------- */
       #modalMiPerfil .modal-box {
         width: 100%;
         max-width: 580px;
@@ -188,8 +384,6 @@
         transform: translateY(0) scale(1);
         opacity: 1;
       }
-
-      /* ---------- HEADER CON GRADIENTE ---------- */
       #modalMiPerfil .modal-header {
         position: relative;
         background: linear-gradient(135deg, #1a237e 0%, #3949ab 55%, #5c6bc0 100%);
@@ -219,9 +413,7 @@
         margin: 0;
         color: #fff;
       }
-      #modalMiPerfil .modal-header h2 i {
-        font-size: 1.4rem;
-      }
+      #modalMiPerfil .modal-header h2 i { font-size: 1.4rem; }
       #modalMiPerfil .modal-close {
         position: relative;
         z-index: 1;
@@ -240,8 +432,6 @@
         background: rgba(255,255,255,0.28);
         transform: rotate(90deg);
       }
-
-      /* ---------- BODY SCROLLABLE ---------- */
       #modalMiPerfil .modal-body {
         padding: 24px;
         overflow-y: auto;
@@ -249,11 +439,7 @@
         background: linear-gradient(180deg, #f8fafc 0%, #ffffff 40%);
       }
       #modalMiPerfil .modal-body::-webkit-scrollbar { width: 8px; }
-      #modalMiPerfil .modal-body::-webkit-scrollbar-thumb {
-        background: #c7cbe0; border-radius: 8px;
-      }
-
-      /* ---------- AVATAR ---------- */
+      #modalMiPerfil .modal-body::-webkit-scrollbar-thumb { background: #c7cbe0; border-radius: 8px; }
       #miPerfil-avatar-wrap {
         display: flex;
         flex-direction: column;
@@ -307,9 +493,7 @@
         color: #5c6bc0;
         transition: transform 0.25s ease;
       }
-      #miPerfil-avatar-container:hover #miPerfil-icono-camara {
-        transform: scale(1.12);
-      }
+      #miPerfil-avatar-container:hover #miPerfil-icono-camara { transform: scale(1.12); }
       #miPerfil-avatar-hint {
         margin-top: 10px;
         font-size: 11.5px;
@@ -320,8 +504,6 @@
         font-weight: 600;
         letter-spacing: 0.2px;
       }
-
-      /* ---------- SECCIONES ---------- */
       #modalMiPerfil .perfil-section {
         background: #fff;
         border: 1px solid #e9edf5;
@@ -342,11 +524,7 @@
         margin-bottom: 14px;
       }
       #modalMiPerfil .perfil-section-title i { font-size: 1rem; }
-
-      /* ---------- CAMPOS ---------- */
-      #modalMiPerfil .field {
-        margin-bottom: 14px;
-      }
+      #modalMiPerfil .field { margin-bottom: 14px; }
       #modalMiPerfil .field:last-child { margin-bottom: 0; }
       #modalMiPerfil .field label {
         display: block;
@@ -380,11 +558,7 @@
         cursor: not-allowed;
         border-color: #e2e8f0;
       }
-
-      /* Input con icono (correo) */
-      #modalMiPerfil .input-icon-wrap {
-        position: relative;
-      }
+      #modalMiPerfil .input-icon-wrap { position: relative; }
       #modalMiPerfil .input-icon-wrap i {
         position: absolute;
         left: 13px; top: 50%;
@@ -393,18 +567,8 @@
         font-size: 1rem;
         pointer-events: none;
       }
-      #modalMiPerfil .input-icon-wrap input {
-        padding-left: 38px;
-      }
-
-      /* Grid de 2 columnas */
-      #modalMiPerfil .grid-2 {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-      }
-
-      /* ---------- ERROR ---------- */
+      #modalMiPerfil .input-icon-wrap input { padding-left: 38px; }
+      #modalMiPerfil .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
       #modalMiPerfil .modal-error {
         background: #fef2f2;
         color: #b91c1c;
@@ -421,8 +585,6 @@
         25% { transform: translateX(-5px); }
         75% { transform: translateX(5px); }
       }
-
-      /* ---------- FOOTER ---------- */
       #modalMiPerfil .modal-footer {
         display: flex;
         gap: 10px;
@@ -466,13 +628,8 @@
         background: #f1f5f9;
         border-color: #cbd5e1;
       }
-
-      /* ---------- RESPONSIVE MÓVIL ---------- */
       @media (max-width: 600px) {
-        #modalMiPerfil.modal-overlay {
-          padding: 0;
-          align-items: flex-end;
-        }
+        #modalMiPerfil.modal-overlay { padding: 0; align-items: flex-end; }
         #modalMiPerfil .modal-box {
           max-width: 100%;
           width: 100%;
@@ -480,18 +637,10 @@
           border-radius: 22px 22px 0 0;
           transform: translateY(100%);
         }
-        #modalMiPerfil.modal-overlay.show .modal-box {
-          transform: translateY(0);
-        }
-        #modalMiPerfil .modal-header {
-          padding: 18px 20px;
-          border-radius: 22px 22px 0 0;
-        }
+        #modalMiPerfil.modal-overlay.show .modal-box { transform: translateY(0); }
+        #modalMiPerfil .modal-header { padding: 18px 20px; border-radius: 22px 22px 0 0; }
         #modalMiPerfil .modal-body { padding: 20px 16px; }
-        #modalMiPerfil .grid-2 {
-          grid-template-columns: 1fr;
-          gap: 0;
-        }
+        #modalMiPerfil .grid-2 { grid-template-columns: 1fr; gap: 0; }
         #modalMiPerfil .modal-footer {
           padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
           flex-direction: column-reverse;
@@ -499,12 +648,8 @@
         #modalMiPerfil .modal-footer .btn { width: 100%; justify-content: center; }
         #miPerfil-avatar-container { width: 96px; height: 96px; }
       }
-
-      /* Accesibilidad */
       @media (prefers-reduced-motion: reduce) {
-        #modalMiPerfil *,
-        #modalMiPerfil *::before,
-        #modalMiPerfil *::after {
+        #modalMiPerfil *, #modalMiPerfil *::before, #modalMiPerfil *::after {
           animation-duration: 0.001ms !important;
           transition-duration: 0.001ms !important;
         }
@@ -513,38 +658,28 @@
     document.head.appendChild(style);
   }
 
-  // =========================
-  // 3. MODAL "MI PERFIL"
-  // =========================
   function conectarModalPerfil() {
     injectPerfilStyles();
-
     var btnPerfil = document.getElementById('dropdownPerfil');
     var modalPerfil = document.getElementById('modalMiPerfil');
 
-    // Esperar a que shared.js inyecte el modal (máx 5s)
     if (!btnPerfil || !modalPerfil) {
       if (!window._perfilWaitStart) window._perfilWaitStart = Date.now();
       if (Date.now() - window._perfilWaitStart > 5000) return;
       setTimeout(conectarModalPerfil, 120);
       return;
     }
-
     if (btnPerfil.dataset.initialized === 'true') return;
     btnPerfil.dataset.initialized = 'true';
 
     reestructurarModalPerfil();
 
-    // ---------- ABRIR MODAL ----------
     async function abrirModal(e) {
       if (e) { e.preventDefault(); e.stopPropagation(); }
-
       cerrarDropdownPerfil();
       cerrarMenuHamburguesa();
 
       var u = JSON.parse(localStorage.getItem('user') || '{}');
-
-      // Traer datos frescos
       try {
         var token = localStorage.getItem('token');
         var res = await fetch(API_URL + '/usuarios/' + u.id, {
@@ -556,11 +691,8 @@
           localStorage.setItem('user', JSON.stringify(u));
           actualizarNavbar();
         }
-      } catch (err) {
-        console.warn('No se pudieron traer datos frescos', err);
-      }
+      } catch (err) { console.warn('No se pudieron traer datos frescos', err); }
 
-      // Rellenar campos
       setVal('miPerfil-nombre', u.nombre || '');
       setVal('miPerfil-cedula', u.cedula || '');
       setVal('miPerfil-correo', u.correo || '');
@@ -569,11 +701,9 @@
       setVal('miPerfil-fecha-ingreso', u.fecha_ingreso || '');
       setVal('miPerfil-fecha-nacimiento', u.fecha_nacimiento || '');
 
-      // Foto
       window._miFotoSeleccionada = null;
       var preview = document.getElementById('miPerfil-preview-foto');
       var icono = document.getElementById('miPerfil-icono-camara');
-
       if (u.foto_url) {
         if (preview) { preview.src = obtenerUrlFoto(u.foto_url) + '?t=' + Date.now(); preview.style.display = 'block'; }
         if (icono) icono.style.display = 'none';
@@ -581,18 +711,14 @@
         if (preview) { preview.removeAttribute('src'); preview.style.display = 'none'; }
         if (icono) icono.style.display = 'block';
       }
-
-      // Ocultar error
       var errDiv = document.getElementById('miPerfil-error');
       if (errDiv) errDiv.style.display = 'none';
 
-      // Mostrar modal con animación
       modalPerfil.style.display = 'flex';
       void modalPerfil.offsetWidth;
       modalPerfil.classList.add('show');
     }
 
-    // anti doble disparo táctil
     let lastOpenPerfil = 0;
     const abrirPerfil = function (e) {
       const now = Date.now();
@@ -604,7 +730,6 @@
     btnPerfil.addEventListener('click', abrirPerfil);
     btnPerfil.addEventListener('touchend', abrirPerfil, { passive: false });
 
-    // ---------- CERRAR MODAL ----------
     var cerrar = function () {
       modalPerfil.classList.remove('show');
       setTimeout(function () { modalPerfil.style.display = 'none'; }, 300);
@@ -615,26 +740,20 @@
     if (btnClose) btnClose.addEventListener('click', cerrar);
     if (btnCancel) btnCancel.addEventListener('click', cerrar);
 
-    // Cerrar con Escape
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && modalPerfil.classList.contains('show')) cerrar();
     });
 
-    // ---------- SUBIR FOTO ----------
     var contenedorAvatar = document.getElementById('miPerfil-avatar-container');
     var inputFile = document.getElementById('miPerfil-file-foto');
 
     if (contenedorAvatar && inputFile) {
-      const abrirSelector = function () {
-        inputFile.value = '';
-        inputFile.click();
-      };
+      const abrirSelector = function () { inputFile.value = ''; inputFile.click(); };
       contenedorAvatar.addEventListener('click', abrirSelector);
 
       inputFile.addEventListener('change', function (e) {
         var file = e.target.files && e.target.files[0];
         if (!file) return;
-
         if (!file.type || file.type.indexOf('image/') !== 0) {
           mostrarErrorPerfil('Selecciona un archivo de imagen válido (JPG, PNG…).');
           return;
@@ -643,9 +762,7 @@
           mostrarErrorPerfil('La imagen no debe superar 5 MB.');
           return;
         }
-
         window._miFotoSeleccionada = file;
-
         var reader = new FileReader();
         reader.onload = function (ev) {
           var preview = document.getElementById('miPerfil-preview-foto');
@@ -657,7 +774,6 @@
       });
     }
 
-    // ---------- GUARDAR ----------
     var btnGuardar = document.getElementById('miPerfil-guardar');
     if (btnGuardar) {
       btnGuardar.addEventListener('click', async function () {
@@ -675,11 +791,9 @@
         var userLocal = JSON.parse(localStorage.getItem('user') || '{}');
         var fotoUrlFinal = userLocal.foto_url;
 
-        // 1. Subir foto si hay una nueva
         if (window._miFotoSeleccionada) {
           var formData = new FormData();
           formData.append('file', window._miFotoSeleccionada);
-
           try {
             var resUpload = await fetch(API_URL + '/usuarios/upload-foto', {
               method: 'POST',
@@ -702,7 +816,6 @@
           }
         }
 
-        // 2. Actualizar datos
         var turnoVal = document.getElementById('miPerfil-turno').value;
         var turnoNum = turnoVal ? parseInt(turnoVal, 10) : null;
         if (isNaN(turnoNum)) turnoNum = null;
@@ -738,13 +851,8 @@
             actualizarNavbar();
             cerrar();
 
-            var toast = document.getElementById('toast-usuarios');
-            if (toast) {
-              toast.classList.add('show');
-              setTimeout(function () { toast.classList.remove('show'); }, 3000);
-            } else {
-              alert('Perfil actualizado correctamente');
-            }
+            // Toast de éxito elegante
+            window.mostrarAlertaPersonalizada('Perfil actualizado correctamente.', 'success');
           } else {
             var errorData = await res.json().catch(() => ({}));
             mostrarErrorPerfil(errorData.detail || 'Error al actualizar el perfil.');
@@ -757,11 +865,7 @@
       });
     }
 
-    // Helpers locales
-    function setVal(id, v) {
-      var el = document.getElementById(id);
-      if (el) el.value = v;
-    }
+    function setVal(id, v) { var el = document.getElementById(id); if (el) el.value = v; }
     function mostrarErrorPerfil(msg) {
       var errDiv = document.getElementById('miPerfil-error');
       if (errDiv) { errDiv.textContent = msg; errDiv.style.display = 'block'; }
@@ -784,9 +888,6 @@
     }
   }
 
-  // =========================
-  // 2.6 REESTRUCTURAR HTML DEL MODAL (SECCIONES)
-  // =========================
   function reestructurarModalPerfil() {
     var modal = document.getElementById('modalMiPerfil');
     if (!modal) return;
@@ -898,7 +999,7 @@
   }
 
   // =========================
-  // SESIÓN (HEARTBEAT Y EXPIRACIÓN)
+  // 6. SESIÓN Y EXPIRACIÓN
   // =========================
   function startHeartbeat() {
     if (heartbeatInterval) return;
@@ -912,38 +1013,44 @@
         headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' }
       })
       .then(function (response) {
-        // SOLO cerramos sesión si el servidor dice explícitamente 401 (No autorizado)
         if (response.status === 401) {
           clearInterval(heartbeatInterval);
           localStorage.clear();
-          alert('Tu sesión ha finalizado (expirada).');
-          window.location.href = '../public/login.html';
+          window.mostrarAlertaPersonalizada('Tu sesión ha finalizado (expirada).', 'warning').then(function() {
+            window.location.href = '../public/login.html';
+          });
         }
       })
       .catch(function (error) { 
-        // Si falla la red, NO cerramos sesión, solo avisamos en consola
         console.warn('Heartbeat falló (posible problema de red):', error); 
       });
     }, INTERVALO_HEARTBEAT_MS);
   }
 
   function mostrarAlertaInactividad() {
-    var continuar = confirm('⚠️ Tu sesión está a punto de expirar por inactividad.\n\n¿Deseas continuar en el sistema?');
-    if (continuar) {
-      localStorage.setItem('lastActivity', Date.now());
-      alertaMostrada = false;
-    }
+    window.mostrarAlertaPersonalizada(
+      'Tu sesión está a punto de expirar por inactividad.',
+      'warning',
+      true,
+      '¿Deseas continuar en el sistema?'
+    ).then(function(continuar) {
+      if (continuar) {
+        localStorage.setItem('lastActivity', Date.now());
+        alertaMostrada = false;
+      }
+    });
   }
 
   function cerrarSesionPorInactividad() {
     clearInterval(heartbeatInterval);
     localStorage.clear();
-    alert('Tu sesión ha expirado por inactividad. Por favor, inicia sesión de nuevo.');
-    window.location.href = '../public/login.html';
+    window.mostrarAlertaPersonalizada('Tu sesión ha expirado por inactividad. Por favor, inicia sesión de nuevo.', 'error').then(function() {
+      window.location.href = '../public/login.html';
+    });
   }
 
   // =========================
-  // LÓGICA GLOBAL
+  // 7. LÓGICA GLOBAL
   // =========================
   if (!esPaginaLogin) {
     var token = localStorage.getItem('token');
@@ -969,7 +1076,6 @@
         localStorage.setItem('lastActivity', Date.now());
       }
 
-      // Revisar inactividad cada minuto
       setInterval(function () {
         var lastActivity = parseInt(localStorage.getItem('lastActivity') || '0', 10);
         var inactividad = Date.now() - lastActivity;
@@ -978,7 +1084,7 @@
           if (!alertaMostrada) { mostrarAlertaInactividad(); alertaMostrada = true; }
         }
         if (inactividad >= TIEMPO_INACTIVIDAD_MS) { cerrarSesionPorInactividad(); }
-      }, 60000); // Cada 1 minuto
+      }, 60000);
 
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () {
@@ -995,7 +1101,7 @@
   }
 
   // =========================
-  // PÁGINA DE LOGIN
+  // 8. PÁGINA DE LOGIN
   // =========================
   if (esPaginaLogin) {
     if (pwToggleBtn) {
@@ -1048,7 +1154,7 @@
         clearTimeout(window.errorTimeout);
         window.errorTimeout = setTimeout(function () { errorMessage.classList.remove('show'); }, 4000);
       } else {
-        alert(message);
+        window.mostrarAlertaPersonalizada(message, 'error');
       }
     }
 
@@ -1101,14 +1207,14 @@
       var prefijoRegex = /^[a-zA-Z0-9._%+-]+$/;
       if (!prefijoRegex.test(prefijo)) {
         if (usernameInput) usernameInput.classList.add('error');
-        mostrarError('El usuario no puede contener espacios ni caracteres especiales');
+        window.mostrarAlertaPersonalizada('El usuario no puede contener espacios ni caracteres especiales', 'error');
         if (usernameInput) usernameInput.focus();
         return;
       }
 
       if (password.length < 1) {
         if (passwordInput) passwordInput.classList.add('error');
-        mostrarError('Por favor ingresa tu contraseña');
+        window.mostrarAlertaPersonalizada('Por favor ingresa tu contraseña', 'error');
         if (passwordInput) passwordInput.focus();
         return;
       }
@@ -1147,17 +1253,21 @@
         if (status === 403) {
           var low = errorMsg.toLowerCase();
           if (low.indexOf('activo') !== -1 || low.indexOf('sesión') !== -1) {
-            errorMsg = '⚠️ Este usuario ya se encuentra activo en otra sesión.\n\nPara acceder, cierra la sesión en el otro dispositivo o espera a que expire.';
+            errorMsg = 'Este usuario ya se encuentra activo en otra sesión.';
+            window.mostrarAlertaPersonalizada(errorMsg, 'warning', false, 'Para acceder, cierra la sesión en el otro dispositivo o espera a que expire.');
           } else if (low.indexOf('bloqueado') !== -1) {
-            errorMsg = '🔒 Usuario bloqueado. ' + errorMsg;
+            window.mostrarAlertaPersonalizada('Usuario bloqueado.', 'error', false, errorMsg);
           } else if (low.indexOf('desactivado') !== -1) {
-            errorMsg = '⚠️ Usuario desactivado. Contacte al administrador.';
+            window.mostrarAlertaPersonalizada('Usuario desactivado.', 'warning', false, 'Contacte al administrador.');
+          } else {
+            window.mostrarAlertaPersonalizada(errorMsg, 'error');
           }
         } else if (status === 429) {
-          errorMsg = '⏳ Demasiados intentos. Intente más tarde.';
+          window.mostrarAlertaPersonalizada('Demasiados intentos. Intente más tarde.', 'warning');
+        } else {
+          window.mostrarAlertaPersonalizada(errorMsg, 'error');
         }
 
-        mostrarError(errorMsg);
         if (passwordInput) { passwordInput.value = ''; passwordInput.focus(); }
       })
       .catch(function (error) {
@@ -1166,7 +1276,7 @@
         var errorMsg = 'Error de conexión con el servidor. ';
         if (!navigator.onLine) errorMsg += 'Verifica tu conexión a internet.';
         else errorMsg += 'Asegúrate de que el backend esté corriendo en ' + API_URL;
-        mostrarError(errorMsg);
+        window.mostrarAlertaPersonalizada(errorMsg, 'error');
       });
     }
 
