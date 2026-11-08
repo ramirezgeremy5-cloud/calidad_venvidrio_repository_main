@@ -3,8 +3,9 @@ from sqlalchemy.orm import relationship
 from app.database.connection import Base
 from datetime import datetime
 
-class AuditoriaCalidad(Base):
-    __tablename__ = "auditorias_calidad"
+
+class AuditoriaInterna(Base):
+    __tablename__ = "auditorias_internas"  # 👈 Cambiado (o deja "auditorias_calidad" si ya tienes datos)
 
     id = Column(Integer, primary_key=True, index=True)
     
@@ -12,8 +13,8 @@ class AuditoriaCalidad(Base):
     evaluador_id = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False)
     
     periodo = Column(String(50), nullable=False)
-    puntaje = Column(Float, nullable=False) # Porcentaje (ej: 85.5)
-    categoria = Column(String(50), nullable=False) # Excelente, Bueno, Regular, Deficiente
+    puntaje = Column(Float, nullable=False)  # Porcentaje (ej: 85.5)
+    categoria = Column(String(50), nullable=False)  # Excelente, Bueno, Regular, Deficiente
     
     # Guardamos las respuestas del checklist en formato JSON
     detalles = Column(String(1000), nullable=True) 

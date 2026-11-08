@@ -2,7 +2,8 @@ from pydantic import BaseModel, Field
 from typing import Optional, Dict
 from datetime import datetime
 
-class AuditoriaCalidadCreate(BaseModel):
+
+class AuditoriaInternaCreate(BaseModel):
     evaluado_id: int
     periodo: str
     puntaje: float
@@ -10,7 +11,8 @@ class AuditoriaCalidadCreate(BaseModel):
     detalles: Optional[str] = None
     observaciones: Optional[str] = None
 
-class AuditoriaCalidadResponse(BaseModel):
+
+class AuditoriaInternaResponse(BaseModel):
     id: int
     evaluado_id: int
     evaluador_id: int

@@ -1,7 +1,7 @@
 /**
  * =============================================
  * LANDING.JS - Funcionalidad completa para 
- * la página de inicio de Venvidrio (Solo Login)
+ * la página de inicio de Venvidrio
  * =============================================
  */
 
@@ -12,26 +12,46 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. MENÚ MÓVIL (Hamburguesa)
     // =============================================
     
-    const menuToggle = document.querySelector('.menu-toggle');
-    const navLinks = document.querySelector('.nav-links');
+    const menuToggle = document.getElementById('menuToggle');
+    const navLinks = document.getElementById('navLinks');
 
     if (menuToggle && navLinks) {
-        menuToggle.addEventListener('click', () => {
-            const isOpen = navLinks.classList.toggle('nav-open');
+        menuToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = navLinks.classList.toggle('active');
+            
             // Cambiamos el icono entre menú y cerrar
             menuToggle.innerHTML = isOpen 
                 ? '<i class="ti ti-x"></i>' 
                 : '<i class="ti ti-menu-2"></i>';
+            
+            // Actualizamos el atributo aria-expanded para accesibilidad
+            menuToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         });
 
         // Al hacer clic en un enlace del menú móvil, se cierra automáticamente
-        document.querySelectorAll('.nav-links a').forEach(link => {
+        navLinks.querySelectorAll('a').forEach(link => {
             link.addEventListener('click', () => {
-                if (window.innerWidth <= 768) {
-                    navLinks.classList.remove('nav-open');
+                if (window.innerWidth <= 900) {
+                    navLinks.classList.remove('active');
                     menuToggle.innerHTML = '<i class="ti ti-menu-2"></i>';
+                    menuToggle.setAttribute('aria-expanded', 'false');
                 }
             });
+        });
+
+        // Cerrar el menú al hacer clic fuera de él
+        document.addEventListener('click', (e) => {
+            if (
+                window.innerWidth <= 900 &&
+                navLinks.classList.contains('active') &&
+                !navLinks.contains(e.target) &&
+                !menuToggle.contains(e.target)
+            ) {
+                navLinks.classList.remove('active');
+                menuToggle.innerHTML = '<i class="ti ti-menu-2"></i>';
+                menuToggle.setAttribute('aria-expanded', 'false');
+            }
         });
     }
 
@@ -45,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (heroContent) {
         setTimeout(() => {
             heroContent.classList.add('visible');
-        }, 300); // 300ms de retraso para un efecto suave
+        }, 300);
     }
 
     // =============================================
@@ -69,35 +89,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =============================================
-    // 4. INTERACCIÓN DEL BOTÓN DE INICIO DE SESIÓN
-    // =============================================
-
-    const btnLogin = document.querySelector('a[href="/login.html"]');
-
-    if (btnLogin) {
-        btnLogin.addEventListener('click', (e) => {
-            // Si estás en desarrollo local y no tienes el backend aún,
-            // esto te mostrará un mensaje para pruebas.
-            // Cuando tengas el backend, borra las líneas del alert y el preventDefault.
-            
-            // e.preventDefault(); // <-- DESCOMENTA ESTO SI NO TIENES BACKEND AÚN
-            console.log('🔐 Redirigiendo a la página de Inicio de Sesión...');
-            // alert('🚀 Redirigiendo al Login...'); // <-- BORRAR ESTO EN PRODUCCIÓN
-            
-            // Cuando tengas el backend, solo déjalo así:
-            // window.location.href = '/login';
-        });
-    }
-
-    // =============================================
-    // 5. EFECTO DE RELLENO DEL NAVBAR AL HACER SCROLL
+    // 4. EFECTO DEL NAVBAR AL HACER SCROLL
     // =============================================
 
     const navbar = document.querySelector('.navbar');
     
     if (navbar) {
         window.addEventListener('scroll', () => {
-            // Cuando el usuario baja más de 50px, se activa el estilo oscuro
             if (window.scrollY > 50) {
                 navbar.classList.add('scrolled');
             } else {
@@ -105,5 +103,4 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
 });

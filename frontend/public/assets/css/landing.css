@@ -1,462 +1,545 @@
-/* =============================================
-   LANDING.CSS - Estilos para página de inicio
-   (Diseño alineado al logo Venvidrio y foto de fábrica)
-   ============================================= */
+/* ==========================================
+   VENVIDRIO - LANDING PAGE
+   landing.css - Index (v4 - Diseño Premium)
+   ========================================== */
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+/* ==========================================================
+   1. VARIABLES Y BASE
+   ========================================================== */
+:root {
+    --font-display: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --ven-amarillo: #fbc02d;
+    --vi-azul: #60a5fa;
+    --drio-rojo: #f87171;
+    --navy: #1a237e;
+    --navy-dark: #0d1b52;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+}
+
+html {
+    scroll-behavior: smooth;
 }
 
 body {
-    background-color: #f8fafc;
-    color: #1e293b;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-display);
+    background-color: #ffffff;
+    color: var(--text-main);
+    line-height: 1.6;
 }
 
-/* --- NAVBAR --- */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    width: 100%;
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* ==========================================================
+   2. NAVBAR (Blanco y con logo resaltado)
+   ========================================================== */
 .navbar {
-    background-color: #0f172a;
-    color: white;
-    padding: 0.8rem 2rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    padding: 0.8rem 2rem;
+    background: rgba(255, 255, 255, 0.95); /* Blanco semitransparente */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    z-index: 1000;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
 }
 
 .navbar.scrolled {
-    background-color: #0a0f1f;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    background: #ffffff;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .nav-brand {
     display: flex;
     align-items: center;
-    flex-shrink: 0;
 }
 
 .nav-logo {
-    height: 55px;
+    height: 45px;
     width: auto;
+    max-width: 180px;
     object-fit: contain;
-    display: block;
-    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.1));
+    filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.1));
 }
 
 .menu-toggle {
     display: none;
-    background: none;
+    background: transparent;
     border: none;
-    color: white;
-    font-size: 1.8rem;
+    font-size: 1.5rem;
+    color: var(--navy);
     cursor: pointer;
-    transition: transform 0.3s ease;
-}
-
-.menu-toggle:hover {
-    transform: scale(1.1);
+    padding: 5px;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
 }
 
 .nav-links {
     display: flex;
-    gap: 1.5rem;
-    align-items: center;
     list-style: none;
+    gap: 2rem;
+    margin: 0;
+    padding: 0;
+    align-items: center;
 }
 
 .nav-links a {
-    color: #e2e8f0;
     text-decoration: none;
-    font-weight: 500;
+    color: #1e293b;
     font-size: 0.95rem;
-    transition: color 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    font-weight: 600;
+    transition: color 0.2s ease;
 }
 
 .nav-links a:hover {
-    color: #ffffff;
+    color: var(--navy);
 }
 
 .btn-nav-primary {
-    background-color: #0a3d91;
-    color: #ffffff;
-    padding: 0.6rem 1.5rem;
-    border-radius: 6px;
-    font-weight: 600;
-    transition: all 0.2s;
-    display: flex;
+    background: var(--navy);
+    color: #ffffff !important;
+    padding: 8px 20px;
+    border-radius: 8px;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    height: 42px;
-    box-sizing: border-box;
+    gap: 6px;
+    font-weight: 600;
+    transition: background 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 4px 10px rgba(26, 35, 126, 0.2);
 }
 
 .btn-nav-primary:hover {
-    background-color: #c8102e;
+    background: var(--navy-dark);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(200, 16, 46, 0.4);
+    box-shadow: 0 6px 15px rgba(26, 35, 126, 0.3);
 }
 
-/* --- HERO SECTION --- */
+/* ==========================================================
+   3. HERO SECTION
+   ========================================================== */
 .hero {
     position: relative;
-    background-color: #0f172a;
-    background-size: cover;
-    background-position: center bottom;
-    background-repeat: no-repeat;
-    min-height: 85vh;
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    color: white;
-    padding: 2rem;
+    padding: 120px 20px 60px;
+    color: #ffffff;
+    background-image: url('../assets/img/fondo-venvidrio-fabrica.jpeg');
+    background-size: cover;
+    background-position: center bottom;
+    background-repeat: no-repeat;
+    background-color: var(--navy);
 }
 
 .hero-overlay {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(15, 23, 42, 0.75);
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.85));
     z-index: 1;
 }
 
 .hero-content {
     position: relative;
     z-index: 2;
-    max-width: 800px;
-    margin: 0 auto; /* Centrado horizontal */
-    text-align: center; /* Centrado de texto dentro del bloque */
-    opacity: 0;
-    transform: translateY(30px);
-    transition: opacity 0.8s ease, transform 0.8s ease;
-}
-
-.hero-content.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.hero-badge {
-    display: inline-block;
-    background: rgba(10, 61, 145, 0.2);
-    border: 1px solid rgba(10, 61, 145, 0.4);
-    padding: 6px 16px;
-    border-radius: 99px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #ffffff;
-    margin-bottom: 1.5rem;
-    letter-spacing: 0.5px;
+    max-width: 900px;
+    animation: fade-up 0.8s ease;
 }
 
 .hero h1 {
-    font-size: 3.5rem;
+    font-family: var(--font-display);
+    font-size: 3rem;
     font-weight: 700;
     margin-bottom: 1rem;
-    line-height: 1.1;
-    text-align: center;
+    line-height: 1.2;
 }
 
-/* Elimina el azul fijo del strong para permitir los colores de Venezuela */
 .hero h1 strong {
-    color: inherit;
-    font-weight: 700;
+    font-weight: 800;
 }
 
-/* =============================================
-   COLORES DE VENEZUELA EN "Venvidrio"
-   ============================================= */
-.ven-amarillo {
-    color: #FFCC00; /* Amarillo bandera de Venezuela */
-}
+.ven-amarillo { color: var(--ven-amarillo); }
+.vi-azul      { color: var(--vi-azul); }
+.drio-rojo    { color: var(--drio-rojo); }
 
-.vi-azul {
-    color: #0033A0; /* Azul bandera de Venezuela */
-}
-
-.drio-rojo {
-    color: #CF142B; /* Rojo bandera de Venezuela */
-}
-
-/* Opcional: sombra sutil para mejor contraste sobre la foto */
 .hero h1 strong span {
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
 .hero-subtitle {
-    font-size: 1.25rem;
+    font-size: 1.15rem;
     color: #cbd5e1;
     margin-bottom: 2.5rem;
     line-height: 1.6;
-    text-align: center;
 }
 
 .hero-actions {
     display: flex;
     gap: 1rem;
     justify-content: center;
-    flex-wrap: wrap;
 }
 
+/* ==========================================================
+   4. BOTONES GLOBALES
+   ========================================================== */
 .btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
-    padding: 0.75rem 2rem;
+    padding: 12px 28px;
     border-radius: 8px;
-    font-weight: 600;
     font-size: 1rem;
+    font-weight: 600;
     text-decoration: none;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
 }
 
 .btn-primary {
-    background-color: #0a3d91;
-    color: #ffffff;
+    background: var(--navy);
+    color: #fff;
+    border-color: var(--navy);
 }
 
 .btn-primary:hover {
-    background-color: #c8102e;
+    background: var(--navy-dark);
+    border-color: var(--navy-dark);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(200, 16, 46, 0.4);
+    box-shadow: 0 6px 20px rgba(26, 35, 126, 0.3);
 }
 
-/* --- FOOTER --- */
+.btn-lg {
+    padding: 16px 32px;
+    font-size: 1.1rem;
+}
+
+/* ==========================================================
+   5. SECCIÓN NOSOTROS
+   ========================================================== */
+.section-nosotros {
+    padding: 5rem 0;
+    background: #ffffff;
+}
+
+.about-header h2 {
+    font-size: 2.2rem;
+    color: var(--navy);
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin-bottom: 3rem;
+    display: block;
+}
+
+.about-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    max-width: 900px;
+    margin: 0 auto 3rem;
+    text-align: left;
+}
+
+.about-text h3 {
+    font-size: 1.5rem;
+    color: var(--navy);
+    margin-bottom: 1rem;
+}
+
+.about-text p {
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    line-height: 1.6;
+    font-size: 1.05rem;
+}
+
+.about-list {
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0;
+}
+
+.about-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 0.8rem;
+    font-size: 0.95rem;
+    color: var(--text-main);
+}
+
+.about-list li i {
+    color: #22c55e;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.card-info {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2.5rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.card-icon {
+    width: 60px;
+    height: 60px;
+    background: #eef2ff;
+    color: var(--navy);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin: 0 auto 1rem;
+}
+
+.card-info h3 {
+    font-size: 1.4rem;
+    color: var(--navy);
+    margin-bottom: 1rem;
+}
+
+.card-info p {
+    font-size: 1rem;
+    color: var(--text-main);
+    line-height: 1.8;
+    margin: 0;
+}
+
+/* ==========================================================
+   6. SECCIÓN BENEFICIOS
+   ========================================================== */
+.section-beneficios {
+    padding: 5rem 0;
+    background-color: #f8fafc;
+}
+
+.section-header {
+    margin-bottom: 3rem;
+}
+
+.section-header h2 {
+    font-size: 2.2rem;
+    color: var(--navy);
+    margin-bottom: 0.5rem;
+}
+
+.beneficios-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 2rem;
+}
+
+.beneficio-card {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.beneficio-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.beneficio-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 1.5rem;
+    background: #eef2ff;
+    color: var(--navy);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+}
+
+.beneficio-card h3 {
+    font-size: 1.15rem;
+    color: var(--text-main);
+    margin-bottom: 0.75rem;
+}
+
+.beneficio-card p {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* ==========================================================
+   7. CTA FINAL
+   ========================================================== */
+.section-cta {
+    padding: 5rem 1.5rem;
+    background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%);
+    color: #ffffff;
+    text-align: center;
+}
+
+.section-cta h2 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.section-cta p {
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    opacity: 0.9;
+}
+
+.section-cta .btn-primary {
+    background: #ffffff;
+    color: var(--navy);
+    border-color: #ffffff;
+}
+
+.section-cta .btn-primary:hover {
+    background: #f1f5f9;
+    color: var(--navy);
+    border-color: #f1f5f9;
+}
+
+/* ==========================================================
+   8. FOOTER
+   ========================================================== */
 .footer {
     background: #0f172a;
-    color: #cbd5e1;
-    padding: 3rem 2rem 1.5rem;
-    margin-top: auto;
-}
-
-.container {
-    max-width: 1100px;
-    margin: 0 auto;
+    color: #f8fafc;
+    padding: 4rem 0 2rem;
+    font-size: 0.9rem;
 }
 
 .footer-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 2rem;
-    margin-bottom: 2rem;
 }
 
 .footer h4 {
-    color: white;
     font-size: 1.1rem;
-    margin-bottom: 0.75rem;
+    margin-bottom: 1rem;
+    color: #ffffff;
 }
 
 .footer ul {
     list-style: none;
     padding: 0;
+    margin: 0;
 }
 
 .footer ul li {
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    margin-bottom: 0.6rem;
 }
 
-.footer ul li a {
-    color: #94a3b8;
+.footer a {
+    color: #cbd5e1;
     text-decoration: none;
     transition: color 0.2s;
 }
 
-.footer ul li a:hover {
+.footer a:hover {
     color: #ffffff;
 }
 
-.footer ul li i {
-    color: #0a3d91;
-    font-size: 18px;
-}
-
-/* --- SECCIÓN NOSOTROS --- */
-.section-nosotros {
-    padding: 4rem 2rem;
-    background: #ffffff;
-}
-
-.about-header {
-    text-align: center;
-    margin-bottom: 3rem;
-}
-
-.about-header h2 {
-    font-size: 2.5rem;
-    color: #0f172a;
-    font-weight: 700;
-}
-
-.about-subtitle {
-    color: #64748b;
-    font-size: 1.1rem;
-    margin-top: 0.5rem;
-}
-
-.about-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 3rem;
-    margin-bottom: 4rem;
-    align-items: center;
-}
-
-.about-text h3 {
-    font-size: 1.8rem;
-    color: #0a3d91;
+.footer-brand .footer-logo {
+    max-width: 140px;
     margin-bottom: 1rem;
 }
 
-.about-text p {
-    color: #475569;
-    line-height: 1.8;
-    margin-bottom: 1rem;
-    font-size: 1.05rem;
+.footer-brand p {
+    color: #94a3b8;
+    margin-bottom: 0.5rem;
 }
 
-/* =============================================
-   CLASE OBLIGATORIA: CENTRADO DE TEXTO
-   ============================================= */
-.text-center {
-    text-align: center;
+.copyright {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-top: 1rem;
 }
 
-/* Ajuste específico para que el about-text centrado no quede pegado */
-.about-text.text-center {
-    max-width: 900px;
-    margin: 0 auto;
-}
-
-/* Centrado del contenedor del about-grid cuando solo hay texto */
-.about-grid:has(.about-text.text-center) {
-    grid-template-columns: 1fr;
-}
-
-.about-stats {
+.footer-contact li {
     display: flex;
-    justify-content: space-around;
-    text-align: center;
-    background: #f8fafc;
-    padding: 2rem;
-    border-radius: 16px;
-    border: 1px solid #e2e8f0;
-}
-
-.stat-item {
-    display: flex;
-    flex-direction: column;
-}
-
-.stat-number {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: #0a3d91;
-}
-
-.stat-label {
-    font-size: 0.95rem;
-    color: #64748b;
-    margin-top: 4px;
-}
-
-.cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 2rem;
-}
-
-.card-info {
-    background: white;
-    padding: 2rem;
-    border-radius: 16px;
-    text-align: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    transition: transform 0.2s, box-shadow 0.2s;
-    border: 1px solid #e2e8f0;
-}
-
-.card-info:hover {
-    transform: translateY(-6px) scale(1.02);
-    box-shadow: 0 12px 30px rgba(0,0,0,0.08);
-}
-
-.card-icon {
-    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: #e0f2fe;
-    color: #0f172a;
-    font-size: 28px;
-    margin-bottom: 1rem;
+    gap: 8px;
+    color: #cbd5e1;
+    margin-bottom: 0.6rem;
 }
 
-.card-info h3 {
-    font-size: 1.3rem;
-    margin-bottom: 0.75rem;
-    color: #0f172a;
+.footer-contact i {
+    color: #64748b;
 }
 
-.card-info p {
-    color: #475569;
-    line-height: 1.6;
-    font-size: 0.95rem;
+/* ==========================================================
+   9. ANIMACIONES
+   ========================================================== */
+@keyframes fade-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
-/* --- RESPONSIVE --- */
-@media (max-width: 1024px) {
-    .hero h1 {
-        font-size: 2.8rem;
-    }
-}
+/* ==========================================================
+   10. RESPONSIVE
+   ========================================================== */
 
-@media (max-width: 768px) {
+/* --- Tablets (<= 900px) --- */
+@media (max-width: 900px) {
     .navbar {
-        flex-wrap: wrap;
-        padding: 0.8rem 1.5rem;
-    }
-    
-    .nav-brand {
-        flex: 1;
+        padding: 1rem 1.5rem;
     }
 
     .menu-toggle {
-        display: block;
+        display: flex;
     }
 
     .nav-links {
-        display: none;
-        flex-direction: column;
+        position: absolute;
+        top: 100%;
+        left: 0;
         width: 100%;
-        background-color: #0f172a;
+        background: #ffffff;
+        flex-direction: column;
+        gap: 0;
         padding: 1rem 0;
-        margin-top: 1rem;
-        border-top: 1px solid rgba(255,255,255,0.1);
-        gap: 0.8rem;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+        display: none;
+        border-top: 1px solid var(--border);
     }
 
-    .nav-links.nav-open {
+    .nav-links.active {
         display: flex;
     }
 
@@ -466,68 +549,73 @@ body {
     }
 
     .nav-links a {
-        justify-content: center;
-        padding: 0.3rem 0;
-        font-size: 1rem;
+        display: block;
+        padding: 1rem;
+        font-size: 1.1rem;
     }
 
     .btn-nav-primary {
+        margin: 1rem auto;
         width: 80%;
-        margin: 0 auto;
         justify-content: center;
     }
 
-    .hero {
-        min-height: 70vh;
-        padding: 1.5rem;
-    }
-    
     .hero h1 {
         font-size: 2.2rem;
     }
-    
+
     .hero-subtitle {
         font-size: 1rem;
     }
-    
+}
+
+/* --- Móviles (<= 600px) --- */
+@media (max-width: 600px) {
+    .hero {
+        padding: 100px 15px 40px;
+    }
+
+    .hero h1 {
+        font-size: 1.8rem;
+    }
+
+    .hero-subtitle {
+        font-size: 0.95rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .btn {
+        width: 100%;
+        padding: 14px 20px;
+    }
+
+    .section-nosotros,
+    .section-beneficios,
+    .section-cta {
+        padding: 3rem 1rem;
+    }
+
+    .about-header h2,
+    .section-header h2,
+    .section-cta h2 {
+        font-size: 1.6rem;
+    }
+
+    .card-info {
+        padding: 1.5rem;
+    }
+
     .footer-grid {
         grid-template-columns: 1fr;
         text-align: center;
     }
 
-    /* Responsive para la sección Nosotros */
-    .about-grid {
-        grid-template-columns: 1fr;
-        gap: 2rem;
+    .footer-contact li {
+        justify-content: center;
     }
-    .about-stats {
-        flex-direction: column;
-        gap: 1.5rem;
-    }
-    .about-header h2 {
-        font-size: 2rem;
-    }
-    .cards-grid {
-        grid-template-columns: 1fr;
-    }
-}
 
-@media (max-width: 480px) {
-    .hero h1 {
-        font-size: 1.8rem;
-    }
-    
-    .hero-badge {
-        font-size: 10px;
-        padding: 4px 12px;
-    }
-    
-    .btn {
-        padding: 0.6rem 1.2rem;
-        font-size: 0.9rem;
-    }
-    
-    .footer ul li {
-        font-size: 0.8rem;
+    .footer-brand .footer-logo {
+        margin: 0 auto 1rem;
+        display: block;
     }
 }
