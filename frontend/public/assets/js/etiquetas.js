@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - ETIQUETAS Y TRAZABILIDAD
-   etiquetas.js — v8 (Impresión al 100% de la hoja)
+   etiquetas.js — v9 (Impresión en 1 sola hoja A4)
    ========================================== */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -225,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // =========================
-  // IMPRIMIR COMO IMAGEN EXACTA Y MARCAR LOTE (OCUPANDO TODA LA HOJA)
+  // IMPRIMIR COMO IMAGEN EXACTA Y MARCAR LOTE (1 SOLA HOJA A4)
   // =========================
   function imprimirEtiquetaComoImagen() {
     if (!ticketPreview || !ticketContent || ticketContent.style.display === 'none') {
@@ -255,39 +255,44 @@ document.addEventListener('DOMContentLoaded', function () {
       const doc = iframe.contentWindow.document;
       doc.open();
       
-      // 👇 AQUÍ ESTÁ EL CAMBIO CLAVE: 
-      // El @page ahora es A4 con margen 0, y la imagen ocupa el 100% del ancho
+      // 👇 AQUÍ ESTÁ EL TRUCO PARA QUE NO SE CORTE Y QUEDE EN 1 SOLA HOJA
       doc.write(`
         <html>
           <head>
             <title>Imprimir Etiqueta</title>
             <style>
               @page {
-                size: A4 portrait; /* Tamaño estándar de hoja */
-                margin: 0;          /* Elimina los márgenes blancos */
+                size: A4 portrait;
+                margin: 0; 
               }
-              body {
+              html, body {
                 margin: 0;
                 padding: 0;
+                width: 210mm;
+                height: 297mm; /* Alto exacto de A4 */
+                background: #fff;
+                overflow: hidden; /* Evita que se genere otra página */
+              }
+              .contenedor {
+                width: 100%;
+                height: 100%;
                 display: flex;
                 justify-content: center;
-                align-items: flex-start;
-                background: #fff;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
+                align-items: center;
               }
               img {
-                width: 100%;       /* Ocupa todo el ancho de la hoja */
-                height: auto;      /* Mantiene la proporción */
-                object-fit: contain; 
-                border: none;      /* Quitamos el borde extra del iframe */
+                max-width: 100%;     /* No se pasa del ancho */
+                max-height: 100%;    /* No se pasa del alto */
+                object-fit: contain; /* Se adapta sin deformarse */
+                border: none;      
                 box-sizing: border-box;
-                margin-top: 10mm;  /* Un pequeño margen superior para que no se corte */
               }
             </style>
           </head>
           <body>
-            <img src="${imgData}" onload="setTimeout(function(){ window.print(); window.frameElement.remove(); }, 100);">
+            <div class="contenedor">
+              <img src="${imgData}" onload="setTimeout(function(){ window.print(); window.frameElement.remove(); }, 150);">
+            </div>
           </body>
         </html>
       `);
