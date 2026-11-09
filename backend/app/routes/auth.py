@@ -2,7 +2,8 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy import text
 from datetime import datetime, timedelta
 import logging
-import requests # 👈 IMPORTANTE: Librería para validar con Cloudflare
+import requests
+import os  # 👈 IMPORTANTE: Para leer variables de entorno
 
 from app.database.connection import engine
 from app.dependencies.security import verify_password, create_access_token, hash_password
@@ -15,8 +16,13 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-# 👇 NUEVA CLAVE SECRETA DE CLOUDFLARE TURNSTILE (CORREGIDA) 👇
-TURNSTILE_SECRET_KEY = "0x4AAAAAAF5fjHYLXA_0cyPmPkPb65YpqQI"
+# 👇 NUEVA CLAVE SECRETA LEÍDA DESDE VARIABLES DE ENTORNO 👇
+# En Render, configura TURNSTILE_SECRET_KEY con tu nueva clave.
+# Si estás en local, puedes ponerla en un archivo .env
+TURNSTILE_SECRET_KEY = os.getenv("TURNSTILE_SECRET_KEY")
+
+if not TURNSTILE_SECRET_KEY:
+    logger.warning("⚠️ ADVERTENCIA: La variable TURNSTILE_SECRET_KEY no está configurada. El CAPTCHA fallará.")
 
 
 # =========================
@@ -24,6 +30,10 @@ TURNSTILE_SECRET_KEY = "0x4AAAAAAF5fjHYLXA_0cyPmPkPb65YpqQI"
 # =========================
 def validar_captcha(token: str) -> bool:
     """Verifica con los servidores de Cloudflare si el token de Turnstile es válido."""
+    if not TURNSTILE_SECRET_KEY:
+        logger.error("❌ No se puede validar el CAPTCHA: falta TURNSTILE_SECRET_KEY")
+        return False
+
     try:
         response = requests.post(
             "https://challenges.cloudflare.com/turnstile/v0/siteverify",

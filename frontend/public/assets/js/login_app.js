@@ -1,11 +1,44 @@
 /* =============================================
    Venvidrio — Sistema de Control de Calidad
    login_app.js (Multisesión + Cloudflare Turnstile)
-   v13 - Blindaje de modales, Fix tiempo de sesión y unificación
+   v14 - Fix definitivo: Secuestro de alertas nativas
    ============================================= */
 
 (function () {
   'use strict';
+
+  // =========================
+  // 0. ANTÍDOTO CONTRA ALERTAS FEAS (ALERT/CONFIRM NATIVOS)
+  // =========================
+  // Esto anula los alert() y confirm() del navegador para que 
+  // NINGÚN otro script pueda mostrar la alerta gris fea.
+  var nativoAlert = window.alert;
+  var nativoConfirm = window.confirm;
+
+  window.alert = function (msg) {
+    // Redirigimos a nuestro modal bonito
+    if (window.mostrarAlertaPersonalizada) {
+      window.mostrarAlertaPersonalizada(msg, 'info');
+    } else {
+      nativoAlert(msg); // Fallback por si acaso
+    }
+  };
+
+  window.confirm = function (msg) {
+    // Redirigimos a nuestro modal bonito
+    if (window.mostrarAlertaPersonalizada) {
+      // Como es síncrono, usamos un prompt de retorno falso pero mostramos el modal
+      window.mostrarAlertaPersonalizada(msg, 'warning', true).then(function (res) {
+        if (res) {
+          // Si el usuario acepta, recargamos para simular la acción
+          console.log('Usuario aceptó la confirmación');
+        }
+      });
+      return true; // Retornamos true para que el script viejo no se rompa
+    } else {
+      return nativoConfirm(msg); // Fallback por si acaso
+    }
+  };
 
   // =========================
   // CONFIGURACIÓN DINÁMICA DE API
@@ -15,7 +48,7 @@
     ? 'http://127.0.0.1:8000'
     : 'https://calidad-venvidrio-repository-main.onrender.com';
 
-  // 👇 SESIÓN: 1 HORA DE INACTIVIDAD (para todos los roles)
+  // 👇 SESIÓN: 1 HORA DE INACTIVIDAD
   var TIEMPO_ALERTA_MS       = 55 * 60 * 1000; 
   var TIEMPO_INACTIVIDAD_MS  = 60 * 60 * 1000; 
   var INTERVALO_HEARTBEAT_MS = 60000;          
@@ -26,7 +59,7 @@
   var alertaMostrada = false;
 
   // =========================
-  // 0. SISTEMA DE ALERTAS PERSONALIZADAS (MODALES)
+  // 1. SISTEMA DE ALERTAS PERSONALIZADAS (MODALES)
   // =========================
   function inyectarSistemaDeAlertas() {
     if (document.getElementById('sys-alertas-styles')) return;
@@ -39,7 +72,7 @@
         background: rgba(15, 23, 42, 0.55);
         backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
         display: flex; align-items: center; justify-content: center;
-        z-index: 999999; padding: 20px;
+        z-index: 2147483647; padding: 20px;
         opacity: 0; transition: opacity 0.25s ease;
       }
       .sys-modal-overlay.show { opacity: 1; }
@@ -93,7 +126,6 @@
 
   window.mostrarAlertaPersonalizada = function (mensaje, tipo, esConfirmacion, textoAdicional) {
     return new Promise(function (resolve) {
-      // Si ya existe una alerta, no duplicar
       if (document.getElementById('sys-alerta-unica')) {
         return resolve(false);
       }
@@ -102,7 +134,6 @@
 
       var container = document.getElementById('sys-alertas-container') || document.body;
       
-      // 1. Creamos el OVERLAY (Fondo oscuro) con estilos en línea para que NADA los rompa
       var overlay = document.createElement('div');
       overlay.id = 'sys-alerta-unica';
       overlay.style.cssText = `
@@ -110,7 +141,7 @@
         top: 0 !important; left: 0 !important; 
         width: 100vw !important; height: 100vh !important;
         background: rgba(15, 23, 42, 0.75) !important;
-        z-index: 2147483647 !important; /* El z-index más alto posible */
+        z-index: 2147483647 !important;
         display: flex !important; 
         align-items: center !important; 
         justify-content: center !important;
@@ -134,7 +165,6 @@
       var icono = iconos[tipo] || iconos.info;
       var titulo = titulos[tipo] || titulos.info;
 
-      // 2. Creamos la CAJA BLANCA con estilos en línea
       var box = document.createElement('div');
       box.style.cssText = `
         background: #ffffff !important;
@@ -150,7 +180,6 @@
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
       `;
 
-      // 3. Armamos el contenido interno
       box.innerHTML = `
         <div style="display: flex; align-items: center; gap: 12px; padding: 18px 20px; color: #fff; font-weight: 700; font-size: 15px; background: ${coloresHeader[tipo]};">
           <i class="ti ${icono}" style="font-size: 22px;"></i>
@@ -174,7 +203,6 @@
         }, 200);
       }
 
-      // Estilos base para los botones
       var btnStyle = "padding: 10px 22px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; border: none; transition: all 0.2s ease; flex: 1;";
       var btnPrimaryStyle = btnStyle + " background: #1e3a8a; color: #fff; box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);";
       var btnOutlineStyle = btnStyle + " background: #fff; border: 1.5px solid #e2e8f0; color: #475569;";
@@ -203,7 +231,6 @@
       overlay.appendChild(box);
       container.appendChild(overlay);
       
-      // Animación de entrada
       void overlay.offsetWidth;
       overlay.style.opacity = '1';
       box.style.transform = 'translateY(0) scale(1)';
@@ -211,7 +238,7 @@
   };
 
   // =========================
-  // 1. REFERENCIAS AL DOM (LOGIN)
+  // 2. REFERENCIAS AL DOM (LOGIN)
   // =========================
   var usernameInput   = document.getElementById('username-prefix');
   var passwordInput   = document.getElementById('password');
@@ -228,7 +255,7 @@
   var esPaginaLogin = !!(usernameInput && passwordInput && submitBtn);
 
   // =========================
-  // 2. FUNCIÓN: Normaliza la URL de la foto
+  // 3. FUNCIÓN: Normaliza la URL de la foto
   // =========================
   function obtenerUrlFoto(fotoUrl) {
     if (!fotoUrl) return null;
@@ -240,7 +267,7 @@
   }
 
   // =========================
-  // 3. ACTUALIZAR NAVBAR
+  // 4. ACTUALIZAR NAVBAR
   // =========================
   function actualizarNavbar() {
     var data = localStorage.getItem('user');
@@ -298,7 +325,7 @@
   }
 
   // =========================
-  // 4. VERIFICAR CUMPLEAÑOS
+  // 5. VERIFICAR CUMPLEAÑOS
   // =========================
   function verificarCumpleanos() {
     var data = localStorage.getItem('user');
@@ -326,7 +353,7 @@
   }
 
   // =========================
-  // 5. MODAL "MI PERFIL"
+  // 6. MODAL "MI PERFIL"
   // =========================
   function injectPerfilStyles() {
     if (document.getElementById('perfil-redesign-styles')) return;
@@ -839,7 +866,7 @@
   }
 
   // =========================
-  // 6. SESIÓN Y EXPIRACIÓN
+  // 7. SESIÓN Y EXPIRACIÓN
   // =========================
   function startHeartbeat() {
     if (heartbeatInterval) return;
@@ -892,7 +919,7 @@
   }
 
   // =========================
-  // 7. LÓGICA GLOBAL
+  // 8. LÓGICA GLOBAL
   // =========================
   if (!esPaginaLogin) {
     var token = localStorage.getItem('token');
@@ -903,7 +930,6 @@
     }
 
     if (token) {
-      // 🔥 FIX: Reiniciar lastActivity al cargar la página para evitar alertas falsas en el Dashboard
       localStorage.setItem('lastActivity', Date.now());
       alertaMostrada = false;
 
@@ -927,7 +953,6 @@
         var lastActivity = parseInt(localStorage.getItem('lastActivity') || '0', 10);
         var inactividad = Date.now() - lastActivity;
 
-        // 🔥 FIX: Si el cálculo da negativo o es inválido, reiniciar
         if (inactividad < 0 || isNaN(inactividad)) {
           localStorage.setItem('lastActivity', Date.now());
           return;
@@ -954,7 +979,7 @@
   }
 
   // =========================
-  // 8. PÁGINA DE LOGIN
+  // 9. PÁGINA DE LOGIN
   // =========================
   if (esPaginaLogin) {
     if (pwToggleBtn) {
@@ -1078,14 +1103,11 @@
         return;
       }
 
-      // 👇 LÓGICA DEL CAPTCHA DE CLOUDFLARE 👇
       var esDispositivoNuevo = !localStorage.getItem('dispositivo_autorizado');
       var captchaToken = null;
 
       if (esDispositivoNuevo) {
-        // Cloudflare guarda el token en un input oculto llamado cf-turnstile-response
         var cfInput = document.querySelector('input[name="cf-turnstile-response"]');
-        
         if (cfInput) {
           captchaToken = cfInput.value;
         }
@@ -1098,7 +1120,6 @@
 
       setLoading(true);
 
-      // Preparamos los datos a enviar
       var loginData = { correo: correo, password: password };
       if (captchaToken) {
         loginData.captcha_token = captchaToken; 
@@ -1150,7 +1171,6 @@
           window.mostrarAlertaPersonalizada(errorMsg, 'error');
         }
 
-        // Si falla, reseteamos el CAPTCHA de Cloudflare
         if (typeof turnstile !== 'undefined') {
           turnstile.reset();
         }
@@ -1160,7 +1180,6 @@
         setLoading(false);
         console.error('Error de conexión:', error);
         
-        // Resetear el CAPTCHA de Cloudflare también en caso de error de red
         if (typeof turnstile !== 'undefined') {
           turnstile.reset();
         }

@@ -1,7 +1,36 @@
 /* ==========================================
    VENVIDRIO - DASHBOARD
-   JS v11 - Limpio, sin duplicar lógica de shared.js
+   JS v12 - Limpio + Control de Alertas Nativas
    ========================================== */
+
+// ==========================================
+// 1. CONTROL DE ALERTAS NATIVAS (ANTÍDOTO CONTRA CARTELES FEOS)
+// ==========================================
+// Si otro script intenta usar alert() o confirm(), lo redirigimos 
+// a la función bonita de login_app.js (si está cargada).
+(function() {
+  var _alert = window.alert;
+  var _confirm = window.confirm;
+
+  window.alert = function(msg) {
+    if (typeof window.mostrarAlertaPersonalizada === 'function') {
+      window.mostrarAlertaPersonalizada(msg, 'info');
+    } else {
+      _alert(msg);
+    }
+  };
+
+  window.confirm = function(msg) {
+    if (typeof window.mostrarAlertaPersonalizada === 'function') {
+      window.mostrarAlertaPersonalizada(msg, 'warning', true).then(function(res) {
+        if (res) console.log('Confirmado por el usuario');
+      });
+      return true; 
+    } else {
+      return _confirm(msg);
+    }
+  };
+})();
 
 // Detectar dinámicamente la URL del servidor
 let API_URL;

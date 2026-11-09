@@ -1,7 +1,7 @@
 /* ==========================================
    VENVIDRIO - SHARED
    Navbar, Reloj, Dropdown, Modal Mi Perfil, Roles
-   v11 - Animaciones fluidas (Menú / Perfil / Dropdown)
+   v12 - Blindaje de modales, mejoras de rendimiento y limpieza
    ========================================== */
 
 (function () {
@@ -118,20 +118,20 @@
   }
 
   // ==========================================================
-  // MODAL "MI PERFIL"
+  // MODAL "MI PERFIL" (Blindado con estilos en línea)
   // ==========================================================
   function crearModalPerfil() {
     if (document.getElementById('modalMiPerfil')) return;
 
     const modalHtml = `
-      <div class="modal-overlay" id="modalMiPerfil" style="display:none; z-index: 99999;">
-        <div class="modal-box" style="max-width: 550px;">
-          <div class="modal-header">
-            <h2><i class="ti ti-user-circle"></i> Mi Perfil</h2>
-            <button class="modal-close" id="perfil-close"><i class="ti ti-x"></i></button>
+      <div class="modal-overlay" id="modalMiPerfil" style="display:none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); z-index: 2147483647; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px);">
+        <div class="modal-box" style="max-width: 550px; width: 100%; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.5); display: flex; flex-direction: column;">
+          <div class="modal-header" style="display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; background: linear-gradient(135deg, #1a237e 0%, #3949ab 55%, #5c6bc0 100%); color: #fff;">
+            <h2 style="margin: 0; font-size: 1.15rem; display: flex; align-items: center; gap: 10px;"><i class="ti ti-user-circle"></i> Mi Perfil</h2>
+            <button class="modal-close" id="perfil-close" style="background: rgba(255,255,255,0.15); border: none; color: #fff; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i class="ti ti-x"></i></button>
           </div>
-          <div class="modal-body">
-            <div class="field" style="align-items: center; margin-bottom: 1.5rem;">
+          <div class="modal-body" style="padding: 24px; overflow-y: auto; max-height: 70vh;">
+            <div class="field" style="display: flex; flex-direction: column; align-items: center; margin-bottom: 1.5rem;">
               <div id="miPerfil-avatar-container" style="position: relative; cursor: pointer; width: 100px; height: 100px; border-radius: 50%; border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; background: #f8f9fa; overflow: hidden;">
                 <i class="ti ti-camera" style="font-size: 32px; color: var(--text-muted);" id="miPerfil-icono-camara"></i>
                 <img id="miPerfil-preview-foto" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
@@ -139,45 +139,45 @@
               <input type="file" id="miPerfil-file-foto" accept="image/*" style="display: none;">
               <small style="font-size:10px;color:var(--text-hint);margin-top:5px;">Clic en la foto para cambiarla</small>
             </div>
-            <div class="grid-2">
+            <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
               <div class="field">
-                <label>Nombre Completo *</label>
-                <input type="text" id="miPerfil-nombre" />
+                <label style="display: block; font-size: 11.5px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Nombre Completo *</label>
+                <input type="text" id="miPerfil-nombre" style="width: 100%; padding: 11px 14px; border: 1.5px solid #dde3ee; border-radius: 10px; font-size: 14px;" />
               </div>
               <div class="field">
-                <label>Cédula</label>
-                <input type="text" id="miPerfil-cedula" />
-              </div>
-            </div>
-            <div class="field">
-              <label>Correo Electrónico (No editable)</label>
-              <input type="email" id="miPerfil-correo" disabled style="background:#f5f5f5; cursor:not-allowed;" />
-            </div>
-            <div class="grid-2">
-              <div class="field">
-                <label>Turno (Asignado)</label>
-                <input type="text" id="miPerfil-turno" disabled style="background:#f5f5f5;" />
-              </div>
-              <div class="field">
-                <label>Cargo (Asignado)</label>
-                <input type="text" id="miPerfil-cargo" disabled style="background:#f5f5f5;" />
+                <label style="display: block; font-size: 11.5px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Cédula</label>
+                <input type="text" id="miPerfil-cedula" style="width: 100%; padding: 11px 14px; border: 1.5px solid #dde3ee; border-radius: 10px; font-size: 14px;" />
               </div>
             </div>
-            <div class="grid-2">
+            <div class="field" style="margin-top: 14px;">
+              <label style="display: block; font-size: 11.5px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Correo Electrónico (No editable)</label>
+              <input type="email" id="miPerfil-correo" disabled style="width: 100%; padding: 11px 14px; border: 1.5px solid #dde3ee; border-radius: 10px; font-size: 14px; background:#f5f5f5; cursor:not-allowed;" />
+            </div>
+            <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px;">
               <div class="field">
-                <label>Fecha de Ingreso</label>
-                <input type="date" id="miPerfil-fecha-ingreso" />
+                <label style="display: block; font-size: 11.5px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Turno (Asignado)</label>
+                <input type="text" id="miPerfil-turno" disabled style="width: 100%; padding: 11px 14px; border: 1.5px solid #dde3ee; border-radius: 10px; font-size: 14px; background:#f5f5f5;" />
               </div>
               <div class="field">
-                <label>Fecha de Nacimiento</label>
-                <input type="date" id="miPerfil-fecha-nacimiento" />
+                <label style="display: block; font-size: 11.5px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Cargo (Asignado)</label>
+                <input type="text" id="miPerfil-cargo" disabled style="width: 100%; padding: 11px 14px; border: 1.5px solid #dde3ee; border-radius: 10px; font-size: 14px; background:#f5f5f5;" />
               </div>
             </div>
-            <div class="modal-error" id="miPerfil-error" style="display:none;"></div>
+            <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px;">
+              <div class="field">
+                <label style="display: block; font-size: 11.5px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Fecha de Ingreso</label>
+                <input type="date" id="miPerfil-fecha-ingreso" style="width: 100%; padding: 11px 14px; border: 1.5px solid #dde3ee; border-radius: 10px; font-size: 14px;" />
+              </div>
+              <div class="field">
+                <label style="display: block; font-size: 11.5px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Fecha de Nacimiento</label>
+                <input type="date" id="miPerfil-fecha-nacimiento" style="width: 100%; padding: 11px 14px; border: 1.5px solid #dde3ee; border-radius: 10px; font-size: 14px;" />
+              </div>
+            </div>
+            <div class="modal-error" id="miPerfil-error" style="display:none; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-top: 12px;"></div>
           </div>
-          <div class="modal-footer">
-            <button class="btn btn-outline" id="miPerfil-cancelar">Cancelar</button>
-            <button class="btn btn-primary" id="miPerfil-guardar"><i class="ti ti-device-floppy"></i> Actualizar Datos</button>
+          <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding: 16px 22px; background: #f8fafc; border-top: 1px solid #e9edf5;">
+            <button class="btn btn-outline" id="miPerfil-cancelar" style="padding: 11px 22px; border-radius: 10px; border: 1.5px solid #dde3ee; background: #fff; color: #475569; cursor: pointer; font-weight: 600;">Cancelar</button>
+            <button class="btn btn-primary" id="miPerfil-guardar" style="padding: 11px 22px; border-radius: 10px; border: none; background: linear-gradient(135deg, #3949ab, #1a237e); color: #fff; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px;"><i class="ti ti-device-floppy"></i> Actualizar Datos</button>
           </div>
         </div>
       </div>
@@ -217,10 +217,10 @@
     $('miPerfil-file-foto').value = '';
     $('miPerfil-error').style.display = 'none';
 
-    // Mostrar con animación (el CSS ya tiene el keyframe de zoom)
-    $('modalMiPerfil').style.display = 'flex';
-    // Forzamos un reflow para que la animación se ejecute
-    void $('modalMiPerfil').offsetWidth;
+    // Mostrar con animación
+    const modal = $('modalMiPerfil');
+    modal.style.display = 'flex';
+    void modal.offsetWidth;
   }
 
   function cerrarModalPerfil() {
@@ -357,7 +357,6 @@
         e.stopPropagation();
         const isActive = navLinks.classList.toggle('active');
         const icon = navToggle.querySelector('i');
-        // Cambiar ícono y estado de aria
         if (isActive) {
           icon.className = 'ti ti-x';
           navToggle.setAttribute('aria-expanded', 'true');
