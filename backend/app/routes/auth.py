@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-# 👇 NUEVA CLAVE SECRETA DE CLOUDFLARE TURNSTILE 👇
-TURNSTILE_SECRET_KEY = "0x4AAAAAAAF5fJHYLXA_OcyPmFkPb65YpqQI"
+# 👇 NUEVA CLAVE SECRETA DE CLOUDFLARE TURNSTILE (CORREGIDA) 👇
+TURNSTILE_SECRET_KEY = "0x4AAAAAAF5fjHYLXA_0cyPmPkPb65YpqQI"
 
 
 # =========================
