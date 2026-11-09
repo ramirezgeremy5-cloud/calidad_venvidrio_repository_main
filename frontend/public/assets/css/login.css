@@ -1,32 +1,47 @@
 /* =============================================
    Venvidrio — Sistema de Control de Calidad
-   Login_styles.css (v2 - Optimizado)
+   Login_styles.css (v3 - Responsive)
    ============================================= */
 
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   min-height: 100vh;
+  min-height: 100dvh; /* 👈 mejor en móviles con barra dinámica */
   display: flex;
   align-items: center;
   justify-content: center;
   background: #0f172a;
   font-family: 'DM Sans', sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ---- Contenedor principal ---- */
 .login-root {
   min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
   background: #0f172a;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem 1rem;
+  padding-top: max(2rem, env(safe-area-inset-top));
+  padding-bottom: max(2rem, env(safe-area-inset-bottom));
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
   position: relative;
   overflow: hidden;
 }
@@ -38,6 +53,8 @@ body {
   filter: blur(60px);
   opacity: 0.15;
   animation: pulse-orb 6s ease-in-out infinite;
+  pointer-events: none;
+  will-change: transform, opacity;
 }
 
 .orb1 {
@@ -91,6 +108,7 @@ body {
       transparent 1px,
       transparent 60px
     );
+  pointer-events: none;
 }
 
 /* ---- Tarjeta ---- */
@@ -99,7 +117,7 @@ body {
   border-radius: 20px;
   padding: 2.5rem 2rem;
   width: 100%;
-  max-width: 420px;
+  max-width: min(420px, 100%);
   position: relative;
   z-index: 10;
   box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 32px 64px rgba(0,0,0,0.4);
@@ -121,21 +139,30 @@ body {
   color: #94a3b8;
   text-decoration: none;
   font-size: 13px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
   transition: color 0.3s;
   z-index: 15;
+  padding: 6px 10px;
+  border-radius: 8px;
+  touch-action: manipulation;
 }
 
 .back-btn:hover {
   color: #0f172a;
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.back-btn i {
+  font-size: 16px;
 }
 
 /* ---- Área de logo real ---- */
 .logo-area {
   text-align: center;
   margin-bottom: 2rem;
+  margin-top: 1.5rem; /* espacio para el botón volver */
   animation: fade-up 0.5s 0.2s ease forwards;
   opacity: 0;
   transform: translateY(12px);
@@ -178,7 +205,6 @@ body {
   transform: translateY(10px);
 }
 
-/* Asignamos retrasos individuales a cada campo */
 .field-group:nth-child(1) { animation-delay: 0.3s; }
 .field-group:nth-child(2) { animation-delay: 0.4s; }
 
@@ -223,7 +249,7 @@ body {
   background: #f8fafc;
   border: 1.5px solid #e2e8f0;
   border-radius: 10px;
-  padding: 11px 14px 11px 42px; /* Padding para dejar espacio al icono */
+  padding: 11px 14px 11px 42px;
   font-size: 14px;
   font-family: 'DM Sans', sans-serif;
   color: #0f172a;
@@ -231,6 +257,13 @@ body {
   appearance: none;
   -webkit-appearance: none;
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+/* 👇 Evita el zoom automático de iOS al enfocar inputs */
+@supports (-webkit-touch-callout: none) {
+  .field-input {
+    font-size: 16px;
+  }
 }
 
 .field-input::placeholder {
@@ -243,7 +276,6 @@ body {
   box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
 }
 
-/* Ajuste específico para el input de contraseña (espacio para el ojo) */
 #password {
   padding-right: 42px;
 }
@@ -258,9 +290,11 @@ body {
   cursor: pointer;
   color: #94a3b8;
   font-size: 18px;
-  padding: 0;
+  padding: 4px;
   line-height: 1;
   transition: color 0.2s;
+  touch-action: manipulation;
+  border-radius: 6px;
 }
 
 .pw-toggle:hover {
@@ -286,6 +320,11 @@ body {
   display: flex;
 }
 
+.error-message i {
+  flex-shrink: 0;
+  font-size: 18px;
+}
+
 /* ---- Advertencia Caps Lock ---- */
 .caps-lock-warning {
   display: none;
@@ -299,6 +338,7 @@ body {
 
 .caps-lock-warning i {
   font-size: 16px;
+  flex-shrink: 0;
 }
 
 /* =============================================
@@ -310,6 +350,7 @@ body {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 1rem;
+  flex-wrap: wrap;
 
   animation: fade-up 0.5s 0.5s ease forwards;
   opacity: 0;
@@ -324,6 +365,8 @@ body {
   color: #475569;
   cursor: pointer;
   user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
 }
 
 .custom-checkbox input {
@@ -331,6 +374,7 @@ body {
   width: 16px;
   height: 16px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .forgot-link {
@@ -341,13 +385,14 @@ body {
   white-space: nowrap;
   transition: color 0.2s;
   position: relative;
+  padding: 4px 0;
 }
 
 .forgot-link::after {
   content: '';
   position: absolute;
   left: 0;
-  bottom: -2px;
+  bottom: 0;
   width: 0;
   height: 1px;
   background: currentColor;
@@ -392,6 +437,8 @@ body {
   overflow: hidden;
   margin-top: 0.5rem;
   transition: transform 0.15s, box-shadow 0.15s;
+  touch-action: manipulation;
+  min-height: 46px;
 
   animation: fade-up 0.5s 0.6s ease forwards;
   opacity: 0;
@@ -468,6 +515,8 @@ body {
   pointer-events: none;
   transition: opacity 0.4s ease;
   z-index: 20;
+  padding: 1rem;
+  text-align: center;
 }
 
 .success-overlay.show {
@@ -486,9 +535,7 @@ body {
   margin-bottom: 16px;
   font-size: 32px;
   color: #fff;
-
   transform: scale(0);
-  animation: none;
 }
 
 .success-overlay.show .check-circle {
@@ -529,7 +576,6 @@ body {
 
 /* =============================================
    PANTALLAS DE AUTENTICACIÓN
-   (Recuperar contraseña / Nueva contraseña / Aviso)
    ============================================= */
 
 .auth-header {
@@ -574,6 +620,9 @@ body {
   align-items: center;
   gap: 6px;
   transition: color 0.2s;
+  padding: 6px 8px;
+  border-radius: 6px;
+  touch-action: manipulation;
 }
 
 .auth-link:hover {
@@ -601,6 +650,7 @@ body {
 
 .success-message i {
   font-size: 18px;
+  flex-shrink: 0;
 }
 
 /* ---- Bloque de fortaleza de contraseña ---- */
@@ -624,6 +674,7 @@ body {
 
 .password-rules li i {
   font-size: 14px;
+  flex-shrink: 0;
 }
 
 .password-rules li.valid {
@@ -656,29 +707,78 @@ body {
   margin-bottom: 0.35rem;
 }
 
-/* ---- Responsive ---- */
-@media (max-width: 480px) {
+/* =============================================
+   RESPONSIVE
+   ============================================= */
+
+/* Tablets y móviles grandes */
+@media (max-width: 640px) {
+  .login-root {
+    padding: 1.25rem 0.75rem;
+    align-items: flex-start;
+    padding-top: max(1.25rem, env(safe-area-inset-top));
+  }
+
   .card {
-    padding: 2rem 1.25rem;
+    padding: 2.25rem 1.5rem 1.75rem;
+    border-radius: 16px;
+    margin: auto 0;
   }
 
   .login-logo {
-    height: 80px;
+    height: 85px;
+  }
+
+  .logo-area {
+    margin-top: 1.75rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .orb1 { width: 250px; height: 250px; }
+  .orb2 { width: 180px; height: 180px; }
+  .orb3 { width: 130px; height: 130px; }
+}
+
+/* Móviles estándar */
+@media (max-width: 480px) {
+  .card {
+    padding: 2rem 1.25rem 1.5rem;
+    border-radius: 16px;
+  }
+
+  .login-logo {
+    height: 75px;
   }
 
   .back-btn {
-    top: 15px;
-    left: 15px;
+    top: 14px;
+    left: 14px;
     font-size: 12px;
+    padding: 5px 8px;
+  }
+
+  .logo-area {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
   }
 
   .options-row {
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
   }
 
   .forgot-link {
     font-size: 12px;
+  }
+
+  .field-input {
+    padding: 12px 14px 12px 42px;
+  }
+
+  .submit-btn {
+    padding: 14px;
+    font-size: 13.5px;
   }
 
   .auth-title {
@@ -687,9 +787,102 @@ body {
 
   .auth-subtitle {
     font-size: 12.5px;
+    max-width: 100%;
   }
 
   .auth-link {
     font-size: 12.5px;
+  }
+
+  .footer-note {
+    font-size: 10.5px;
+    margin-top: 1.25rem;
+  }
+}
+
+/* Móviles pequeños (iPhone SE, Galaxy A0x, etc.) */
+@media (max-width: 360px) {
+  .login-root {
+    padding: 1rem 0.5rem;
+  }
+
+  .card {
+    padding: 1.75rem 1rem 1.25rem;
+    border-radius: 14px;
+  }
+
+  .login-logo {
+    height: 65px;
+  }
+
+  .logo-area {
+    margin-top: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .field-label {
+    font-size: 10px;
+    letter-spacing: 1.2px;
+  }
+
+  .field-input {
+    font-size: 15px;
+    padding: 11px 12px 11px 40px;
+  }
+
+  .field-icon {
+    left: 12px;
+    font-size: 16px;
+  }
+
+  .submit-btn {
+    font-size: 13px;
+    letter-spacing: 0.8px;
+  }
+
+  .footer-note {
+    font-size: 10px;
+  }
+}
+
+/* Landscape en móviles (poca altura) */
+@media (max-height: 600px) and (orientation: landscape) {
+  .login-root {
+    align-items: flex-start;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .card {
+    padding: 1.5rem 1.5rem 1.25rem;
+    margin: 0 auto;
+  }
+
+  .logo-area {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .login-logo {
+    height: 55px;
+  }
+
+  .footer-note {
+    margin-top: 0.75rem;
+  }
+}
+
+/* Accesibilidad: respeta la preferencia de reducir movimiento */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .bg-orb {
+    animation: none;
   }
 }
