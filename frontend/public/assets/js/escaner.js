@@ -1,6 +1,6 @@
 /* ==========================================
    ESCANER.JS - Módulo de Escaneo QR/Código de Barras
-   (Reutilizable para Producción, Defectos, Etiquetas, etc.)
+   (Corregido para html5-qrcode y CSP)
    ========================================== */
 
 const EscanerApp = (function() {
@@ -10,85 +10,86 @@ const EscanerApp = (function() {
   let btnEscanear = null;
   let btnCerrar = null;
 
-  /**
-   * Inicializa el escáner en los elementos del DOM indicados.
-   * @param {string} containerId - ID del div que contiene la cámara (ej. "reader-container-etiqueta").
-   * @param {string} btnId - ID del botón que abre la cámara (ej. "btn-escanear-etiqueta").
-   * @param {string} btnCerrarId - ID del botón para cerrar la cámara (ej. "btn-cerrar-camara-etiqueta").
-   * @param {string} readerDivId - ID del div interno donde se renderiza el video (ej. "reader-etiqueta").
-   */
   function init(containerId, btnId, btnCerrarId, readerDivId) {
     uiContainer = document.getElementById(containerId);
     btnEscanear = document.getElementById(btnId);
     btnCerrar = document.getElementById(btnCerrarId);
 
-    // Validación por si falta algún elemento en el DOM
     if (!uiContainer || !btnEscanear) {
-      console.warn("EscanerApp: No se encontraron los elementos necesarios en el DOM para inicializar la cámara.");
+      console.warn("EscanerApp: Faltan elementos del DOM.");
       return;
     }
-
-    // Verificamos que se haya proporcionado el ID del div de lectura
     if (!readerDivId) {
-      console.warn("EscanerApp: Debes proporcionar el ID del div donde se renderizará el video.");
+      console.warn("EscanerApp: Falta el ID del div de lectura.");
       return;
     }
 
-    btnEscanear.addEventListener('click', () => {
+    btnEscanear.addEventListener('click', async () => {
+      // 1. Verificación de contexto seguro (HTTPS o localhost)
+      if (!window.isSecureContext) {
+        alert("La cámara requiere HTTPS. Revisa la URL.");
+        return;
+      }
+
       uiContainer.style.display = 'block';
       btnEscanear.style.display = 'none';
 
-      // Creamos la instancia de la cámara usando el ID dinámico
-      html5QrCode = new Html5Qrcode(readerDivId);
-      
-      const config = { 
-        fps: 10, 
-        qrbox: { width: 250, height: 250 },
-        formatsToSupport: [ 
-          Html5QrcodeSupportedFormats.QR_CODE,
-          Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.CODE_39
-        ]
-      };
+      try {
+        html5QrCode = new Html5Qrcode(readerDivId);
+        
+        const config = { 
+          fps: 10, 
+          qrbox: { width: 250, height: 250 },
+          formatsToSupport: [ 
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39
+          ]
+        };
 
-      html5QrCode.start(
-        { facingMode: "environment" }, 
-        config,
-        (decodedText) => {
-          // Al leer con éxito, detenemos la cámara y ejecutamos el callback
-          html5QrCode.stop().then(() => {
-            uiContainer.style.display = 'none';
-            btnEscanear.style.display = 'flex';
-            
-            if (callbackExito) callbackExito(decodedText);
-          }).catch(err => console.error("Error al detener cámara:", err));
-        },
-        (errorMessage) => { /* Ignorar frames que no tienen código */ }
-      ).catch(err => {
+        // 👇 CORRECCIÓN CLAVE: facingMode debe ser un STRING exacto, no un objeto.
+        // Si le pasas { ideal: "environment" } o similar, la librería falla.
+        await html5QrCode.start(
+          { facingMode: "environment" }, 
+          config,
+          (decodedText) => {
+            html5QrCode.stop().then(() => {
+              uiContainer.style.display = 'none';
+              btnEscanear.style.display = 'flex';
+              if (callbackExito) callbackExito(decodedText);
+            }).catch(err => console.error("Error al detener:", err));
+          },
+          (errorMessage) => { /* Ignorar frames sin código */ }
+        );
+      } catch (err) {
         console.error("Error al iniciar cámara:", err);
-        alert("No se pudo acceder a la cámara. Verifica los permisos.");
+        
+        // Diagnóstico más claro según el tipo de error
+        if (err.name === "NotAllowedError") {
+          alert("Permiso denegado. Revisa el CSP o la configuración del sitio.");
+        } else if (err.name === "NotFoundError") {
+          alert("No se encontró ninguna cámara disponible.");
+        } else {
+          alert("No se pudo acceder a la cámara: " + err.message);
+        }
+        
         uiContainer.style.display = 'none';
         btnEscanear.style.display = 'flex';
-      });
+      }
     });
 
-    // Lógica del botón de cerrar
     if (btnCerrar) {
       btnCerrar.addEventListener('click', () => {
         if (html5QrCode) {
           html5QrCode.stop().then(() => {
             uiContainer.style.display = 'none';
             btnEscanear.style.display = 'flex';
-          }).catch(err => console.error("Error al cerrar cámara:", err));
+          }).catch(err => console.error("Error al cerrar:", err));
         }
       });
     }
   }
 
-  /**
-   * Registra la función que se ejecutará cuando se lea un código con éxito.
-   * @param {function} callback - Función que recibe el texto decodificado.
-   */
   function onScanSuccess(callback) {
     callbackExito = callback;
   }
