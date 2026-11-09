@@ -1,6 +1,6 @@
 /* =============================================
    Venvidrio — Sistema de Control de Calidad
-   Login_styles.css (v3 - Responsive)
+   Login_styles.css (v4 - Final Responsive)
    ============================================= */
 
 *, *::before, *::after {
@@ -17,7 +17,7 @@ html {
 
 body {
   min-height: 100vh;
-  min-height: 100dvh; /* 👈 mejor en móviles con barra dinámica */
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -57,32 +57,9 @@ body {
   will-change: transform, opacity;
 }
 
-.orb1 {
-  width: 350px;
-  height: 350px;
-  background: #3b82f6;
-  top: -100px;
-  right: -80px;
-  animation-delay: 0s;
-}
-
-.orb2 {
-  width: 250px;
-  height: 250px;
-  background: #60a5fa;
-  bottom: -80px;
-  left: -60px;
-  animation-delay: 2s;
-}
-
-.orb3 {
-  width: 180px;
-  height: 180px;
-  background: #1d4ed8;
-  top: 50%;
-  left: 20%;
-  animation-delay: 4s;
-}
+.orb1 { width: 350px; height: 350px; background: #3b82f6; top: -100px; right: -80px; animation-delay: 0s; }
+.orb2 { width: 250px; height: 250px; background: #60a5fa; bottom: -80px; left: -60px; animation-delay: 2s; }
+.orb3 { width: 180px; height: 180px; background: #1d4ed8; top: 50%; left: 20%; animation-delay: 4s; }
 
 @keyframes pulse-orb {
   0%, 100% { transform: scale(1);   opacity: 0.15; }
@@ -94,20 +71,8 @@ body {
   position: absolute;
   inset: 0;
   background-image:
-    repeating-linear-gradient(
-      90deg,
-      rgba(255,255,255,0.015) 0px,
-      rgba(255,255,255,0.015) 1px,
-      transparent 1px,
-      transparent 60px
-    ),
-    repeating-linear-gradient(
-      0deg,
-      rgba(255,255,255,0.015) 0px,
-      rgba(255,255,255,0.015) 1px,
-      transparent 1px,
-      transparent 60px
-    );
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 60px),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 60px);
   pointer-events: none;
 }
 
@@ -121,7 +86,6 @@ body {
   position: relative;
   z-index: 10;
   box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 32px 64px rgba(0,0,0,0.4);
-
   animation: card-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   opacity: 0;
   transform: translateY(24px);
@@ -154,15 +118,13 @@ body {
   background: rgba(15, 23, 42, 0.04);
 }
 
-.back-btn i {
-  font-size: 16px;
-}
+.back-btn i { font-size: 16px; }
 
 /* ---- Área de logo real ---- */
 .logo-area {
   text-align: center;
   margin-bottom: 2rem;
-  margin-top: 1.5rem; /* espacio para el botón volver */
+  margin-top: 1.5rem;
   animation: fade-up 0.5s 0.2s ease forwards;
   opacity: 0;
   transform: translateY(12px);
@@ -227,6 +189,7 @@ body {
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
 .field-icon {
@@ -238,6 +201,7 @@ body {
   font-size: 18px;
   pointer-events: none;
   transition: color 0.2s;
+  z-index: 2;
 }
 
 .field-group:focus-within .field-icon {
@@ -276,6 +240,18 @@ body {
   box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
 }
 
+/* 👇 ESTA ES LA CLASE QUE ARREGLA LA PC PARA EL @venvidrio.com */
+.field-suffix {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: #94a3b8;
+  pointer-events: none;
+  z-index: 2;
+}
+
 #password {
   padding-right: 42px;
 }
@@ -295,6 +271,7 @@ body {
   transition: color 0.2s;
   touch-action: manipulation;
   border-radius: 6px;
+  z-index: 2;
 }
 
 .pw-toggle:hover {
@@ -351,7 +328,6 @@ body {
   gap: 12px;
   margin-bottom: 1rem;
   flex-wrap: wrap;
-
   animation: fade-up 0.5s 0.5s ease forwards;
   opacity: 0;
   transform: translateY(10px);
@@ -439,7 +415,6 @@ body {
   transition: transform 0.15s, box-shadow 0.15s;
   touch-action: manipulation;
   min-height: 46px;
-
   animation: fade-up 0.5s 0.6s ease forwards;
   opacity: 0;
   transform: translateY(10px);
@@ -564,7 +539,6 @@ body {
   font-size: 11px;
   color: #94a3b8;
   margin-top: 1.5rem;
-
   animation: fade-up 0.5s 0.7s ease forwards;
   opacity: 0;
   transform: translateY(8px);
@@ -581,7 +555,6 @@ body {
 .auth-header {
   text-align: center;
   margin-bottom: 1.5rem;
-
   animation: fade-up 0.5s 0.25s ease forwards;
   opacity: 0;
   transform: translateY(10px);
@@ -606,7 +579,6 @@ body {
 .auth-footer {
   text-align: center;
   margin-top: 1.25rem;
-
   animation: fade-up 0.5s 0.65s ease forwards;
   opacity: 0;
   transform: translateY(8px);
@@ -711,7 +683,6 @@ body {
    RESPONSIVE
    ============================================= */
 
-/* Tablets y móviles grandes */
 @media (max-width: 640px) {
   .login-root {
     padding: 1.25rem 0.75rem;
@@ -739,7 +710,6 @@ body {
   .orb3 { width: 130px; height: 130px; }
 }
 
-/* Móviles estándar */
 @media (max-width: 480px) {
   .card {
     padding: 2rem 1.25rem 1.5rem;
@@ -800,7 +770,6 @@ body {
   }
 }
 
-/* Móviles pequeños (iPhone SE, Galaxy A0x, etc.) */
 @media (max-width: 360px) {
   .login-root {
     padding: 1rem 0.5rem;
@@ -845,7 +814,6 @@ body {
   }
 }
 
-/* Landscape en móviles (poca altura) */
 @media (max-height: 600px) and (orientation: landscape) {
   .login-root {
     align-items: flex-start;
@@ -872,7 +840,6 @@ body {
   }
 }
 
-/* Accesibilidad: respeta la preferencia de reducir movimiento */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

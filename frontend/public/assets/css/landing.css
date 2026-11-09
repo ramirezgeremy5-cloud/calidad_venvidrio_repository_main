@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - LANDING PAGE
-   landing.css - Index (v6 - Mobile First Ready)
+   landing.css - Index (v7 - Footer Logo Fix)
    ========================================== */
 
 /* ==========================================================
@@ -19,13 +19,13 @@
 }
 
 * {
-    box-sizing: border-box; /* 👈 Crucial para que el padding no desborde los contenedores */
-    -webkit-tap-highlight-color: transparent; /* 👈 Quita el cuadro azul al tocar en móviles */
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
 }
 
 html {
     scroll-behavior: smooth;
-    -webkit-text-size-adjust: 100%; /* 👈 Evita que iOS agrande la letra en horizontal */
+    -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -35,7 +35,7 @@ body {
     background-color: #ffffff;
     color: var(--text-main);
     line-height: 1.6;
-    overflow-x: hidden; /* 👈 Evita el scroll horizontal por culpa de animaciones o imágenes */
+    overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
 }
 
@@ -51,7 +51,7 @@ body {
 }
 
 /* ==========================================================
-   2. NAVBAR (Blanco y con logo resaltado)
+   2. NAVBAR
    ========================================================== */
 .navbar {
     position: fixed;
@@ -62,7 +62,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 0.8rem 2rem;
-    padding-top: max(0.8rem, env(safe-area-inset-top)); /* 👈 Respeta el notch */
+    padding-top: max(0.8rem, env(safe-area-inset-top));
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -98,7 +98,7 @@ body {
     color: var(--navy);
     cursor: pointer;
     padding: 5px;
-    min-width: 44px; /* 👈 Tamaño mínimo táctil */
+    min-width: 44px;
     min-height: 44px;
     align-items: center;
     justify-content: center;
@@ -152,7 +152,6 @@ body {
    ========================================================== */
 .hero {
     position: relative;
-    /* 👇 dvh asegura que se adapte a la barra de direcciones móvil */
     min-height: 80vh;
     min-height: 80dvh; 
     display: flex;
@@ -214,7 +213,7 @@ body {
     display: flex;
     gap: 1rem;
     justify-content: center;
-    flex-wrap: wrap; /* 👈 Permite que los botones bajen si no caben */
+    flex-wrap: wrap;
 }
 
 /* ==========================================================
@@ -232,8 +231,8 @@ body {
     text-decoration: none;
     transition: all 0.2s ease;
     border: 2px solid transparent;
-    touch-action: manipulation; /* 👈 Mejora la respuesta al toque */
-    min-height: 48px; /* 👈 Botones más fáciles de pulsar */
+    touch-action: manipulation;
+    min-height: 48px;
 }
 
 .btn-primary {
@@ -493,9 +492,12 @@ body {
     color: #ffffff;
 }
 
+/* 👇 AQUÍ ESTÁ EL TRUCO PARA EL LOGO BLANCO EN EL FOOTER 👇 */
 .footer-brand .footer-logo {
     max-width: 140px;
     margin-bottom: 1rem;
+    filter: brightness(0) invert(1); /* Convierte el logo a blanco puro */
+    opacity: 0.9; /* Un toque sutil para que no deslumbre */
 }
 
 .footer-brand p {
@@ -534,7 +536,6 @@ body {
    10. RESPONSIVE
    ========================================================== */
 
-/* --- Tablets (<= 900px) --- */
 @media (max-width: 900px) {
     .navbar {
         padding: 1rem 1.5rem;
@@ -557,7 +558,6 @@ body {
         box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
         display: none;
         border-top: 1px solid var(--border);
-        /* Aseguramos que se pueda hacer scroll si hay muchos links */
         max-height: calc(100vh - 70px);
         overflow-y: auto;
     }
@@ -592,7 +592,6 @@ body {
     }
 }
 
-/* --- Móviles (<= 600px) --- */
 @media (max-width: 600px) {
     .navbar {
         padding: 0.8rem 1rem;
@@ -600,7 +599,7 @@ body {
     }
 
     .nav-logo {
-        height: 38px; /* 👈 Logo un poco más pequeño para que quepa bien */
+        height: 38px;
     }
 
     .hero {
@@ -619,7 +618,7 @@ body {
     }
 
     .hero-actions {
-        flex-direction: column; /* 👈 Botones uno debajo del otro en móviles */
+        flex-direction: column;
         width: 100%;
     }
 
@@ -667,7 +666,6 @@ body {
     }
 }
 
-/* --- Pantallas muy pequeñas (<= 360px) --- */
 @media (max-width: 360px) {
     .hero h1 {
         font-size: 1.5rem;
@@ -682,7 +680,6 @@ body {
     }
 }
 
-/* --- Accesibilidad: Reduce el movimiento si el usuario lo prefiere --- */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
         animation-duration: 0.01ms !important;

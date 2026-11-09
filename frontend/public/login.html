@@ -57,17 +57,19 @@
 
       <!-- Campo Usuario -->
       <div class="field-group">
-        <label class="field-label" for="username-prefix">Usuario o Correo</label>
+        <label class="field-label" for="username-prefix">Usuario</label>
         <div class="field-wrapper">
           <i class="ti ti-user field-icon"></i>
-          <!-- Placeholder acortado para que no desborde en móviles -->
           <input 
             class="field-input" 
             id="username-prefix" 
             type="text" 
             autocomplete="username" 
-            placeholder="Usuario o correo" 
+            placeholder="Ej: juan.perez" 
+            style="padding-right: 120px;" 
           />
+          <!-- Sufijo visual fijo dentro del input -->
+          <span class="field-suffix">@venvidrio.com</span>
         </div>
       </div>
 
