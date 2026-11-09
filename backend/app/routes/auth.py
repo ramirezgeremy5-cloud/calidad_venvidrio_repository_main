@@ -287,7 +287,8 @@ def register(data: RegisterRequest):
 @router.post("/logout")
 def logout(current_user = Depends(get_current_user)):
     try:
-        logger.info(f"👋 Solicitud de logout para usuario ID: {current_user['id']}")
+        # 👇 CORREGIDO: current_user.id (notación de punto)
+        logger.info(f"👋 Solicitud de logout para usuario ID: {current_user.id}")
         return {
             "success": True,
             "message": "Sesión cerrada correctamente"
@@ -311,13 +312,15 @@ def cambiar_password(
     data: PasswordChangeRequest,
     current_user = Depends(get_current_user)
 ):
-    logger.info(f"🔑 Cambio de contraseña para usuario ID: {current_user['id']}")
+    # 👇 CORREGIDO: current_user.id
+    logger.info(f"🔑 Cambio de contraseña para usuario ID: {current_user.id}")
 
     try:
         with engine.connect() as conn:
             user = conn.execute(
                 text("SELECT password FROM usuarios WHERE id = :id"),
-                {"id": current_user["id"]}
+                # 👇 CORREGIDO: current_user.id
+                {"id": current_user.id}
             ).first()
 
             if not user:
@@ -327,7 +330,8 @@ def cambiar_password(
                 )
 
             if not verify_password(data.current_password, user["password"]):
-                logger.warning(f"❌ Contraseña actual incorrecta para usuario ID: {current_user['id']}")
+                # 👇 CORREGIDO: current_user.id
+                logger.warning(f"❌ Contraseña actual incorrecta para usuario ID: {current_user.id}")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Contraseña actual incorrecta"
@@ -342,12 +346,14 @@ def cambiar_password(
                 """),
                 {
                     "password": new_password_hash,
-                    "id": current_user["id"]
+                    # 👇 CORREGIDO: current_user.id
+                    "id": current_user.id
                 }
             )
             conn.commit()
 
-            logger.info(f"✅ Contraseña actualizada para usuario ID: {current_user['id']}")
+            # 👇 CORREGIDO: current_user.id
+            logger.info(f"✅ Contraseña actualizada para usuario ID: {current_user.id}")
             return {
                 "success": True,
                 "message": "Contraseña actualizada exitosamente"
@@ -368,7 +374,8 @@ def cambiar_password(
 # =========================
 @router.get("/verify")
 def verify_token(current_user = Depends(get_current_user)):
-    logger.info(f"✅ Token verificado para usuario ID: {current_user['id']}")
+    # 👇 CORREGIDO: current_user.id en lugar de current_user['id']
+    logger.info(f"✅ Token verificado para usuario ID: {current_user.id}")
     
     try:
         with engine.connect() as conn:
@@ -380,7 +387,8 @@ def verify_token(current_user = Depends(get_current_user)):
                 """),
                 {
                     "now": datetime.utcnow(),
-                    "id": current_user["id"]
+                    # 👇 CORREGIDO: current_user.id
+                    "id": current_user.id
                 }
             )
             conn.commit()
@@ -390,10 +398,11 @@ def verify_token(current_user = Depends(get_current_user)):
     return {
         "success": True,
         "user": {
-            "id": current_user["id"],
-            "nombre": current_user["nombre"],
-            "correo": current_user["correo"],
-            "rol_id": current_user["rol_id"]
+            # 👇 CORREGIDO: notación de punto en todas las propiedades
+            "id": current_user.id,
+            "nombre": current_user.nombre,
+            "correo": current_user.correo,
+            "rol_id": current_user.rol_id
         }
     }
 
