@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - LANDING PAGE
-   landing.css - Index (v8 - Estable en PC)
+   landing.css - Index (v9 - Ruta de imagen corregida)
    ========================================== */
 
 :root {
@@ -149,7 +149,8 @@ body {
     text-align: center;
     padding: 120px 20px 80px;
     color: #ffffff;
-    background-image: url('../assets/img/fondo-venvidrio-fabrica.jpeg');
+    /* 👇 RUTA CORREGIDA: Empieza con / para buscar desde la raíz (public) */
+    background-image: url('/assets/img/fondo-venvidrio-fabrica.jpeg');
     background-size: cover;
     background-position: center bottom;
     background-repeat: no-repeat;
