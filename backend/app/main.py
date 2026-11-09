@@ -11,7 +11,6 @@ import traceback
 
 from app.database.connection import engine, Base
 
-
 # =========================
 # MODELOS (ORDEN CRÍTICO)
 # =========================
@@ -20,11 +19,9 @@ from app.models.cargo import Cargo
 from app.models.defecto import Defecto
 from app.models.auditoria_producto import AuditoriaProducto
 
-
 # =========================
 # ROUTERS
 # =========================
-
 from app.routes import usuarios
 from app.routes import auth
 from app.routes import clientes
@@ -41,11 +38,9 @@ from app.routes import reportes_defectos
 from app.routes import cargos
 from app.routes import escaner
 
-
 # =========================
 # LIFESPAN (STARTUP + SHUTDOWN)
 # =========================
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("=" * 60)
@@ -66,14 +61,11 @@ async def lifespan(app: FastAPI):
     print("=" * 60)
 
     yield
-
     print("👋 MoonDRAGO API detenida")
-
 
 # =========================
 # CREACIÓN APP
 # =========================
-
 app = FastAPI(
     title="MoonDRAGO — Sistema de Control de Calidad",
     version="1.0.0",
@@ -81,21 +73,16 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-
 # =========================
 # CONFIGURACIÓN DE ARCHIVOS ESTÁTICOS (FOTOS)
 # =========================
-
 UPLOAD_DIR = "app/static/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
-
 
 # =========================
 # CORS FRONTEND
 # =========================
-
 origins = [
     "http://127.0.0.1:5500",
     "http://localhost:5500",
@@ -124,51 +111,78 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
+# =========================
+# MIDDLEWARE CSP (Content Security Policy) - CORREGIDO
+# =========================
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    
+    # Política CSP corregida (incluye jsdelivr en connect-src)
+    csp = (
+        "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: "
+        "https://*.cloudflare.com https://*.cloudflarecaptcha.com "
+        "https://challenges.cloudflare.com https://cdn.jsdelivr.net "
+        "https://fonts.googleapis.com https://fonts.gstatic.com "
+        "https://calidad-venvidrio-repository-main.onrender.com "
+        "https://zjubkwzrtggykladkycy.supabase.co; "
+        
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: "
+        "https://challenges.cloudflare.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+        
+        "frame-src 'self' data: blob: https://challenges.cloudflare.com; "
+        
+        "connect-src 'self' data: blob: https://challenges.cloudflare.com "
+        "https://*.cloudflare.com https://*.cloudflarecaptcha.com "
+        "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
+        "https://calidad-venvidrio-repository-main.onrender.com "
+        "https://zjubkwzrtggykladkycy.supabase.co; "
+        
+        "img-src 'self' data: blob: https://*.cloudflare.com "
+        "https://challenges.cloudflare.com https://zjubkwzrtggykladkycy.supabase.co "
+        "https://calidad-venvidrio-repository-main.onrender.com; "
+        
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
+        
+        "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net;"
+    )
+    
+    response.headers["Content-Security-Policy"] = csp
+    return response
 
 # =========================
 # CREAR TABLAS
 # =========================
-
 try:
     configure_mappers()
     print("✅ Mapeo de modelos verificado correctamente.")
-    
     Base.metadata.create_all(bind=engine)
     print("✅ Tablas creadas/verificadas exitosamente.")
 except Exception as e:
     print(f"⚠️ Error al configurar mappers o crear tablas: {e}")
 
-
 # =========================
 # REGISTRO ROUTERS
 # =========================
-
 app.include_router(auth.router)
 app.include_router(usuarios.router)
 app.include_router(cargos.router)
-
 app.include_router(clientes.router)
 app.include_router(productos.router)
 app.include_router(produccion.router)
 app.include_router(etiqueta.router)
 app.include_router(defecto_tipos.router)
 app.include_router(defecto.router)
-
 app.include_router(auditoria_interna.router)
 app.include_router(auditoria_producto.router)
-
 app.include_router(dashboard.router)
-
 app.include_router(reportes.router)
 app.include_router(reportes_defectos.router)
-
 app.include_router(escaner.router)
-
 
 # =========================
 # HOME
 # =========================
-
 @app.get("/")
 def home():
     return {
@@ -185,31 +199,21 @@ def home():
         }
     }
 
-
 # =========================
 # HEALTH DATABASE
 # =========================
-
 @app.get("/health/db")
 def health_db():
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-        return {
-            "database": "venvidrio_calidad",
-            "status": "connected"
-        }
+        return {"database": "venvidrio_calidad", "status": "connected"}
     except Exception as e:
-        return {
-            "status": "error",
-            "detail": str(e)
-        }
-
+        return {"status": "error", "detail": str(e)}
 
 # =========================
 # HEALTH CHECK GENERAL
 # =========================
-
 @app.get("/health")
 def health_check():
     return {
@@ -224,16 +228,13 @@ def health_check():
         }
     }
 
-
 # =========================
 # MANEJO DE ERRORES GLOBAL
 # =========================
-
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     print(f"❌ [MoonDRAGO] ERROR NO MANEJADO en {request.url.path}: {exc}")
     traceback.print_exc()
-
     return JSONResponse(
         status_code=500,
         content={
@@ -245,16 +246,9 @@ async def global_exception_handler(request: Request, exc: Exception):
         }
     )
 
-
 # =========================
 # EJECUCIÓN (Opcional)
 # =========================
-
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True
-    )
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
