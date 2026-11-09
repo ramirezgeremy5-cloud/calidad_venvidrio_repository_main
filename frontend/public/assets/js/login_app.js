@@ -15,10 +15,10 @@
     : 'https://calidad-venvidrio-repository-main.onrender.com';
 
   // 👇 SESIÓN: 1 HORA DE INACTIVIDAD
-  var TIEMPO_ALERTA_MS       = 55 * 60 * 1000; // Avisar a los 55 min
-  var TIEMPO_INACTIVIDAD_MS  = 60 * 60 * 1000; // Cerrar a los 60 min (1 hora)
-  var INTERVALO_HEARTBEAT_MS = 60000;          // Verificar servidor cada 1 min
-  var INTERVALO_CHEQUEO_MS   = 5000;           // Revisar inactividad cada 5 seg
+  var TIEMPO_ALERTA_MS       = 55 * 60 * 1000; 
+  var TIEMPO_INACTIVIDAD_MS  = 60 * 60 * 1000; 
+  var INTERVALO_HEARTBEAT_MS = 60000;          
+  var INTERVALO_CHEQUEO_MS   = 5000;           
 
   var heartbeatInterval = null;
   var inactivityInterval = null;
@@ -1101,6 +1101,14 @@
         else errorMsg += 'Asegúrate de que el backend esté corriendo en ' + API_URL;
         window.mostrarAlertaPersonalizada(errorMsg, 'error');
       });
+    }
+
+    // 👇 CORRECCIÓN CLAVE: Mostrar CAPTCHA desde el inicio si es dispositivo nuevo
+    if (!localStorage.getItem('dispositivo_autorizado')) {
+      var captchaContainer = document.getElementById('captcha-container');
+      if (captchaContainer) {
+        captchaContainer.style.display = 'flex';
+      }
     }
 
     submitBtn.addEventListener('click', function (e) { e.preventDefault(); handleLogin(); });
