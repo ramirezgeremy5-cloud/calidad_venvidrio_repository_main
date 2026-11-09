@@ -6,6 +6,9 @@
   <meta name="theme-color" content="#0f172a" />
   <title>Venvidrio — Iniciar Sesión</title>
 
+  <!-- 👇 CSP FORZADA DESDE EL HTML PARA PERMITIR CLOUDFLARE Y EL BACKEND 👇 -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://cdn.jsdelivr.net; frame-src 'self' https://challenges.cloudflare.com; connect-src 'self' data: https://challenges.cloudflare.com https://calidad-venvidrio-repository-main.onrender.com; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net;">
+
   <!-- CSS -->
   <link rel="stylesheet" href="../assets/css/login.css" />
 
