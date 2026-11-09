@@ -1,13 +1,11 @@
 /* ==========================================
    VENVIDRIO - DASHBOARD
-   JS v12 - Limpio + Control de Alertas Nativas
+   JS v13 - Limpio + Ajustes de renderizado para Cards
    ========================================== */
 
 // ==========================================
 // 1. CONTROL DE ALERTAS NATIVAS (ANTÍDOTO CONTRA CARTELES FEOS)
 // ==========================================
-// Si otro script intenta usar alert() o confirm(), lo redirigimos 
-// a la función bonita de login_app.js (si está cargada).
 (function() {
   var _alert = window.alert;
   var _confirm = window.confirm;
@@ -769,7 +767,7 @@ function renderAuditoriasPendientes(lotes, defectos) {
 
   lotesFiltrados.forEach(l => {
     const est = String(l.estatus || '100').trim();
-    const tieneDefectos = defectos.some(d => String(d.produccion_id) === String(l.id) || String(d.lote_id) === String(l.id));
+    const tieneDefectos = defectos.some(d => String(d.produccion_id) === String(l.id) || String(l.lote_id) === String(l.id));
 
     if (est === '100') {
       pendientes++;
