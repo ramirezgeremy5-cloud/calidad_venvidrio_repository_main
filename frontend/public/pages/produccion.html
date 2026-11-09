@@ -33,7 +33,7 @@
   </div>
 
   <ul class="nav-links" id="navLinks">
-    <!-- 👇 RUTA CORREGIDA: Súbelo a la raíz ../dashboard.html en lugar de ../public/dashboard.html -->
+    <!-- 👇 RUTA CORREGIDA -->
     <li><a href="../dashboard.html"><i class="ti ti-layout-dashboard"></i> Panel Principal</a></li>
     <li><a href="../pages/produccion.html" class="active"><i class="ti ti-building-factory-2"></i> Producción</a></li>
     <li><a href="../pages/defectos.html"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
@@ -598,4 +598,155 @@
             <span class="detail-label">Auditoría</span>
             <span class="detail-value" id="detail-estado-auditoria">—</span>
           </div>
-          <
+          <div class="detail-item detail-item-full">
+            <span class="detail-label">Observaciones</span>
+            <span class="detail-value" id="detail-observaciones">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 👇 SECCIÓN DE CÓDIGO QR Y DESCARGA DE IMAGEN -->
+      <div class="detail-section" style="text-align: center; border-top: 1px solid var(--border); padding-top: 1.5rem;">
+        <h4 class="detail-section-title" style="justify-content: center;"><i class="ti ti-qrcode"></i> Código QR del Lote</h4>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+          Escanee este código para abrir la vista previa de la etiqueta. Al escanear, se abrirá una página aparte con el ticket.
+        </p>
+        <div id="modal-qr-container" style="display: flex; justify-content: center; padding: 10px; background: #fff; border: 1px dashed var(--border); border-radius: var(--radius-sm); width: fit-content; margin: 0 auto;">
+          <!-- Aquí se inyectará el QR -->
+        </div>
+
+        <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+          <button type="button" class="btn btn-primary" id="btn-descargar-jpg">
+            <i class="ti ti-download"></i> Descargar Imagen JPG
+          </button>
+          <button type="button" class="btn btn-primary" id="btn-descargar-pdf" style="background: #dc2626; border-color: #dc2626;">
+            <i class="ti ti-file-type-pdf"></i> Descargar PDF
+          </button>
+        </div>
+        
+        <!-- ETIQUETA OCULTA OPTIMIZADA PARA CAPTURA (DISEÑO FOTO) -->
+        <div style="position: absolute; left: -9999px; top: 0; display: block;" id="div-oculto-para-captura">
+          
+          <div class="ticket-preview-container" id="ticket-para-captura" style="width: 420px; background: #fff; padding: 20px; border: 2px solid #000; font-family: 'Courier New', Courier, monospace; color: #000; box-sizing: border-box;">
+            
+            <!-- CABECERA -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio" style="height: 35px; object-fit: contain; filter: grayscale(100%);">
+                <div style="font-size: 8px; font-weight: bold; letter-spacing: 0.5px;">VENVIDRIO<br>VENEZUELA DEL VIDRIO</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 14px; font-weight: bold;" id="ticket-planta">VENVIDRIO VALERA</div>
+                <div style="font-size: 22px; font-weight: bold; margin-top: 4px;" id="ticket-title-code">TICKET-PRUEBA-123</div>
+              </div>
+            </div>
+
+            <div style="border-top: 1.5px dashed #ccc; margin: 10px 0;"></div>
+
+            <!-- CLIENTE Y ORDEN -->
+            <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 8px;">
+              <div>
+                <div style="color: #555;">CLIENT / CLIENTE</div>
+                <div style="font-weight: bold; font-size: 11px;" id="ticket-cliente">CLIENTE STOCK</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="color: #555;">ORDER / ORDEN</div>
+                <div style="font-weight: bold; font-size: 11px;" id="ticket-orden">NO APLICA</div>
+              </div>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 8px;">
+              <div style="color: #555;">OBS.</div>
+              <div style="font-weight: bold; font-size: 11px;" id="ticket-obs">NO APLICA</div>
+            </div>
+
+            <div style="border-top: 1.5px dashed #ccc; margin: 10px 0;"></div>
+
+            <!-- MAQUINA Y FECHA -->
+            <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 8px;">
+              <div>
+                <div style="color: #555;">MACH / SHIFT / GROUP</div>
+                <div style="color: #555;">MAQ / TURNO / GRUPO</div>
+                <div style="font-weight: bold; font-size: 14px; margin-top: 2px;" id="ticket-maquina">A1 1 A</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="color: #555;">DATE / FECHA</div>
+                <div style="font-weight: bold; font-size: 12px; margin-top: 2px;" id="ticket-fecha">07/11/2026</div>
+              </div>
+            </div>
+
+            <div style="border-top: 1.5px dashed #ccc; margin: 10px 0;"></div>
+
+            <!-- PRODUCTO -->
+            <div style="font-size: 10px; margin-bottom: 8px;">
+              <div style="color: #555;">PRODUCT / PRODUCTO</div>
+              <div style="font-weight: bold; font-size: 12px;" id="ticket-producto">BOTELLA PRUEBA 500ML</div>
+            </div>
+            <div style="font-size: 10px; margin-bottom: 8px;">
+              <div style="color: #555;">ACABADO / FINISHED</div>
+              <div style="font-weight: bold; font-size: 12px;" id="ticket-acabado">26-600-BEAD</div>
+            </div>
+
+            <div style="border-top: 1.5px dashed #ccc; margin: 10px 0;"></div>
+
+            <!-- ITEM, MOLDE, LOTE -->
+            <div style="font-size: 10px; margin-bottom: 6px;">
+              <div style="color: #555;">ITEM</div>
+              <div style="font-weight: bold; font-size: 14px;" id="ticket-item-code">V-TEST-001</div>
+            </div>
+            <div style="font-size: 10px; margin-bottom: 6px;">
+              <div style="color: #555;">MOLD / MOLDE</div>
+              <div style="font-weight: bold; font-size: 14px;" id="ticket-molde">MOLDE-PRUEBA-01</div>
+            </div>
+            <div style="font-size: 10px; margin-bottom: 10px;">
+              <div style="color: #555;">LOT / LOTE</div>
+              <div style="font-weight: bold; font-size: 14px;" id="ticket-lote">20261107A1001</div>
+            </div>
+
+            <!-- BPP Y CAP -->
+            <div style="display: flex; justify-content: flex-end; gap: 20px; font-size: 10px; margin-bottom: 10px;">
+              <div style="text-align: right;">
+                <span style="color: #555;">BPP</span> <span style="font-weight: bold;" id="ticket-bpp">—</span>
+              </div>
+              <div style="text-align: right;">
+                <span style="color: #555;">CAP</span> <span style="font-weight: bold;" id="ticket-cap">—</span>
+              </div>
+            </div>
+
+            <!-- CÓDIGO DE BARRAS -->
+            <div style="text-align: center; margin-top: 15px; padding-top: 10px; border-top: 2px solid #000;">
+              <svg id="barcode-svg" style="width: 100%; height: 60px;"></svg>
+              <div style="font-size: 14px; font-weight: bold; margin-top: 5px;" id="ticket-barcode-text">TICKET-PRUEBA-123</div>
+            </div>
+
+            <!-- FOOTER -->
+            <div style="text-align: center; font-size: 8px; color: #555; margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 8px;">
+              MADE IN VENEZUELA / HECHO EN VENEZUELA
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline" id="btn-cerrar-modal-lote-footer">
+        <i class="ti ti-x"></i> Cerrar
+      </button>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <p>© 2026 MoonDRAGO — Sistema de Control de Calidad para Venvidrio</p>
+</footer>
+
+<!-- SCRIPTS AL FINAL -->
+<script src="../assets/js/shared.js"></script>
+<script src="../assets/js/login_app.js"></script>
+<script src="../assets/js/escaner.js"></script>
+<script src="../assets/js/produccion.js" defer></script>
+
+</body>
+</html>
