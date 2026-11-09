@@ -1,0 +1,21 @@
+{
+  "name": "Venvidrio | Control de Calidad",
+  "short_name": "Venvidrio",
+  "description": "Sistema de Control de Calidad Industrial",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/assets/img/logo-venvidrio_index.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/img/logo-venvidrio_index.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

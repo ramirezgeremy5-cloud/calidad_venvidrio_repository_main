@@ -2,16 +2,15 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8" />
-    <!-- viewport-fit=cover ajusta la pantalla a los bordes del celular (notch) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <!-- theme-color pinta la barra de estado del celular del color azul oscuro corporativo -->
     <meta name="theme-color" content="#0f172a" />
     
-    <!-- 👇 TÍTULO ACTUALIZADO 👇 -->
     <title>Venvidrio | Sistema de Control de Calidad</title>
     
-    <!-- 👇 FAVICON (Guarda tu imagen como favicon.png en la raíz de tu frontend) 👇 -->
-    <link rel="icon" type="image/png" href="favicon.ico" />
+    <!-- 👇 FAVICON Y PWA 👇 -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="../assets/img/logo-venvidrio_index.png" />
 
     <!-- Iconos Tabler -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
@@ -165,7 +164,6 @@
     <footer class="footer" id="contacto">
         <div class="container footer-grid">
             <div class="footer-brand">
-                <!-- Nota: Si el logo es oscuro, te sugiero una versión en blanco para el footer -->
                 <img src="../assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo" class="footer-logo" />
                 <p>Sistema de Control de Calidad</p>
                 <p class="copyright">
@@ -194,5 +192,16 @@
 
     <!-- ================= JS Externo ================= -->
     <script src="../assets/js/landing.js"></script>
+    
+    <!-- ================= REGISTRO PWA ================= -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => {
+                    console.log('Error al registrar el Service Worker:', err);
+                });
+            });
+        }
+    </script>
 </body>
 </html>
