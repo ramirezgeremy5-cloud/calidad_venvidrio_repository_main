@@ -1,6 +1,6 @@
 /* =============================================
    Venvidrio — Sistema de Control de Calidad
-   login_app.js (Multisesión + Alertas Elegantes)
+   login_app.js (Multisesión + CAPTCHA + Alertas)
    ============================================= */
 
 (function () {
@@ -1014,12 +1014,38 @@
         return;
       }
 
+      // 👇 LÓGICA DEL CAPTCHA PARA DISPOSITIVOS NUEVOS 👇
+      var esDispositivoNuevo = !localStorage.getItem('dispositivo_autorizado');
+      var captchaContainer = document.getElementById('captcha-container');
+      var captchaToken = null;
+
+      if (esDispositivoNuevo) {
+        if (captchaContainer) captchaContainer.style.display = 'flex';
+
+        if (typeof grecaptcha !== 'undefined') {
+          captchaToken = grecaptcha.getResponse();
+          if (captchaToken.length === 0) {
+            window.mostrarAlertaPersonalizada('Por seguridad, completa el CAPTCHA para ingresar desde este nuevo dispositivo.', 'warning');
+            return;
+          }
+        } else {
+          window.mostrarAlertaPersonalizada('El CAPTCHA no está disponible. Recarga la página.', 'error');
+          return;
+        }
+      }
+
       setLoading(true);
+
+      // Preparamos los datos a enviar
+      var loginData = { correo: correo, password: password };
+      if (captchaToken) {
+        loginData.captcha_token = captchaToken; // Enviamos el token al backend
+      }
 
       fetch(API_URL + '/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ correo: correo, password: password })
+        body: JSON.stringify(loginData)
       })
       .then(function (response) {
         return response.json().then(function (data) { return { status: response.status, data: data }; });
@@ -1030,7 +1056,9 @@
         setLoading(false);
 
         if (status === 200 || status === 201) {
-          // 👇 GUARDAMOS TODOS LOS DATOS
+          // 👇 Si el login es exitoso, marcamos este dispositivo como autorizado 👇
+          localStorage.setItem('dispositivo_autorizado', 'true');
+
           localStorage.setItem('token', data.access_token);
           localStorage.setItem('user', JSON.stringify(data.user));
           localStorage.setItem('role', data.role);
@@ -1045,11 +1073,10 @@
           return;
         }
 
-        // ❌ MANEJO DE ERRORES
         var errorMsg = data.detail || 'Credenciales incorrectas';
-        
-        // El error 403 ahora es solo para: bloqueado o desactivado (ya no para sesión activa)
-        if (status === 403) {
+        if (status === 400 && errorMsg.toLowerCase().indexOf('captcha') !== -1) {
+          window.mostrarAlertaPersonalizada('El CAPTCHA es inválido o expiró. Intenta de nuevo.', 'error');
+        } else if (status === 403) {
           var low = errorMsg.toLowerCase();
           if (low.indexOf('bloqueado') !== -1) {
             window.mostrarAlertaPersonalizada('Usuario bloqueado.', 'error', false, errorMsg);
@@ -1058,12 +1085,12 @@
           } else {
             window.mostrarAlertaPersonalizada(errorMsg, 'error');
           }
-        } else if (status === 429) {
-          window.mostrarAlertaPersonalizada('Demasiados intentos. Intente más tarde.', 'warning');
         } else {
           window.mostrarAlertaPersonalizada(errorMsg, 'error');
         }
 
+        // Si falla, reseteamos el CAPTCHA para que vuelva a intentar
+        if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
         if (passwordInput) { passwordInput.value = ''; passwordInput.focus(); }
       })
       .catch(function (error) {
@@ -1082,6 +1109,6 @@
 
     localStorage.removeItem('token');
     localStorage.removeItem('lastActivity');
-    console.log('🔐 Venvidrio - Login UI inicializada');
+    console.log('🔐 Venvidrio - Login UI inicializada con reCAPTCHA');
   }
 })();

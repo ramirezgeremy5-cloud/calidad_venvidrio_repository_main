@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy import text
 from datetime import datetime, timedelta
 import logging
+import requests # 👈 IMPORTANTE: Librería para validar con Google
 
 from app.database.connection import engine
 from app.dependencies.security import verify_password, create_access_token, hash_password
@@ -14,9 +15,30 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
+# 👇 TU CLAVE SECRETA DE GOOGLE RECAPTCHA 👇
+RECAPTCHA_SECRET_KEY = "6LcTcxxuAAAAAJTpfG9DY0BQCqeWhp7yfNwkl"
+
 
 # =========================
-# LOGIN (MULTISESIÓN)
+# FUNCIÓN AUXILIAR PARA VALIDAR CAPTCHA
+# =========================
+def validar_captcha(token: str) -> bool:
+    """Verifica con los servidores de Google si el token del CAPTCHA es válido."""
+    try:
+        response = requests.post(
+            "https://www.google.com/recaptcha/api/siteverify",
+            data={"secret": RECAPTCHA_SECRET_KEY, "response": token},
+            timeout=5
+        )
+        result = response.json()
+        return result.get("success", False)
+    except Exception as e:
+        logger.error(f"Error validando CAPTCHA con Google: {e}")
+        return False
+
+
+# =========================
+# LOGIN (MULTISESIÓN + CAPTCHA)
 # =========================
 @router.post("/login", response_model=TokenResponse)
 def login(data: LoginRequest):
@@ -25,6 +47,20 @@ def login(data: LoginRequest):
     Permite múltiples sesiones simultáneas (PC + Móvil).
     """
     logger.info(f"🔐 Intento de login para: {data.correo}")
+
+    # 👇 1. VALIDACIÓN DEL CAPTCHA 👇
+    # Si el frontend envía un captcha_token (porque es un dispositivo nuevo), lo validamos.
+    if data.captcha_token:
+        if not validar_captcha(data.captcha_token):
+            logger.warning(f"❌ CAPTCHA inválido para: {data.correo}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="CAPTCHA inválido o expirado. Intenta de nuevo."
+            )
+        logger.info(f"✅ CAPTCHA válido para: {data.correo}")
+    else:
+        # Si no envían token, significa que el frontend ya los reconoce como dispositivo seguro
+        logger.debug(f"ℹ️ Login sin CAPTCHA (dispositivo recordado): {data.correo}")
 
     try:
         with engine.connect() as conn:
@@ -287,7 +323,6 @@ def register(data: RegisterRequest):
 @router.post("/logout")
 def logout(current_user = Depends(get_current_user)):
     try:
-        # 👇 CORREGIDO: current_user.id (notación de punto)
         logger.info(f"👋 Solicitud de logout para usuario ID: {current_user.id}")
         return {
             "success": True,
@@ -312,14 +347,12 @@ def cambiar_password(
     data: PasswordChangeRequest,
     current_user = Depends(get_current_user)
 ):
-    # 👇 CORREGIDO: current_user.id
     logger.info(f"🔑 Cambio de contraseña para usuario ID: {current_user.id}")
 
     try:
         with engine.connect() as conn:
             user = conn.execute(
                 text("SELECT password FROM usuarios WHERE id = :id"),
-                # 👇 CORREGIDO: current_user.id
                 {"id": current_user.id}
             ).first()
 
@@ -330,7 +363,6 @@ def cambiar_password(
                 )
 
             if not verify_password(data.current_password, user["password"]):
-                # 👇 CORREGIDO: current_user.id
                 logger.warning(f"❌ Contraseña actual incorrecta para usuario ID: {current_user.id}")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -346,13 +378,11 @@ def cambiar_password(
                 """),
                 {
                     "password": new_password_hash,
-                    # 👇 CORREGIDO: current_user.id
                     "id": current_user.id
                 }
             )
             conn.commit()
 
-            # 👇 CORREGIDO: current_user.id
             logger.info(f"✅ Contraseña actualizada para usuario ID: {current_user.id}")
             return {
                 "success": True,
@@ -374,7 +404,6 @@ def cambiar_password(
 # =========================
 @router.get("/verify")
 def verify_token(current_user = Depends(get_current_user)):
-    # 👇 CORREGIDO: current_user.id en lugar de current_user['id']
     logger.info(f"✅ Token verificado para usuario ID: {current_user.id}")
     
     try:
@@ -387,7 +416,6 @@ def verify_token(current_user = Depends(get_current_user)):
                 """),
                 {
                     "now": datetime.utcnow(),
-                    # 👇 CORREGIDO: current_user.id
                     "id": current_user.id
                 }
             )
@@ -398,7 +426,6 @@ def verify_token(current_user = Depends(get_current_user)):
     return {
         "success": True,
         "user": {
-            # 👇 CORREGIDO: notación de punto en todas las propiedades
             "id": current_user.id,
             "nombre": current_user.nombre,
             "correo": current_user.correo,

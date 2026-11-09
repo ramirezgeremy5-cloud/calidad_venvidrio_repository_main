@@ -14,6 +14,9 @@
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Bebas+Neue&display=swap" rel="stylesheet" />
+
+  <!-- Script de Google reCAPTCHA -->
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 
 <body>
@@ -106,6 +109,11 @@
         <a href="recuperar.html" class="forgot-link" id="forgotLink">
           ¿Olvidaste tu contraseña?
         </a>
+      </div>
+
+      <!-- Contenedor del CAPTCHA (Oculto por defecto, el JS lo mostrará) -->
+      <div id="captcha-container" style="display: none; margin-bottom: 1rem; justify-content: center;">
+        <div class="g-recaptcha" data-sitekey="6LcTcxxuAAAAAIFjSThntr06xAiIyS6PwfalmcMY"></div>
       </div>
 
       <!-- Botón Iniciar Sesión -->
