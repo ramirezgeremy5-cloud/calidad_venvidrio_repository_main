@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-# 👇 TU CLAVE SECRETA DE GOOGLE RECAPTCHA 👇
-RECAPTCHA_SECRET_KEY = "6LcTcxxuAAAAAJTpfG9DY0BQCqeWhp7yfNwkl"
+# 👇 NUEVA CLAVE SECRETA DE GOOGLE RECAPTCHA 👇
+RECAPTCHA_SECRET_KEY = "6Ld5dhcuAAAAAF0u_rfSAEq9Pe-P73Nfv7xWEOM"
 
 
 # =========================
@@ -49,7 +49,6 @@ def login(data: LoginRequest):
     logger.info(f"🔐 Intento de login para: {data.correo}")
 
     # 👇 1. VALIDACIÓN DEL CAPTCHA 👇
-    # Si el frontend envía un captcha_token (porque es un dispositivo nuevo), lo validamos.
     if data.captcha_token:
         if not validar_captcha(data.captcha_token):
             logger.warning(f"❌ CAPTCHA inválido para: {data.correo}")
@@ -59,7 +58,6 @@ def login(data: LoginRequest):
             )
         logger.info(f"✅ CAPTCHA válido para: {data.correo}")
     else:
-        # Si no envían token, significa que el frontend ya los reconoce como dispositivo seguro
         logger.debug(f"ℹ️ Login sin CAPTCHA (dispositivo recordado): {data.correo}")
 
     try:
