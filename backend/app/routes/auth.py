@@ -1,8 +1,7 @@
-from fastapi import APIRouter, HTTPException, Depends, status, Header
+from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy import text
 from datetime import datetime, timedelta
 import logging
-import uuid
 
 from app.database.connection import engine
 from app.dependencies.security import verify_password, create_access_token, hash_password
@@ -15,17 +14,15 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-# Tiempo de inactividad permitido antes de expirar la sesión (60 minutos = 1 hora)
-TIEMPO_INACTIVIDAD_MINUTOS = 60
-
 
 # =========================
-# LOGIN
+# LOGIN (MULTISESIÓN)
 # =========================
 @router.post("/login", response_model=TokenResponse)
 def login(data: LoginRequest):
     """
-    Iniciar sesión con correo y contraseña
+    Iniciar sesión con correo y contraseña.
+    Permite múltiples sesiones simultáneas (PC + Móvil).
     """
     logger.info(f"🔐 Intento de login para: {data.correo}")
 
@@ -33,14 +30,11 @@ def login(data: LoginRequest):
         with engine.connect() as conn:
             logger.debug("📡 Buscando usuario en la base de datos...")
 
-            # Consulta con JOIN para traer cargo y permisos
             user = conn.execute(
                 text("""
                     SELECT u.id, u.nombre, u.correo, u.password, u.rol_id, u.activo,
                            COALESCE(u.intentos_fallidos, 0) as intentos_fallidos,
                            u.bloqueado_hasta,
-                           u.session_id,
-                           u.ultima_actividad,
                            c.nombre as cargo_nombre,
                            c.permisos as cargo_permisos
                     FROM usuarios u
@@ -50,7 +44,6 @@ def login(data: LoginRequest):
                 {"correo": data.correo}
             ).mappings().first()
 
-            # Usuario no existe
             if not user:
                 logger.warning(f"❌ Usuario no encontrado: {data.correo}")
                 raise HTTPException(
@@ -60,7 +53,6 @@ def login(data: LoginRequest):
 
             logger.info(f"✅ Usuario encontrado: {user['nombre']} (ID: {user['id']})")
 
-            # Verificar si el usuario está activo
             if not user["activo"]:
                 logger.warning(f"⚠️ Usuario desactivado: {data.correo}")
                 raise HTTPException(
@@ -68,16 +60,12 @@ def login(data: LoginRequest):
                     detail="Usuario desactivado. Contacte al administrador"
                 )
 
-            # =========================================================
-            # 👇 CORRECCIÓN DEL ERROR: datetime vs str en bloqueado_hasta
-            # =========================================================
+            # Manejo del bloqueo por intentos fallidos
             if user["bloqueado_hasta"]:
                 valor_bloqueo = user["bloqueado_hasta"]
                 
-                # Si ya es un objeto datetime (PostgreSQL TIMESTAMP), lo usamos directo
                 if isinstance(valor_bloqueo, datetime):
                     bloqueado_hasta = valor_bloqueo
-                # Si por alguna razón viene como string, lo parseamos
                 elif isinstance(valor_bloqueo, str):
                     try:
                         bloqueado_hasta = datetime.fromisoformat(valor_bloqueo)
@@ -94,17 +82,6 @@ def login(data: LoginRequest):
                         status_code=status.HTTP_403_FORBIDDEN,
                         detail=f"Usuario bloqueado. Intente en {minutos_restantes} minutos"
                     )
-
-            # =========================================================
-            # REEMPLAZAR SESIÓN ANTERIOR (SIN BLOQUEAR)
-            # =========================================================
-            if user["session_id"]:
-                logger.info(f"♻️ Reemplazando sesión anterior para: {data.correo}")
-                conn.execute(
-                    text("UPDATE usuarios SET session_id = NULL, ultima_actividad = NULL WHERE id = :id"),
-                    {"id": user["id"]}
-                )
-                conn.commit()
 
             # Verificar contraseña
             logger.debug("🔑 Verificando contraseña...")
@@ -134,7 +111,7 @@ def login(data: LoginRequest):
                             """),
                             {
                                 "intentos": nuevos_intentos,
-                                "bloqueado": bloqueado_hasta,  # 👈 El driver acepta datetime nativo
+                                "bloqueado": bloqueado_hasta,
                                 "id": user["id"]
                             }
                         )
@@ -167,7 +144,7 @@ def login(data: LoginRequest):
                     detail="Credenciales incorrectas"
                 )
 
-            # ✅ Login exitoso - Resetear intentos fallidos
+            # ✅ Login exitoso
             logger.info(f"✅ Login exitoso para: {data.correo}")
 
             try:
@@ -180,7 +157,7 @@ def login(data: LoginRequest):
                         WHERE id = :id
                     """),
                     {
-                        "now": datetime.utcnow(),  # 👈 Objeto datetime nativo
+                        "now": datetime.utcnow(),
                         "id": user["id"]
                     }
                 )
@@ -188,44 +165,21 @@ def login(data: LoginRequest):
             except Exception as e:
                 logger.error(f"❌ Error actualizando último login: {e}")
 
-            # Crear token JWT con session_id (sid) incluido
+            # Crear token JWT
             try:
-                nuevo_session_id = str(uuid.uuid4())
                 token_data = {
                     "sub": str(user["id"]),
                     "correo": user["correo"],
-                    "rol": user["rol_id"],
-                    "sid": nuevo_session_id
+                    "rol": user["rol_id"]
                 }
                 access_token = create_access_token(token_data)
-                logger.info(f"🔑 Token creado para usuario ID: {user['id']} (sid: {nuevo_session_id[:8]}...)")
+                logger.info(f"🔑 Token creado para usuario ID: {user['id']}")
             except Exception as e:
                 logger.error(f"❌ Error creando token JWT: {e}")
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail=f"Error creando token: {str(e)}"
                 )
-
-            # ✅ GUARDAR LA SESIÓN EN LA BD (session_id + ultima_actividad)
-            try:
-                now_iso = datetime.utcnow()
-                conn.execute(
-                    text("""
-                        UPDATE usuarios
-                        SET session_id = :sid,
-                            ultima_actividad = :now
-                        WHERE id = :id
-                    """),
-                    {
-                        "sid": nuevo_session_id,
-                        "now": now_iso,  # 👈 Objeto datetime nativo
-                        "id": user["id"]
-                    }
-                )
-                conn.commit()
-                logger.info(f"💾 Sesión guardada en BD para usuario ID: {user['id']}")
-            except Exception as e:
-                logger.error(f"❌ Error guardando session_id en BD: {e}")
 
             return {
                 "access_token": access_token,
@@ -262,7 +216,6 @@ def register(data: RegisterRequest):
 
     try:
         with engine.connect() as conn:
-            # Verificar si el correo ya existe
             existing = conn.execute(
                 text("SELECT id FROM usuarios WHERE correo = :correo"),
                 {"correo": data.correo}
@@ -297,7 +250,7 @@ def register(data: RegisterRequest):
                     "password": password_hash,
                     "rol_id": data.rol_id or 1,
                     "activo": True,
-                    "creado_en": datetime.utcnow(),  # 👈 datetime nativo
+                    "creado_en": datetime.utcnow(),
                     "intentos_fallidos": 0
                 }
             ).mappings().first()
@@ -334,21 +287,7 @@ def register(data: RegisterRequest):
 @router.post("/logout")
 def logout(current_user = Depends(get_current_user)):
     try:
-        logger.info(f"👋 Solicitud de logout para usuario ID: {current_user.id}")
-
-        with engine.connect() as conn:
-            conn.execute(
-                text("""
-                    UPDATE usuarios
-                    SET session_id = NULL,
-                        ultima_actividad = NULL
-                    WHERE id = :id
-                """),
-                {"id": current_user.id}
-            )
-            conn.commit()
-
-        logger.info(f"✅ Sesión liberada para usuario ID: {current_user.id}")
+        logger.info(f"👋 Solicitud de logout para usuario ID: {current_user['id']}")
         return {
             "success": True,
             "message": "Sesión cerrada correctamente"
@@ -358,8 +297,6 @@ def logout(current_user = Depends(get_current_user)):
         raise
     except Exception as e:
         logger.error(f"💥 Error inesperado en logout: {str(e)}")
-        import traceback
-        logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error interno del servidor: {str(e)}"
@@ -374,13 +311,13 @@ def cambiar_password(
     data: PasswordChangeRequest,
     current_user = Depends(get_current_user)
 ):
-    logger.info(f"🔑 Cambio de contraseña para usuario ID: {current_user.id}")
+    logger.info(f"🔑 Cambio de contraseña para usuario ID: {current_user['id']}")
 
     try:
         with engine.connect() as conn:
             user = conn.execute(
                 text("SELECT password FROM usuarios WHERE id = :id"),
-                {"id": current_user.id}
+                {"id": current_user["id"]}
             ).first()
 
             if not user:
@@ -390,7 +327,7 @@ def cambiar_password(
                 )
 
             if not verify_password(data.current_password, user["password"]):
-                logger.warning(f"❌ Contraseña actual incorrecta para usuario ID: {current_user.id}")
+                logger.warning(f"❌ Contraseña actual incorrecta para usuario ID: {current_user['id']}")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Contraseña actual incorrecta"
@@ -405,12 +342,12 @@ def cambiar_password(
                 """),
                 {
                     "password": new_password_hash,
-                    "id": current_user.id
+                    "id": current_user["id"]
                 }
             )
             conn.commit()
 
-            logger.info(f"✅ Contraseña actualizada para usuario ID: {current_user.id}")
+            logger.info(f"✅ Contraseña actualizada para usuario ID: {current_user['id']}")
             return {
                 "success": True,
                 "message": "Contraseña actualizada exitosamente"
@@ -420,8 +357,6 @@ def cambiar_password(
         raise
     except Exception as e:
         logger.error(f"💥 Error inesperado en cambio de contraseña: {str(e)}")
-        import traceback
-        logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error interno del servidor: {str(e)}"
@@ -433,7 +368,7 @@ def cambiar_password(
 # =========================
 @router.get("/verify")
 def verify_token(current_user = Depends(get_current_user)):
-    logger.info(f"✅ Token verificado para usuario ID: {current_user.id}")
+    logger.info(f"✅ Token verificado para usuario ID: {current_user['id']}")
     
     try:
         with engine.connect() as conn:
@@ -444,8 +379,8 @@ def verify_token(current_user = Depends(get_current_user)):
                     WHERE id = :id
                 """),
                 {
-                    "now": datetime.utcnow(),  # 👈 datetime nativo
-                    "id": current_user.id
+                    "now": datetime.utcnow(),
+                    "id": current_user["id"]
                 }
             )
             conn.commit()
@@ -455,10 +390,10 @@ def verify_token(current_user = Depends(get_current_user)):
     return {
         "success": True,
         "user": {
-            "id": current_user.id,
-            "nombre": current_user.nombre,
-            "correo": current_user.correo,
-            "rol_id": current_user.rol_id
+            "id": current_user["id"],
+            "nombre": current_user["nombre"],
+            "correo": current_user["correo"],
+            "rol_id": current_user["rol_id"]
         }
     }
 
@@ -472,37 +407,3 @@ def test_endpoint():
         "success": True,
         "message": "Auth router funcionando correctamente"
     }
-
-
-# =========================
-# ENDPOINT DE PRUEBA DE CONEXIÓN
-# =========================
-@router.post("/test-login")
-def test_login(data: LoginRequest):
-    try:
-        with engine.connect() as conn:
-            result = conn.execute(text("SELECT 1 as test")).mappings().first()
-
-            user = conn.execute(
-                text("""
-                    SELECT id, nombre, correo, rol_id, activo,
-                           session_id, ultima_actividad
-                    FROM usuarios WHERE correo = :correo
-                """),
-                {"correo": data.correo}
-            ).mappings().first()
-
-            return {
-                "success": True,
-                "db_connection": "ok",
-                "user_found": bool(user),
-                "user": dict(user) if user else None,
-                "message": "Endpoint de prueba funcionando"
-            }
-    except Exception as e:
-        import traceback
-        return {
-            "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
-        }

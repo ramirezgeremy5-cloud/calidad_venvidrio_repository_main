@@ -5,8 +5,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import configure_mappers
-from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
 import traceback
 
@@ -16,7 +15,6 @@ from app.database.connection import engine, Base
 # =========================
 # MODELOS (ORDEN CRÍTICO)
 # =========================
-# 👇 IMPORTANTE: Importar TODOS los modelos que tienen relaciones
 from app.models.usuario import Usuario
 from app.models.cargo import Cargo
 from app.models.defecto import Defecto
@@ -45,37 +43,6 @@ from app.routes import escaner
 
 
 # =========================
-# SCHEDULER: LIMPIEZA DE SESIONES EXPIRADAS
-# =========================
-
-# 👇 ALINEADO CON auth.py Y dependencies/auth.py: 60 MINUTOS
-TIEMPO_INACTIVIDAD_MINUTOS = 60
-
-scheduler = BackgroundScheduler()
-
-
-def limpiar_sesiones_expiradas():
-    try:
-        limite = (datetime.utcnow() - timedelta(minutes=TIEMPO_INACTIVIDAD_MINUTOS)).isoformat()
-        with engine.connect() as conn:
-            result = conn.execute(
-                text("""
-                    UPDATE usuarios
-                    SET session_id = NULL,
-                        ultima_actividad = NULL
-                    WHERE session_id IS NOT NULL
-                      AND (ultima_actividad IS NULL OR ultima_actividad < :limite)
-                """),
-                {"limite": limite}
-            )
-            conn.commit()
-            if result.rowcount:
-                print(f"♻️ [Scheduler] {result.rowcount} sesiones expiradas liberadas")
-    except Exception as e:
-        print(f"⚠️ [Scheduler] Error limpiando sesiones: {e}")
-
-
-# =========================
 # LIFESPAN (STARTUP + SHUTDOWN)
 # =========================
 
@@ -94,28 +61,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"❌ ERROR CRÍTICO: No se pudo conectar a la base de datos: {e}")
 
-    scheduler.add_job(
-        limpiar_sesiones_expiradas,
-        "interval",
-        minutes=5,
-        id="limpiar_sesiones",
-        replace_existing=True
-    )
-    scheduler.start()
-    print("🧹 Scheduler de limpieza de sesiones iniciado (cada 5 min)")
-
     print("=" * 60)
     print("🌐 CORS habilitado para puertos locales y Render")
     print("=" * 60)
 
     yield
 
-    try:
-        print("🛑 Deteniendo scheduler de limpieza...")
-        if scheduler.running:
-            scheduler.shutdown(wait=False)
-    except Exception as e:
-        print(f"⚠️ Error deteniendo scheduler: {e}")
     print("👋 MoonDRAGO API detenida")
 
 
@@ -142,7 +93,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
 # =========================
-# CORS FRONTEND (BLINDADO PARA RENDER)
+# CORS FRONTEND
 # =========================
 
 origins = [
@@ -159,7 +110,6 @@ origins = [
     "http://localhost:8000",
     "http://127.0.0.1:3000",
     "http://localhost:3000",
-    # 👇 DOMINIOS DE PRODUCCIÓN EN RENDER
     "https://venvidrio-calidad.onrender.com",
     "https://calidad-venvidrio-repository-main.onrender.com",
 ]
@@ -176,11 +126,10 @@ app.add_middleware(
 
 
 # =========================
-# CREAR TABLAS (CON MANEJO DE ERRORES)
+# CREAR TABLAS
 # =========================
 
 try:
-    # 👇 FORZAMOS A SQLALCHEMY A MAPEAR TODOS LOS MODELOS ANTES DE CREAR TABLAS
     configure_mappers()
     print("✅ Mapeo de modelos verificado correctamente.")
     
@@ -188,7 +137,6 @@ try:
     print("✅ Tablas creadas/verificadas exitosamente.")
 except Exception as e:
     print(f"⚠️ Error al configurar mappers o crear tablas: {e}")
-    print("⚠️ Si el error es de relación, revisa que los modelos tengan los back_populates correctos.")
 
 
 # =========================
@@ -206,7 +154,6 @@ app.include_router(etiqueta.router)
 app.include_router(defecto_tipos.router)
 app.include_router(defecto.router)
 
-# 👇 ROUTERS DE AUDITORÍA
 app.include_router(auditoria_interna.router)
 app.include_router(auditoria_producto.router)
 
@@ -215,7 +162,6 @@ app.include_router(dashboard.router)
 app.include_router(reportes.router)
 app.include_router(reportes_defectos.router)
 
-# 👇 REGISTRO DEL ROUTER DEL ESCÁNER
 app.include_router(escaner.router)
 
 
@@ -273,8 +219,8 @@ def health_check():
         "version": "1.0.0",
         "database": "conectada" if engine else "desconectada",
         "session": {
-            "inactividad_minutos": TIEMPO_INACTIVIDAD_MINUTOS,
-            "scheduler": "activo (limpieza cada 5 min)"
+            "inactividad_minutos": 60,
+            "multisesion": "habilitada (sin límite de dispositivos)"
         }
     }
 

@@ -1,7 +1,6 @@
 /* =============================================
    Venvidrio — Sistema de Control de Calidad
-   login_app.js (Login + Alertas Elegantes + Sesión 1h)
-   v10 — Login flexible (Usuario o Correo) + Anti-bloqueo
+   login_app.js (Multisesión + Alertas Elegantes)
    ============================================= */
 
 (function () {
@@ -272,7 +271,7 @@
   }
 
   // =========================
-  // 5. MODAL "MI PERFIL" (Rediseñado)
+  // 5. MODAL "MI PERFIL"
   // =========================
   function injectPerfilStyles() {
     if (document.getElementById('perfil-redesign-styles')) return;
@@ -799,6 +798,7 @@
         headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' }
       })
       .then(function (response) {
+        // Solo cerramos la sesión si el token realmente ya no sirve (401)
         if (response.status === 401) {
           clearInterval(heartbeatInterval);
           clearInterval(inactivityInterval);
@@ -993,14 +993,12 @@
       var password = passwordInput.value.trim();
       var correo = "";
 
-      // 👇 NUEVA LÓGICA: Detecta si es usuario o correo completo
       if (inputUsuario.includes('@')) {
         correo = inputUsuario;
       } else {
         correo = inputUsuario + '@venvidrio.com';
       }
 
-      // Validación del formato final (previene inyecciones o errores)
       var emailRegex = /^[a-zA-Z0-9._%+-]+@venvidrio\.com$/;
       if (!emailRegex.test(correo)) {
         if (usernameInput) usernameInput.classList.add('error');
@@ -1032,7 +1030,7 @@
         setLoading(false);
 
         if (status === 200 || status === 201) {
-          // 👇 GUARDAMOS TODOS LOS DATOS, INCLUYENDO PERMISOS
+          // 👇 GUARDAMOS TODOS LOS DATOS
           localStorage.setItem('token', data.access_token);
           localStorage.setItem('user', JSON.stringify(data.user));
           localStorage.setItem('role', data.role);
@@ -1047,13 +1045,13 @@
           return;
         }
 
+        // ❌ MANEJO DE ERRORES
         var errorMsg = data.detail || 'Credenciales incorrectas';
+        
+        // El error 403 ahora es solo para: bloqueado o desactivado (ya no para sesión activa)
         if (status === 403) {
           var low = errorMsg.toLowerCase();
-          if (low.indexOf('activo') !== -1 || low.indexOf('sesión') !== -1) {
-            errorMsg = 'Este usuario ya se encuentra activo en otra sesión.';
-            window.mostrarAlertaPersonalizada(errorMsg, 'warning', false, 'Para acceder, cierra la sesión en el otro dispositivo o espera a que expire.');
-          } else if (low.indexOf('bloqueado') !== -1) {
+          if (low.indexOf('bloqueado') !== -1) {
             window.mostrarAlertaPersonalizada('Usuario bloqueado.', 'error', false, errorMsg);
           } else if (low.indexOf('desactivado') !== -1) {
             window.mostrarAlertaPersonalizada('Usuario desactivado.', 'warning', false, 'Contacte al administrador.');

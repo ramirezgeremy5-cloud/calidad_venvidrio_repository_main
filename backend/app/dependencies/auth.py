@@ -7,14 +7,10 @@ from typing import Optional
 
 from app.database.connection import SessionLocal
 from app.models.usuario import Usuario
-from app.models.cargo import Cargo # 👈 Importamos el modelo de Cargo
+from app.models.cargo import Cargo
 from app.dependencies.security import decode_access_token, verify_token
 
 security = HTTPBearer()
-
-# 👇 TIEMPO DE INACTIVIDAD: 60 MINUTOS (1 HORA)
-TIEMPO_INACTIVIDAD_MINUTOS = 60
-
 
 # =========================
 # DEPENDENCIA DE BASE DE DATOS
@@ -29,53 +25,6 @@ def get_db():
 
 
 # =========================
-# HELPERS INTERNOS
-# =========================
-
-def _validar_sesion_y_actividad(usuario: Usuario, sid: Optional[str], db: Session) -> None:
-    """
-    Valida que:
-      1. El sid del token coincida con el session_id en BD
-      2. No hayan pasado más de TIEMPO_INACTIVIDAD_MINUTOS desde ultima_actividad
-      3. Renueva ultima_actividad (sliding window)
-
-    Lanza HTTPException 401 si algo falla.
-    """
-    # 1) Validar sid contra session_id en BD
-    if not sid or usuario.session_id != sid:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Sesión cerrada o reemplazada. Inicie sesión nuevamente.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # 2) Validar expiración por inactividad
-    ultima = usuario.ultima_actividad
-    if ultima:
-        try:
-            ultima_dt = datetime.fromisoformat(ultima) if isinstance(ultima, str) else ultima
-            
-            # Si la diferencia es mayor a 60 minutos, expira
-            if datetime.utcnow() - ultima_dt > timedelta(minutes=TIEMPO_INACTIVIDAD_MINUTOS):
-                # Liberar sesión expirada
-                usuario.session_id = None
-                usuario.ultima_actividad = None
-                db.commit()
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Sesión expirada por inactividad. Inicie sesión nuevamente.",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-        except (ValueError, TypeError):
-            # Si el campo no se puede parsear, no bloqueamos al usuario
-            pass
-
-    # 3) Renovar ultima_actividad (sliding window)
-    usuario.ultima_actividad = datetime.utcnow().isoformat()
-    db.commit()
-
-
-# =========================
 # DEPENDENCIAS DE AUTENTICACIÓN
 # =========================
 
@@ -84,7 +33,8 @@ def get_current_user(
     db: Session = Depends(get_db)
 ) -> Usuario:
     """
-    Obtener usuario actual desde el token JWT
+    Obtener usuario actual desde el token JWT.
+    Ya no valida session_id en BD para permitir múltiples sesiones simultáneas.
     """
     token = credentials.credentials
 
@@ -99,7 +49,6 @@ def get_current_user(
         raise credentials_exception
 
     user_id = payload.get("sub")
-    sid = payload.get("sid")
 
     if user_id is None:
         raise credentials_exception
@@ -120,7 +69,9 @@ def get_current_user(
             detail="Usuario desactivado. Contacte al administrador"
         )
 
-    _validar_sesion_y_actividad(usuario, sid, db)
+    # ✅ NOTA: Ya NO validamos el session_id.
+    # El JWT es la única prueba de autenticación.
+    # La inactividad se controla desde el frontend (login_app.js).
 
     return usuario
 
@@ -128,9 +79,6 @@ def get_current_user(
 def get_current_active_user(
     current_user: Usuario = Depends(get_current_user)
 ) -> Usuario:
-    """
-    Obtener usuario activo actual
-    """
     if not current_user.activo:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -143,9 +91,6 @@ def get_current_user_optional(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)
 ) -> Optional[Usuario]:
-    """
-    Obtener usuario actual opcionalmente (sin requerir autenticación)
-    """
     if not credentials:
         return None
 
@@ -155,7 +100,6 @@ def get_current_user_optional(
         return None
 
     user_id = payload.get("sub")
-    sid = payload.get("sid")
     if not user_id:
         return None
 
@@ -167,11 +111,6 @@ def get_current_user_optional(
     usuario = db.query(Usuario).filter(Usuario.id == user_id_int).first()
 
     if not usuario or not usuario.activo:
-        return None
-
-    try:
-        _validar_sesion_y_actividad(usuario, sid, db)
-    except HTTPException:
         return None
 
     return usuario
@@ -200,7 +139,6 @@ def check_role(allowed_roles: list, required_permission: Optional[str] = None):
             cargo = db.query(Cargo).filter(Cargo.id == current_user.cargo_id).first()
             
             if cargo and cargo.permisos:
-                # Separamos por comas y limpiamos espacios (ej: "auditoria_producto, produccion")
                 permisos = [p.strip().lower() for p in cargo.permisos.split(',')]
                 if required_permission.lower() in permisos:
                     return current_user
@@ -228,7 +166,7 @@ def check_roles(roles: list):
 
 
 # =========================
-# DEPENDENCIAS ESPECÍFICAS DE MÓDULOS (NUEVAS)
+# DEPENDENCIAS ESPECÍFICAS DE MÓDULOS
 # =========================
 
 def check_auditoria_interna():
@@ -286,9 +224,6 @@ def check_user_ownership(user_id_param: str = "usuario_id"):
 def get_token_data(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> dict:
-    """
-    Obtener datos del token JWT sin verificar usuario en BD
-    """
     token = credentials.credentials
     payload = decode_access_token(token)
 
