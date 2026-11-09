@@ -2,9 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <!-- viewport-fit=cover ayuda con pantallas con notch (iPhone) -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <!-- Color de la barra del navegador en Android/iOS -->
   <meta name="theme-color" content="#0f172a" />
   <title>Venvidrio — Iniciar Sesión</title>
 
@@ -58,34 +56,34 @@
       <!-- Campo Usuario -->
       <div class="field-group">
         <label class="field-label" for="username-prefix">Usuario</label>
-        <div class="field-wrapper">
-          <i class="ti ti-user field-icon"></i>
+        <div class="field-wrapper" style="position: relative; display: flex; align-items: center; width: 100%;">
+          <i class="ti ti-user field-icon" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 18px; pointer-events: none; z-index: 2;"></i>
           <input 
             class="field-input" 
             id="username-prefix" 
             type="text" 
             autocomplete="username" 
             placeholder="Ej: juan.perez" 
-            style="padding-right: 120px;" 
+            style="width: 100%; box-sizing: border-box; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 11px 14px 11px 42px; padding-right: 120px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: #0f172a; outline: none; appearance: none; -webkit-appearance: none;" 
           />
-          <!-- Sufijo visual fijo dentro del input -->
-          <span class="field-suffix">@venvidrio.com</span>
+          <span style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 14px; color: #94a3b8; pointer-events: none; z-index: 2;">@venvidrio.com</span>
         </div>
       </div>
 
       <!-- Campo Contraseña -->
       <div class="field-group">
         <label class="field-label" for="password">Contraseña</label>
-        <div class="field-wrapper">
-          <i class="ti ti-lock field-icon"></i>
+        <div class="field-wrapper" style="position: relative; display: flex; align-items: center; width: 100%;">
+          <i class="ti ti-lock field-icon" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 18px; pointer-events: none; z-index: 2;"></i>
           <input 
             class="field-input" 
             id="password" 
             type="password" 
             autocomplete="current-password" 
             placeholder="••••••••" 
+            style="width: 100%; box-sizing: border-box; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 11px 14px 11px 42px; padding-right: 42px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: #0f172a; outline: none; appearance: none; -webkit-appearance: none;" 
           />
-          <button class="pw-toggle" id="pwToggle" type="button" aria-label="Mostrar contraseña">
+          <button class="pw-toggle" id="pwToggle" type="button" aria-label="Mostrar contraseña" style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 18px; padding: 4px; line-height: 1; z-index: 2;">
             <i class="ti ti-eye" id="pwIcon"></i>
           </button>
         </div>
