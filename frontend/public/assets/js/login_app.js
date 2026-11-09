@@ -1,6 +1,7 @@
 /* =============================================
    Venvidrio — Sistema de Control de Calidad
    login_app.js (Multisesión + Cloudflare Turnstile)
+   v13 - Blindaje de modales, Fix tiempo de sesión y unificación
    ============================================= */
 
 (function () {
@@ -14,7 +15,7 @@
     ? 'http://127.0.0.1:8000'
     : 'https://calidad-venvidrio-repository-main.onrender.com';
 
-  // 👇 SESIÓN: 1 HORA DE INACTIVIDAD
+  // 👇 SESIÓN: 1 HORA DE INACTIVIDAD (para todos los roles)
   var TIEMPO_ALERTA_MS       = 55 * 60 * 1000; 
   var TIEMPO_INACTIVIDAD_MS  = 60 * 60 * 1000; 
   var INTERVALO_HEARTBEAT_MS = 60000;          
@@ -92,66 +93,120 @@
 
   window.mostrarAlertaPersonalizada = function (mensaje, tipo, esConfirmacion, textoAdicional) {
     return new Promise(function (resolve) {
+      // Si ya existe una alerta, no duplicar
+      if (document.getElementById('sys-alerta-unica')) {
+        return resolve(false);
+      }
+
       inyectarSistemaDeAlertas();
 
-      var container = document.getElementById('sys-alertas-container');
+      var container = document.getElementById('sys-alertas-container') || document.body;
+      
+      // 1. Creamos el OVERLAY (Fondo oscuro) con estilos en línea para que NADA los rompa
       var overlay = document.createElement('div');
-      overlay.className = 'sys-modal-overlay';
+      overlay.id = 'sys-alerta-unica';
+      overlay.style.cssText = `
+        position: fixed !important; 
+        top: 0 !important; left: 0 !important; 
+        width: 100vw !important; height: 100vh !important;
+        background: rgba(15, 23, 42, 0.75) !important;
+        z-index: 2147483647 !important; /* El z-index más alto posible */
+        display: flex !important; 
+        align-items: center !important; 
+        justify-content: center !important;
+        padding: 20px !important;
+        box-sizing: border-box !important;
+        backdrop-filter: blur(4px) !important;
+        -webkit-backdrop-filter: blur(4px) !important;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      `;
 
       var iconos = { info: 'ti-info-circle', success: 'ti-circle-check', warning: 'ti-alert-triangle', error: 'ti-alert-circle' };
       var titulos = { info: 'Información', success: 'Éxito', warning: 'Advertencia', error: 'Error' };
+      var coloresHeader = {
+        info: 'linear-gradient(135deg, #1e3a8a, #3b82f6)',
+        success: 'linear-gradient(135deg, #15803d, #22c55e)',
+        warning: 'linear-gradient(135deg, #b45309, #f59e0b)',
+        error: 'linear-gradient(135deg, #b91c1c, #ef4444)'
+      };
 
       var icono = iconos[tipo] || iconos.info;
       var titulo = titulos[tipo] || titulos.info;
 
-      overlay.innerHTML = `
-        <div class="sys-modal-box">
-          <div class="sys-modal-header ${tipo}">
-            <i class="ti ${icono}"></i>
-            <span>${titulo}</span>
-          </div>
-          <div class="sys-modal-body">
-            <p>${mensaje}</p>
-            ${textoAdicional ? '<div class="sys-modal-warning-text">' + textoAdicional + '</div>' : ''}
-          </div>
-          <div class="sys-modal-footer" id="sys-modal-actions"></div>
-        </div>
+      // 2. Creamos la CAJA BLANCA con estilos en línea
+      var box = document.createElement('div');
+      box.style.cssText = `
+        background: #ffffff !important;
+        width: 100% !important;
+        max-width: 420px !important;
+        border-radius: 16px !important;
+        overflow: hidden !important;
+        box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.5) !important;
+        transform: translateY(20px) scale(0.96);
+        transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
       `;
 
-      var actions = overlay.querySelector('#sys-modal-actions');
+      // 3. Armamos el contenido interno
+      box.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 12px; padding: 18px 20px; color: #fff; font-weight: 700; font-size: 15px; background: ${coloresHeader[tipo]};">
+          <i class="ti ${icono}" style="font-size: 22px;"></i>
+          <span>${titulo}</span>
+        </div>
+        <div style="padding: 22px 20px; color: #334155; font-size: 14px; line-height: 1.55; text-align: center;">
+          <p style="margin: 0;">${mensaje}</p>
+          ${textoAdicional ? '<div style="margin-top: 12px; padding: 10px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; color: #92400e; font-size: 13px;">' + textoAdicional + '</div>' : ''}
+        </div>
+        <div style="display: flex; gap: 10px; padding: 0 20px 20px; justify-content: center;" id="sys-modal-actions"></div>
+      `;
+
+      var actionsContainer = box.querySelector('#sys-modal-actions');
 
       function cerrar(resultado) {
-        overlay.classList.remove('show');
+        overlay.style.opacity = '0';
+        box.style.transform = 'translateY(20px) scale(0.96)';
         setTimeout(function () {
           if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
           resolve(resultado);
-        }, 250);
+        }, 200);
       }
+
+      // Estilos base para los botones
+      var btnStyle = "padding: 10px 22px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; border: none; transition: all 0.2s ease; flex: 1;";
+      var btnPrimaryStyle = btnStyle + " background: #1e3a8a; color: #fff; box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);";
+      var btnOutlineStyle = btnStyle + " background: #fff; border: 1.5px solid #e2e8f0; color: #475569;";
 
       if (esConfirmacion) {
         var btnNo = document.createElement('button');
-        btnNo.className = 'sys-modal-btn sys-modal-btn-outline';
+        btnNo.style.cssText = btnOutlineStyle;
         btnNo.textContent = 'Cancelar';
-        btnNo.addEventListener('click', function () { cerrar(false); });
+        btnNo.onclick = function () { cerrar(false); };
 
         var btnSi = document.createElement('button');
-        btnSi.className = 'sys-modal-btn sys-modal-btn-primary';
+        btnSi.style.cssText = btnPrimaryStyle;
         btnSi.textContent = 'Aceptar';
-        btnSi.addEventListener('click', function () { cerrar(true); });
+        btnSi.onclick = function () { cerrar(true); };
 
-        actions.appendChild(btnNo);
-        actions.appendChild(btnSi);
+        actionsContainer.appendChild(btnNo);
+        actionsContainer.appendChild(btnSi);
       } else {
         var btnOk = document.createElement('button');
-        btnOk.className = 'sys-modal-btn sys-modal-btn-primary';
+        btnOk.style.cssText = btnPrimaryStyle;
         btnOk.textContent = 'Entendido';
-        btnOk.addEventListener('click', function () { cerrar(true); });
-        actions.appendChild(btnOk);
+        btnOk.onclick = function () { cerrar(true); };
+        actionsContainer.appendChild(btnOk);
       }
 
+      overlay.appendChild(box);
       container.appendChild(overlay);
+      
+      // Animación de entrada
       void overlay.offsetWidth;
-      overlay.classList.add('show');
+      overlay.style.opacity = '1';
+      box.style.transform = 'translateY(0) scale(1)';
     });
   };
 
@@ -848,6 +903,10 @@
     }
 
     if (token) {
+      // 🔥 FIX: Reiniciar lastActivity al cargar la página para evitar alertas falsas en el Dashboard
+      localStorage.setItem('lastActivity', Date.now());
+      alertaMostrada = false;
+
       startHeartbeat();
 
       function registrarActividad() {
@@ -867,6 +926,12 @@
       inactivityInterval = setInterval(function () {
         var lastActivity = parseInt(localStorage.getItem('lastActivity') || '0', 10);
         var inactividad = Date.now() - lastActivity;
+
+        // 🔥 FIX: Si el cálculo da negativo o es inválido, reiniciar
+        if (inactividad < 0 || isNaN(inactividad)) {
+          localStorage.setItem('lastActivity', Date.now());
+          return;
+        }
 
         if (inactividad >= TIEMPO_ALERTA_MS && inactividad < TIEMPO_INACTIVIDAD_MS) {
           if (!alertaMostrada) { mostrarAlertaInactividad(); alertaMostrada = true; }
