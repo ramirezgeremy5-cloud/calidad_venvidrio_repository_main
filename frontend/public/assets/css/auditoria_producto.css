@@ -1,9 +1,9 @@
 /* ==========================================================
    VENVIDRIO — AUDITORÍA DE PRODUCTO NO CONFORME
-   auditoria_producto.css — v2 (Completo)
+   auditoria_producto.css — v3 (Defectos dinámicos por clase)
    Cubre: stepper, select-search, file-upload, checklist
-   de defectos, glosario, toast, noscript, fieldset,
-   estados de validación, responsive profundo
+   de defectos agrupado por clasificación, glosario, toast,
+   noscript, fieldset, estados de validación, responsive
    ========================================================== */
 
 /* ==========================================================
@@ -32,6 +32,20 @@
 
   --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
   --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+
+  /* Colores por clasificación de defecto */
+  --clase-critico: #dc2626;
+  --clase-critico-soft: #fef2f2;
+  --clase-critico-line: #fecaca;
+  --clase-mayor-bplus: #ea580c;
+  --clase-mayor-bplus-soft: #fff7ed;
+  --clase-mayor-bplus-line: #fed7aa;
+  --clase-mayor-bminus: #ca8a04;
+  --clase-mayor-bminus-soft: #fefce8;
+  --clase-mayor-bminus-line: #fef08a;
+  --clase-menor: #2563eb;
+  --clase-menor-soft: #eff6ff;
+  --clase-menor-line: #bfdbfe;
 }
 
 /* ==========================================================
@@ -223,6 +237,7 @@ fieldset.form-section:last-of-type { margin-bottom: 0; }
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  flex-wrap: wrap;
 }
 .label-required::after {
   content: ' *';
@@ -485,18 +500,64 @@ fieldset.form-section:last-of-type { margin-bottom: 0; }
   font-family: inherit;
 }
 
+/* Contenedor principal: ahora es scroll vertical de grupos */
 .defecto-checklist {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 8px;
-  max-height: 340px;
+  display: block;
+  max-height: 360px;
   overflow-y: auto;
-  padding: 10px;
+  padding: 12px;
   background: #f8fafc;
   border: 1px solid var(--border, #e2e8f0);
   border-radius: var(--radius-sm);
 }
 
+/* Placeholder de carga */
+.defecto-loading,
+.defecto-checklist > p {
+  margin: 0;
+  color: var(--text-hint, #94a3b8);
+  font-size: 12.5px;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+/* Grupo por clasificación (generado por JS) */
+.defecto-grupo {
+  margin-bottom: 14px;
+}
+.defecto-grupo:last-child { margin-bottom: 0; }
+
+.defecto-grupo > h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted, #475569);
+}
+.defecto-grupo > h4 .grupo-count {
+  color: var(--text-hint, #94a3b8);
+  font-weight: 400;
+  font-size: 11px;
+}
+
+/* Grid interno de chips dentro de cada grupo */
+.defecto-grupo > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+/* Colores por clasificación en el título */
+.defecto-grupo[data-clase="Crítico"] > h4 { color: var(--clase-critico); }
+.defecto-grupo[data-clase="Mayor B+"] > h4 { color: var(--clase-mayor-bplus); }
+.defecto-grupo[data-clase="Mayor B-"] > h4 { color: var(--clase-mayor-bminus); }
+.defecto-grupo[data-clase="Menor"] > h4 { color: var(--clase-menor); }
+
+/* Chip individual */
 .defecto-chip {
   display: flex;
   align-items: center;
@@ -512,6 +573,7 @@ fieldset.form-section:last-of-type { margin-bottom: 0; }
   transition: all var(--transition);
   min-height: 38px;
   user-select: none;
+  word-break: break-word;
 }
 .defecto-chip:hover {
   border-color: var(--brand-2);
@@ -547,8 +609,43 @@ fieldset.form-section:last-of-type { margin-bottom: 0; }
   60% { transform: scale(1.15); }
   100% { transform: scale(1); }
 }
+
+/* Color del chip seleccionado según su clasificación */
+.defecto-chip[data-clase="Crítico"]:has(input:checked) {
+  background: var(--clase-critico-soft);
+  border-color: var(--clase-critico);
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
+}
+.defecto-chip[data-clase="Crítico"]:has(input:checked) span { color: var(--clase-critico); }
+.defecto-chip[data-clase="Crítico"]:has(input:checked)::before { background: var(--clase-critico); }
+
+.defecto-chip[data-clase="Mayor B+"]:has(input:checked) {
+  background: var(--clase-mayor-bplus-soft);
+  border-color: var(--clase-mayor-bplus);
+  box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.15);
+}
+.defecto-chip[data-clase="Mayor B+"]:has(input:checked) span { color: var(--clase-mayor-bplus); }
+.defecto-chip[data-clase="Mayor B+"]:has(input:checked)::before { background: var(--clase-mayor-bplus); }
+
+.defecto-chip[data-clase="Mayor B-"]:has(input:checked) {
+  background: var(--clase-mayor-bminus-soft);
+  border-color: var(--clase-mayor-bminus);
+  box-shadow: 0 0 0 2px rgba(202, 138, 4, 0.15);
+}
+.defecto-chip[data-clase="Mayor B-"]:has(input:checked) span { color: var(--clase-mayor-bminus); }
+.defecto-chip[data-clase="Mayor B-"]:has(input:checked)::before { background: var(--clase-mayor-bminus); }
+
+.defecto-chip[data-clase="Menor"]:has(input:checked) {
+  background: var(--clase-menor-soft);
+  border-color: var(--clase-menor);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+.defecto-chip[data-clase="Menor"]:has(input:checked) span { color: var(--clase-menor); }
+.defecto-chip[data-clase="Menor"]:has(input:checked)::before { background: var(--clase-menor); }
+
 /* Ocultar chips filtrados */
 .defecto-chip[hidden] { display: none; }
+.defecto-grupo[hidden] { display: none; }
 
 .defecto-resumen {
   display: flex;
@@ -831,9 +928,10 @@ fieldset.form-section:last-of-type { margin-bottom: 0; }
   .step-dot { width: 28px; height: 28px; font-size: 12px; }
   .step-label { font-size: 10.5px; }
 
-  .defecto-checklist {
+  .defecto-checklist { max-height: 320px; }
+
+  .defecto-grupo > div {
     grid-template-columns: 1fr 1fr;
-    max-height: 300px;
   }
 
   .form-actions {
@@ -848,7 +946,7 @@ fieldset.form-section:last-of-type { margin-bottom: 0; }
 @media (max-width: 600px) {
   .grid-2 { grid-template-columns: 1fr; }
 
-  .defecto-checklist { grid-template-columns: 1fr; }
+  .defecto-grupo > div { grid-template-columns: 1fr; }
 
   .aud-stepper .step-label { display: none; }
   .aud-stepper .step::before { top: 15px; }

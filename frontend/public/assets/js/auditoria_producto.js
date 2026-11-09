@@ -1,6 +1,6 @@
 /* ==========================================================
    VENVIDRIO - AUDITORÍA DE PRODUCTO NO CONFORME
-   auditoria_producto.js - v2 (Corregido y ampliado)
+   auditoria_producto.js - v3 (Defectos dinámicos desde BD)
    Compatible con el HTML mejorado (checklist de defectos,
    select-search, file-upload, stepper, toast global)
    ========================================================== */
@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let loteActual = null;
   let usuarioActual = null;
   let archivoEvidencia = null;
+  let catalogoDefectos = { clasificaciones: {}, tipos: [] };
 
   // ==========================================================
   // 1. UTILIDADES
@@ -111,7 +112,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const span = toast.querySelector('span');
     if (span) span.textContent = mensaje;
 
-    // Reflow para reiniciar animación
     void toast.offsetWidth;
     toast.classList.add('show');
 
@@ -143,7 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
     selectLote.innerHTML = '<option value="">Cargando lotes...</option>';
 
     try {
-      // 👇 Consultar ambos estatus en paralelo (100 pendiente, 300 retenido)
       const [res100, res300] = await Promise.all([
         fetchConRetry(`${API_URL}/produccion?estatus=100&limit=500`, { headers }),
         fetchConRetry(`${API_URL}/produccion?estatus=300&limit=500`, { headers })
@@ -153,7 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const lista300 = res300.ok ? await res300.json() : [];
 
       lotesRetenidos = [...lista300, ...lista100];
-      // Ordenar por ticket + código de lote
       lotesRetenidos.sort((a, b) => {
         const ta = a.ticket_carga || '';
         const tb = b.ticket_carga || '';
@@ -242,7 +240,6 @@ document.addEventListener('DOMContentLoaded', () => {
       setVal('producto_cliente',
         `${loteActual.tipo_producto || '—'} | Cliente: ${loteActual.cliente || '—'}`);
 
-      // Responsable: prioridad usuario logueado → operador del lote
       if (usuarioActual?.nombre) {
         setVal('responsable', usuarioActual.nombre);
       } else if (loteActual.operador) {
@@ -251,11 +248,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       actualizarStepper(2);
 
-      // Cargar defectos previos del lote (si tiene)
       await cargarDefectosDelLote(loteActual.id);
     });
 
-    // Buscador de lotes
     const searchInput = $('lote_search');
     if (searchInput) {
       let debounceId;
@@ -285,10 +280,21 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // 👇 Marcar como checked los chips correspondientes
-      const tipos = new Set(defectos.map(d => String(d.tipo_defecto || '').trim().toLowerCase()));
+      // 👇 Marcar por clasificación + nombre (evita colisiones entre clases)
+      const pares = new Set(
+        defectos.map(d => {
+          const clase = String(
+            d.clasificacion || d.tipo_defecto_clasificacion || d.clase || ''
+          ).trim().toLowerCase();
+          const tipo = String(d.tipo_defecto || d.nombre || '').trim().toLowerCase();
+          return `${clase}||${tipo}`;
+        })
+      );
+
       document.querySelectorAll('#defectos-list input[type="checkbox"]').forEach(cb => {
-        if (tipos.has(cb.value.toLowerCase())) cb.checked = true;
+        const clase = String(cb.dataset.clase || '').trim().toLowerCase();
+        const tipo  = String(cb.value || '').trim().toLowerCase();
+        if (pares.has(`${clase}||${tipo}`)) cb.checked = true;
       });
 
       actualizarContadorDefectos();
@@ -299,15 +305,82 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================================
-  // 7. CHECKLIST DE DEFECTOS
+  // 7. CATÁLOGO DE DEFECTOS DESDE LA BASE DE DATOS
+  // ==========================================================
+  async function cargarCatalogoDefectos() {
+    const container = $('defectos-list');
+    if (!container) return;
+
+    container.innerHTML = '<p style="color:#64748b;font-size:13px;">Cargando defectos...</p>';
+
+    try {
+      const res = await fetchConRetry(`${API_URL}/defectos/tipos?t=${Date.now()}`, { headers });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = await res.json();
+      const agrupado = data?.clasificaciones || {};
+
+      catalogoDefectos = {
+        clasificaciones: agrupado,
+        tipos: Array.isArray(data?.tipos) ? data.tipos : []
+      };
+
+      if (!Object.keys(agrupado).length) {
+        container.innerHTML = '<p style="color:#64748b;font-size:13px;">No hay tipos de defectos registrados en el sistema.</p>';
+        return;
+      }
+
+      const ordenClases = ['Crítico', 'Mayor B+', 'Mayor B-', 'Menor'];
+      const clases = Object.keys(agrupado).sort((a, b) => {
+        const ia = ordenClases.indexOf(a);
+        const ib = ordenClases.indexOf(b);
+        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+      });
+
+      container.innerHTML = clases.map(clase => {
+        const tipos = agrupado[clase] || [];
+        if (!tipos.length) return '';
+
+        const chips = tipos.map(tipo => `
+          <label class="defecto-chip" data-clase="${esc(clase)}">
+            <input type="checkbox" value="${esc(tipo)}" data-clase="${esc(clase)}">
+            <span>${esc(tipo)}</span>
+          </label>
+        `).join('');
+
+        return `
+          <div class="defecto-grupo" data-clase="${esc(clase)}" style="margin-bottom:14px;">
+            <h4 style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#475569;">
+              ${esc(clase)} <span style="color:#94a3b8;font-weight:400;">(${tipos.length})</span>
+            </h4>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">${chips}</div>
+          </div>
+        `;
+      }).join('');
+
+      console.log(`✅ Catálogo de defectos cargado: ${catalogoDefectos.tipos.length} tipos`);
+    } catch (e) {
+      console.error('Error cargando catálogo de defectos:', e);
+      container.innerHTML = '<p style="color:#dc2626;font-size:13px;">No se pudieron cargar los tipos de defectos. Revisa tu conexión.</p>';
+      mostrarToast('No se pudo cargar el catálogo de defectos.', 'error');
+    }
+  }
+
+  // ==========================================================
+  // 8. CHECKLIST DE DEFECTOS (interacción)
   // ==========================================================
   function initChecklistDefectos() {
     const container = $('defectos-list');
     if (!container) return;
 
-    container.addEventListener('change', actualizarContadorDefectos);
+    // Delegación: el listener se mantiene aunque el DOM se regenere
+    container.addEventListener('change', (e) => {
+      if (e.target && e.target.matches('input[type="checkbox"]')) {
+        actualizarContadorDefectos();
+      }
+    });
 
-    // Buscador
     const search = $('defecto_search');
     if (search) {
       search.addEventListener('input', () => {
@@ -316,10 +389,14 @@ document.addEventListener('DOMContentLoaded', () => {
           const texto = chip.textContent.toLowerCase();
           chip.hidden = q && !texto.includes(q);
         });
+        container.querySelectorAll('.defecto-grupo').forEach(grupo => {
+          const visibles = Array.from(grupo.querySelectorAll('.defecto-chip'))
+            .filter(c => !c.hidden);
+          grupo.hidden = visibles.length === 0;
+        });
       });
     }
 
-    // Botón limpiar selección
     const btnClear = $('defectos-clear');
     if (btnClear) {
       btnClear.addEventListener('click', () => {
@@ -341,14 +418,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnClear = $('defectos-clear');
     if (btnClear) btnClear.style.display = count > 0 ? 'inline-flex' : 'none';
 
-    // Avanzar stepper a paso 3 si hay defectos
     if (count > 0) actualizarStepper(3);
   }
 
   function getDefectosSeleccionados() {
     return Array.from(
       document.querySelectorAll('#defectos-list input[type="checkbox"]:checked')
-    ).map(cb => cb.value);
+    ).map(cb => ({
+      tipo_defecto: cb.value,
+      clasificacion: cb.dataset.clase || ''
+    }));
   }
 
   function resetChecklistDefectos() {
@@ -360,11 +439,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (search) {
       search.value = '';
       document.querySelectorAll('.defecto-chip').forEach(chip => { chip.hidden = false; });
+      document.querySelectorAll('.defecto-grupo').forEach(g => { g.hidden = false; });
     }
   }
 
   // ==========================================================
-  // 8. FILE UPLOAD CON PREVIEW
+  // 9. FILE UPLOAD CON PREVIEW
   // ==========================================================
   function initFileUpload() {
     const input = $('evidencia_foto');
@@ -387,7 +467,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Validar tipo y tamaño (máx 5 MB)
       if (!file.type.startsWith('image/')) {
         mostrarToast('Solo se permiten archivos de imagen.', 'error');
         input.value = '';
@@ -423,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================================
-  // 9. CÁLCULOS AUTOMÁTICOS
+  // 10. CÁLCULOS AUTOMÁTICOS
   // ==========================================================
   function initCalculos() {
     const insp = $('paletas_inspeccionadas');
@@ -442,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================================
-  // 10. CONTADOR DE OBSERVACIONES
+  // 11. CONTADOR DE OBSERVACIONES
   // ==========================================================
   function initContadorObs() {
     const obs = $('observaciones');
@@ -454,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================================
-  // 11. STEPPER
+  // 12. STEPPER
   // ==========================================================
   function actualizarStepper(pasoActivo) {
     document.querySelectorAll('.aud-stepper .step').forEach(step => {
@@ -466,7 +545,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================================
-  // 12. GUARDAR AUDITORÍA
+  // 13. GUARDAR AUDITORÍA
   // ==========================================================
   function initGuardar() {
     const btn = $('btn-guardar');
@@ -475,7 +554,6 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', async (e) => {
       e.preventDefault();
 
-      // === Validaciones ===
       const loteId = val('lote_id');
       const paletasInsp = parseInt($('paletas_inspeccionadas')?.value, 10) || 0;
       const paletasRech = parseInt($('paletas_rechazadas')?.value, 10) || 0;
@@ -509,23 +587,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // === Estado del botón ===
       const originalHTML = btn.innerHTML;
       btn.disabled = true;
       btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite;display:inline-block;"></i> Guardando...';
 
       try {
         // === 1. Registrar auditoría ===
+        // Se envía array de objetos { tipo_defecto, clasificacion }
         const payload = {
           produccion_id: parseInt(loteId, 10),
           fecha_auditoria: new Date().toISOString().split('T')[0],
           paletas_inspeccionadas: paletasInsp,
           paletas_aprobadas: paletasAprob,
           paletas_rechazadas: paletasRech,
-          movimiento, // 👈 NUEVO: se envía la disposición
+          movimiento,
           observaciones,
-          defectos: defectos, // 👈 NUEVO: array de nombres de defectos
-          evidencia_nombre: archivoEvidencia?.name || null // 👈 NUEVO
+          defectos,
+          evidencia_nombre: archivoEvidencia?.name || null
         };
 
         const resAud = await fetchConRetry(`${API_URL}/auditoria-producto/`, {
@@ -550,7 +628,7 @@ document.addEventListener('DOMContentLoaded', () => {
               `${API_URL}/auditoria-producto/${dataAud.id}/evidencia`,
               {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }, // sin Content-Type (FormData)
+                headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
               },
               TIMEOUT_WAKE_MS
@@ -583,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // === 4. Éxito ===
-        actualizarStepper(5); // todos done
+        actualizarStepper(5);
         mostrarToast(`Auditoría registrada. Lote → estatus ${nuevoEstatus}.`);
         limpiarFormulario();
         await cargarLotes();
@@ -599,7 +677,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================================
-  // 13. LIMPIAR FORMULARIO
+  // 14. LIMPIAR FORMULARIO
   // ==========================================================
   function limpiarFormulario() {
     loteActual = null;
@@ -621,7 +699,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     resetChecklistDefectos();
 
-    // Reset file upload
     const fileInput = $('evidencia_foto');
     if (fileInput) fileInput.value = '';
     const fileName = $('file-name');
@@ -632,13 +709,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnClear) btnClear.style.display = 'none';
     document.querySelector('.file-upload-btn')?.classList.remove('has-file');
 
-    // Reset contador obs
     setText('obs-count', '0');
-
-    // Reset stepper
     actualizarStepper(1);
-
-    // Re-render opciones (por si cambió el filtro)
     renderOpcionesLotes('');
   }
 
@@ -652,12 +724,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================================
-  // 14. INICIALIZACIÓN
+  // 15. INICIALIZACIÓN
   // ==========================================================
   function init() {
     cargarUsuario();
     initSelectorLote();
     initChecklistDefectos();
+    cargarCatalogoDefectos();   // 👈 Carga los tipos desde la BD
     initFileUpload();
     initCalculos();
     initContadorObs();

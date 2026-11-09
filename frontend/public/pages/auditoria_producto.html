@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#ffffff" />
   <meta name="color-scheme" content="light" />
   <meta name="description" content="Auditoría de producto no conforme — Venvidrio Control de Calidad" />
-  
+
   <!-- 👇 TÍTULO ESTANDARIZADO 👇 -->
   <title>Venvidrio | Auditoría de Producto</title>
 
@@ -253,85 +253,39 @@
           </legend>
 
           <div class="field">
-            <label class="label-required">Defectos Críticos encontrados</label>
+            <label class="label-required">
+              Defectos encontrados
+              <span class="badge-info" style="font-weight:400;font-size:11px;margin-left:6px;">
+                catálogo del sistema
+              </span>
+            </label>
 
             <div class="defecto-search">
               <i class="ti ti-search" aria-hidden="true"></i>
               <input
                 type="search"
                 id="defecto_search"
-                placeholder="Buscar defecto..."
+                placeholder="Buscar defecto por nombre o clasificación..."
                 autocomplete="off"
                 aria-controls="defectos-list"
               />
             </div>
 
+            <!-- 👇 VACÍO: el JS lo llena dinámicamente desde /defectos/tipos -->
             <div
               id="defectos-list"
               class="defecto-checklist"
               role="group"
-              aria-labelledby="defectos-label"
+              aria-labelledby="ficha-title"
+              aria-live="polite"
             >
-              <label class="defecto-chip">
-                <input type="checkbox" name="defectos" value="Telefono" />
-                <span>Teléfono</span>
-              </label>
-              <label class="defecto-chip">
-                <input type="checkbox" name="defectos" value="Filamento interno" />
-                <span>Filamento interno</span>
-              </label>
-              <label class="defecto-chip">
-                <input type="checkbox" name="defectos" value="Marca de Tubo de Soplo" />
-                <span>Marca de Tubo de Soplo</span>
-              </label>
-              <label class="defecto-chip">
-                <input type="checkbox" name="defectos" value="Sobreprensa" />
-                <span>Sobreprensa</span>
-              </label>
-              <label class="defecto-chip">
-                <input type="checkbox" name="defectos" value="Brida en el Acabado" />
-                <span>Brida en el Acabado</span>
-              </label>
-              <label class="defecto-chip">
-                <input type="checkbox" name="defectos" value="Acabado Astillado" />
-                <span>Acabado Astillado</span>
-              </label>
-              <label class="defecto-chip">
-                <input type="checkbox" name="defectos" value="Acabado Filoso" />
-                <span>Acabado Filoso</span>
-              </label>
-              <label class="defecto-chip">
-                <input type="checkbox" name="defectos" value="Vidrio Interno Pegado o Suelto" />
-                <span>Vidrio Interno Pegado o Suelto</span>
-              </label>
-              <label class="defecto-chip">
-                <input type="checkbox" name="defectos" value="Ampolla Superficial Interna" />
-                <span>Ampolla Superficial Interna</span>
-              </label>
-              <label class="defecto-chip">
-                <input type="checkbox" name="defectos" value="Ampolla Fina (Blowout)" />
-                <span>Ampolla Fina (Blowout)</span>
-              </label>
-              <label class="defecto-chip">
-                <input type="checkbox" name="defectos" value="Marca Interna" />
-                <span>Marca Interna</span>
-              </label>
-              <label class="defecto-chip">
-                <input type="checkbox" name="defectos" value="Vidrio Externo Pegado Cortante" />
-                <span>Vidrio Externo Pegado Cortante</span>
-              </label>
-              <label class="defecto-chip">
-                <input type="checkbox" name="defectos" value="Costura Gruesa Cortante (Aleta)" />
-                <span>Costura Gruesa Cortante (Aleta)</span>
-              </label>
-              <label class="defecto-chip">
-                <input type="checkbox" name="defectos" value="Cuello Obstruido" />
-                <span>Cuello Obstruido</span>
-              </label>
+              <p style="color:#64748b;font-size:13px;margin:0;">
+                Cargando catálogo de defectos...
+              </p>
             </div>
 
             <div class="defecto-resumen">
-              <span id="defectos-count" class="badge badge-info">0 seleccionados</span>
+              <span id="defectos-count" class="badge badge-info" aria-live="polite">0 seleccionados</span>
               <button
                 type="button"
                 id="defectos-clear"
