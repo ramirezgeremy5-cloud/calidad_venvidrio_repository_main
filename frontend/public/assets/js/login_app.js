@@ -804,7 +804,7 @@
           clearInterval(inactivityInterval);
           localStorage.clear();
           window.mostrarAlertaPersonalizada('Tu sesión ha finalizado (expirada).', 'warning').then(function() {
-            window.location.href = '../public/login.html';
+            window.location.href = '/login.html'; // 👈 Corregido para evitar 404
           });
         }
       })
@@ -833,7 +833,7 @@
     clearInterval(inactivityInterval);
     localStorage.clear();
     window.mostrarAlertaPersonalizada('Tu sesión ha expirado por inactividad. Por favor, inicia sesión de nuevo.', 'error').then(function() {
-      window.location.href = '../public/login.html';
+      window.location.href = '/login.html'; // 👈 Corregido para evitar 404
     });
   }
 
@@ -844,7 +844,7 @@
     var token = localStorage.getItem('token');
 
     if (!token && window.location.pathname.indexOf('login.html') === -1) {
-      window.location.href = '../public/login.html';
+      window.location.href = '/login.html'; // 👈 Corregido para evitar 404
       return;
     }
 
