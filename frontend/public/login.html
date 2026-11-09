@@ -2,7 +2,10 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- viewport-fit=cover ayuda con pantallas con notch (iPhone) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <!-- Color de la barra del navegador en Android/iOS -->
+  <meta name="theme-color" content="#0f172a" />
   <title>Venvidrio — Iniciar Sesión</title>
 
   <!-- CSS -->
@@ -57,12 +60,13 @@
         <label class="field-label" for="username-prefix">Usuario o Correo</label>
         <div class="field-wrapper">
           <i class="ti ti-user field-icon"></i>
+          <!-- Placeholder acortado para que no desborde en móviles -->
           <input 
             class="field-input" 
             id="username-prefix" 
             type="text" 
             autocomplete="username" 
-            placeholder="Ej: juan.perez o juan@venvidrio.com" 
+            placeholder="Usuario o correo" 
           />
         </div>
       </div>

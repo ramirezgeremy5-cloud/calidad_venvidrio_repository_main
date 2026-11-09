@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - LANDING PAGE
-   landing.css - Index (v5 - Hero Sugerente)
+   landing.css - Index (v6 - Mobile First Ready)
    ========================================== */
 
 /* ==========================================================
@@ -18,8 +18,14 @@
     --border: #e2e8f0;
 }
 
+* {
+    box-sizing: border-box; /* 👈 Crucial para que el padding no desborde los contenedores */
+    -webkit-tap-highlight-color: transparent; /* 👈 Quita el cuadro azul al tocar en móviles */
+}
+
 html {
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%; /* 👈 Evita que iOS agrande la letra en horizontal */
 }
 
 body {
@@ -29,6 +35,8 @@ body {
     background-color: #ffffff;
     color: var(--text-main);
     line-height: 1.6;
+    overflow-x: hidden; /* 👈 Evita el scroll horizontal por culpa de animaciones o imágenes */
+    -webkit-font-smoothing: antialiased;
 }
 
 .container {
@@ -54,12 +62,12 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 0.8rem 2rem;
+    padding-top: max(0.8rem, env(safe-area-inset-top)); /* 👈 Respeta el notch */
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     z-index: 1000;
-    box-sizing: border-box;
     transition: all 0.3s ease;
 }
 
@@ -71,6 +79,7 @@ body {
 .nav-brand {
     display: flex;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .nav-logo {
@@ -89,10 +98,11 @@ body {
     color: var(--navy);
     cursor: pointer;
     padding: 5px;
-    min-width: 44px;
+    min-width: 44px; /* 👈 Tamaño mínimo táctil */
     min-height: 44px;
     align-items: center;
     justify-content: center;
+    touch-action: manipulation;
 }
 
 .nav-links {
@@ -110,6 +120,7 @@ body {
     font-size: 0.95rem;
     font-weight: 600;
     transition: color 0.2s ease;
+    padding: 5px 0;
 }
 
 .nav-links a:hover {
@@ -123,6 +134,7 @@ body {
     border-radius: 8px;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     font-weight: 600;
     transition: background 0.2s ease, transform 0.2s ease;
@@ -136,12 +148,13 @@ body {
 }
 
 /* ==========================================================
-   3. HERO SECTION (Ajustado para ser más sugerente)
+   3. HERO SECTION
    ========================================================== */
 .hero {
     position: relative;
-    /* 👇 REDUCIDO: Antes era 100vh, ahora ocupa un 80% de la pantalla */
+    /* 👇 dvh asegura que se adapte a la barra de direcciones móvil */
     min-height: 80vh;
+    min-height: 80dvh; 
     display: flex;
     align-items: center;
     justify-content: center;
@@ -158,7 +171,6 @@ body {
 .hero-overlay {
     position: absolute;
     inset: 0;
-    /* 👇 MÁS TRANSPARENTE: Antes era 0.75, ahora es 0.55 para que se vea más la foto */
     background: linear-gradient(to bottom, rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.75));
     z-index: 1;
 }
@@ -168,7 +180,6 @@ body {
     z-index: 2;
     max-width: 900px;
     animation: fade-up 0.8s ease;
-    /* 👇 Un poco de margen superior para centrarlo mejor en el nuevo espacio */
     margin-top: 20px;
 }
 
@@ -203,6 +214,7 @@ body {
     display: flex;
     gap: 1rem;
     justify-content: center;
+    flex-wrap: wrap; /* 👈 Permite que los botones bajen si no caben */
 }
 
 /* ==========================================================
@@ -220,6 +232,8 @@ body {
     text-decoration: none;
     transition: all 0.2s ease;
     border: 2px solid transparent;
+    touch-action: manipulation; /* 👈 Mejora la respuesta al toque */
+    min-height: 48px; /* 👈 Botones más fáciles de pulsar */
 }
 
 .btn-primary {
@@ -505,6 +519,7 @@ body {
 
 .footer-contact i {
     color: #64748b;
+    flex-shrink: 0;
 }
 
 /* ==========================================================
@@ -523,6 +538,7 @@ body {
 @media (max-width: 900px) {
     .navbar {
         padding: 1rem 1.5rem;
+        padding-top: max(1rem, env(safe-area-inset-top));
     }
 
     .menu-toggle {
@@ -541,6 +557,9 @@ body {
         box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
         display: none;
         border-top: 1px solid var(--border);
+        /* Aseguramos que se pueda hacer scroll si hay muchos links */
+        max-height: calc(100vh - 70px);
+        overflow-y: auto;
     }
 
     .nav-links.active {
@@ -575,9 +594,18 @@ body {
 
 /* --- Móviles (<= 600px) --- */
 @media (max-width: 600px) {
+    .navbar {
+        padding: 0.8rem 1rem;
+        padding-top: max(0.8rem, env(safe-area-inset-top));
+    }
+
+    .nav-logo {
+        height: 38px; /* 👈 Logo un poco más pequeño para que quepa bien */
+    }
+
     .hero {
-        /* 👇 Reducimos la altura en móviles también para que sea más compacto */
         min-height: 70vh;
+        min-height: 70dvh;
         padding: 100px 15px 40px;
     }
 
@@ -588,6 +616,11 @@ body {
     .hero-subtitle {
         font-size: 0.95rem;
         margin-bottom: 1.5rem;
+    }
+
+    .hero-actions {
+        flex-direction: column; /* 👈 Botones uno debajo del otro en móviles */
+        width: 100%;
     }
 
     .btn {
@@ -607,8 +640,16 @@ body {
         font-size: 1.6rem;
     }
 
+    .about-text h3 {
+        font-size: 1.3rem;
+    }
+
     .card-info {
         padding: 1.5rem;
+    }
+
+    .footer {
+        padding: 3rem 0 2rem;
     }
 
     .footer-grid {
@@ -623,5 +664,30 @@ body {
     .footer-brand .footer-logo {
         margin: 0 auto 1rem;
         display: block;
+    }
+}
+
+/* --- Pantallas muy pequeñas (<= 360px) --- */
+@media (max-width: 360px) {
+    .hero h1 {
+        font-size: 1.5rem;
+    }
+
+    .hero-subtitle {
+        font-size: 0.85rem;
+    }
+    
+    .nav-logo {
+        height: 32px;
+    }
+}
+
+/* --- Accesibilidad: Reduce el movimiento si el usuario lo prefiere --- */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }
