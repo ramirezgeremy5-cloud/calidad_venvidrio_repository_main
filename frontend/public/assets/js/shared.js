@@ -1,7 +1,7 @@
 /* ==========================================
    VENVIDRIO - SHARED
    Navbar, Reloj, Dropdown, Modal Mi Perfil, Roles
-   v10 - Reloj robusto + Mi Perfil funcional
+   v11 - Animaciones fluidas (Menú / Perfil / Dropdown)
    ========================================== */
 
 (function () {
@@ -40,7 +40,6 @@
   }
 
   function toast(msg, tipo = 'success') {
-    // Reutilizamos el toast de la página si existe, si no, alert()
     const el = document.querySelector('.toast, #toast-usuarios');
     const txt = document.getElementById('toast-text') || el?.querySelector('span');
     if (el && txt) {
@@ -57,83 +56,11 @@
   }
 
   // ==========================================================
-  // INYECTAR ESTILOS DE ANIMACIÓN
-  // ==========================================================
-  function injectAnimationStyles() {
-    if (document.getElementById('nav-anim-styles')) return;
-    const style = document.createElement('style');
-    style.id = 'nav-anim-styles';
-    style.textContent = `
-      .nav-toggle { transition: transform 0.25s ease, background 0.25s ease; }
-      .nav-toggle:active { transform: scale(0.9); }
-      .nav-toggle i {
-        display: inline-block;
-        transition: transform 0.35s cubic-bezier(0.68, -0.55, 0.27, 1.55), opacity 0.2s ease;
-      }
-      .nav-toggle i.ti-x { transform: rotate(90deg) scale(1.1); }
-
-      @media (max-width: 900px) {
-        #navLinks {
-          transform-origin: top center;
-          transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-          opacity: 0;
-          transform: translateY(-10px) scaleY(0.96);
-          pointer-events: none;
-        }
-        #navLinks.active {
-          opacity: 1;
-          transform: translateY(0) scaleY(1);
-          pointer-events: auto;
-        }
-        #navLinks a {
-          opacity: 0;
-          transform: translateX(-12px);
-          transition: opacity 0.3s ease, transform 0.3s ease;
-        }
-        #navLinks.active a { opacity: 1; transform: translateX(0); }
-        #navLinks.active a:nth-child(1) { transition-delay: 0.05s; }
-        #navLinks.active a:nth-child(2) { transition-delay: 0.10s; }
-        #navLinks.active a:nth-child(3) { transition-delay: 0.15s; }
-        #navLinks.active a:nth-child(4) { transition-delay: 0.20s; }
-        #navLinks.active a:nth-child(5) { transition-delay: 0.25s; }
-        #navLinks.active a:nth-child(6) { transition-delay: 0.30s; }
-        #navLinks.active a:nth-child(7) { transition-delay: 0.35s; }
-        #navLinks.active a:nth-child(8) { transition-delay: 0.40s; }
-      }
-
-      @media (min-width: 901px) {
-        body { animation: pageFadeIn 0.45s ease both; }
-        body.page-transition-out {
-          animation: pageFadeOut 0.3s ease forwards;
-          pointer-events: none;
-        }
-        @keyframes pageFadeIn {
-          from { opacity: 0; transform: translateY(8px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes pageFadeOut {
-          from { opacity: 1; transform: translateY(0); }
-          to   { opacity: 0; transform: translateY(-8px); }
-        }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after {
-          animation-duration: 0.001ms !important;
-          transition-duration: 0.001ms !important;
-        }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  // ==========================================================
-  // RELOJ EN TIEMPO REAL (A PRUEBA DE FALLOS)
+  // RELOJ EN TIEMPO REAL
   // ==========================================================
   function iniciarReloj() {
     const reloj = document.getElementById('reloj-real');
     if (!reloj) {
-      // Si no existe aún el elemento, reintentar en 100ms
       setTimeout(iniciarReloj, 100);
       return;
     }
@@ -158,22 +85,8 @@
     window.relojInterval = setInterval(actualizarHora, 1000);
   }
 
-  // Arrancar el reloj de inmediato (funciona si shared.js se carga al final del body)
   iniciarReloj();
-
-  // Y también al DOMContentLoaded (por si se cargó en el head)
   document.addEventListener('DOMContentLoaded', iniciarReloj);
-
-  // MutationObserver de respaldo (por si el navbar se inyecta dinámicamente)
-  if (!document.getElementById('reloj-real')) {
-    const obsReloj = new MutationObserver(() => {
-      if (document.getElementById('reloj-real')) {
-        iniciarReloj();
-        obsReloj.disconnect();
-      }
-    });
-    obsReloj.observe(document.documentElement, { childList: true, subtree: true });
-  }
 
   // ==========================================================
   // CONTROL DE ACCESO AL MENÚ (Roles + Cargos)
@@ -272,7 +185,6 @@
     document.body.insertAdjacentHTML('beforeend', modalHtml);
   }
 
-  // Variable para guardar la foto seleccionada en el modal de perfil
   let archivoFotoPerfil = null;
 
   function abrirModalPerfil() {
@@ -283,7 +195,6 @@
       return;
     }
 
-    // Rellenar campos
     $('miPerfil-nombre').value = user.nombre || '';
     $('miPerfil-cedula').value = user.cedula || '';
     $('miPerfil-correo').value = user.correo || '';
@@ -292,7 +203,6 @@
     $('miPerfil-fecha-ingreso').value = user.fecha_ingreso || '';
     $('miPerfil-fecha-nacimiento').value = user.fecha_nacimiento || '';
 
-    // Foto
     archivoFotoPerfil = null;
     const previewImg = $('miPerfil-preview-foto');
     const iconCamara = $('miPerfil-icono-camara');
@@ -307,13 +217,17 @@
     $('miPerfil-file-foto').value = '';
     $('miPerfil-error').style.display = 'none';
 
-    // Mostrar
+    // Mostrar con animación (el CSS ya tiene el keyframe de zoom)
     $('modalMiPerfil').style.display = 'flex';
+    // Forzamos un reflow para que la animación se ejecute
+    void $('modalMiPerfil').offsetWidth;
   }
 
   function cerrarModalPerfil() {
     const modal = $('modalMiPerfil');
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+      modal.style.display = 'none';
+    }
     archivoFotoPerfil = null;
   }
 
@@ -343,7 +257,6 @@
 
     let fotoUrlFinal = user.foto_url || null;
 
-    // Subir foto si se seleccionó una nueva
     if (archivoFotoPerfil) {
       try {
         const formData = new FormData();
@@ -383,7 +296,6 @@
         throw new Error(err.detail || `HTTP ${res.status}`);
       }
 
-      // Actualizar localStorage
       user.nombre = nombre;
       user.cedula = cedula;
       user.fecha_ingreso = fechaIngreso;
@@ -391,7 +303,6 @@
       user.foto_url = fotoUrlFinal;
       localStorage.setItem('user', JSON.stringify(user));
 
-      // Actualizar navbar
       const navAvatar = $('navAvatar');
       const dropdownAvatar = $('dropdownAvatar');
       const navUsername = $('navUsername');
@@ -444,9 +355,16 @@
 
       navToggle.addEventListener('click', (e) => {
         e.stopPropagation();
-        navLinks.classList.toggle('active');
+        const isActive = navLinks.classList.toggle('active');
         const icon = navToggle.querySelector('i');
-        icon.className = navLinks.classList.contains('active') ? 'ti ti-x' : 'ti ti-menu-2';
+        // Cambiar ícono y estado de aria
+        if (isActive) {
+          icon.className = 'ti ti-x';
+          navToggle.setAttribute('aria-expanded', 'true');
+        } else {
+          icon.className = 'ti ti-menu-2';
+          navToggle.setAttribute('aria-expanded', 'false');
+        }
       });
 
       navLinks.querySelectorAll('a').forEach(link => {
@@ -455,6 +373,7 @@
             navLinks.classList.remove('active');
             const icon = navToggle.querySelector('i');
             if (icon) icon.className = 'ti ti-menu-2';
+            navToggle.setAttribute('aria-expanded', 'false');
           }
         });
       });
@@ -465,12 +384,13 @@
             navLinks.classList.remove('active');
             const icon = navToggle.querySelector('i');
             if (icon) icon.className = 'ti ti-menu-2';
+            navToggle.setAttribute('aria-expanded', 'false');
           }
         }
       });
     }
 
-    // 3. Dropdown del usuario
+    // 3. Dropdown del usuario (con animación)
     document.body.addEventListener('click', (e) => {
       const navUser = e.target.closest('#navUserContainer');
       const userDropdown = document.getElementById('userDropdown');
@@ -479,9 +399,6 @@
       if (navUser) {
         e.stopPropagation();
         userDropdown.classList.toggle('show');
-        if (userDropdown.classList.contains('show')) {
-          userDropdown.style.zIndex = '99999';
-        }
       } else if (!e.target.closest('#userDropdown')) {
         userDropdown.classList.remove('show');
       }
@@ -548,7 +465,6 @@
       const finalizar = () => {
         if (window.relojInterval) clearInterval(window.relojInterval);
         localStorage.clear();
-        // 👇 CORREGIDO: Ruta absoluta para evitar error 404
         window.location.href = '/login.html'; 
       };
 
