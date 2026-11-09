@@ -1,7 +1,7 @@
 /* =============================================
    SHARED — VENVIDRIO
    Estilos globales: Fondo, Navbar, Contenedor, Modales
-   v7 — Navbar compacto móvil + Animaciones (Perfil / Menú)
+   v8 — Fix Alerta de Sesión + Z-Index + Navbar compacto
    ============================================= */
 
 /* ================= VARIABLES GLOBALES ================= */
@@ -463,7 +463,6 @@ body {
   to   { opacity: 1; }
 }
 
-/* Animación especial para el perfil */
 .modal-box {
   background: #fff;
   border-radius: var(--radius-lg);
@@ -658,17 +657,15 @@ body {
     order: 2;
   }
 
-  /* MÓVIL: Ocultar nombre de usuario por defecto */
   .nav-user {
     order: 3;
     padding: 3px 8px 3px 3px;
   }
 
   .nav-user .nav-username {
-    display: none; /* 👈 Oculta el nombre en móvil */
+    display: none; 
   }
 
-  /* MÓVIL: El menú desplegable entra con animación (slide down) */
   .nav-links {
     display: none;
     order: 4;
@@ -685,7 +682,6 @@ body {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     
-    /* Animación del menú */
     opacity: 0;
     transform: translateY(-10px);
     transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -710,7 +706,6 @@ body {
     transition: opacity 0.25s ease, transform 0.25s ease, background 0.2s ease, color 0.2s ease;
   }
 
-  /* Animación de los enlaces al aparecer */
   .nav-links.active li a {
     opacity: 1;
     transform: translateX(0);
@@ -767,7 +762,6 @@ body {
     font-size: 11px;
   }
 
-  /* En móviles muy pequeños, el usuario es solo el avatar */
   .nav-user {
     padding: 3px;
     min-width: var(--tap-min);
@@ -804,4 +798,90 @@ body {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ============================================= */
+/* =========== FIX ALERTA DE SESIÓN ============ */
+/* ============================================= */
+/* Nota: Si tu JS usa IDs o clases diferentes para la alerta, 
+   ajústalos aquí. He usado selectores genéricos y clases comunes. */
+
+#session-warning,
+.session-expiration-alert,
+.modal-overlay.session-warning {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999; /* Por encima de todo, incluyendo modales normales */
+  padding: 20px;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: modal-fade 0.3s ease both;
+}
+
+#session-warning .modal-box,
+.session-expiration-alert .modal-box,
+.modal-overlay.session-warning .modal-box {
+  max-width: 450px;
+  text-align: center;
+  padding: 30px;
+  border-radius: var(--radius-lg);
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  animation: modal-zoom 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+#session-warning h2,
+.session-expiration-alert h2,
+.modal-overlay.session-warning h2 {
+  color: var(--danger);
+  font-size: 20px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+#session-warning p,
+.session-expiration-alert p,
+.modal-overlay.session-warning p {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+#session-warning .btn,
+.session-expiration-alert .btn,
+.modal-overlay.session-warning .btn {
+  width: 100%;
+  max-width: 250px;
+  margin: 0 auto;
+}
+
+/* Si el aviso de sesión usa un botón flotante sin overlay (como en tu imagen) */
+.session-warning-floating {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  padding: 15px 25px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  border-left: 4px solid var(--danger);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 90%;
+  text-align: center;
 }
