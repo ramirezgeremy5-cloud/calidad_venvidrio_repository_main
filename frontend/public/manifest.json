@@ -9,25 +9,25 @@
   "theme_color": "#0f172a",
   "icons": [
     {
-      "src": "/assets/img/logo-venvidrio_index.png",
+      "src": "/assets/img/logo-venvidrio.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/assets/img/logo-venvidrio_index.png",
+      "src": "/assets/img/logo-venvidrio.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/assets/img/logo-venvidrio_index.png",
+      "src": "/assets/img/logo-venvidrio.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/assets/img/logo-venvidrio_index.png",
+      "src": "/assets/img/logo-venvidrio.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
