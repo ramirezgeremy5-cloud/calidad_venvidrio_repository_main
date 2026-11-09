@@ -548,7 +548,8 @@
       const finalizar = () => {
         if (window.relojInterval) clearInterval(window.relojInterval);
         localStorage.clear();
-        window.location.href = '../public/login.html';
+        // 👇 CORREGIDO: Ruta absoluta para evitar error 404
+        window.location.href = '/login.html'; 
       };
 
       if (token) {
