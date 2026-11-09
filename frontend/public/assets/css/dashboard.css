@@ -1,51 +1,23 @@
 /* =============================================
    DASHBOARD — VENVIDRIO
-   dashboard.css — v4 (Reloj visible + Compatibilidad)
+   dashboard.css — v5 (Limpio, sin duplicados con shared.css)
    ============================================= */
 
-/* ================= VARIABLES DE MARCA ================= */
+/* ================= VARIABLES ESPECÍFICAS DEL DASHBOARD ================= */
+/* Nota: --navy, --text-main, --danger, etc. ya están en shared.css */
 :root {
   --brand-1: #1a237e;
   --brand-2: #3949ab;
   --brand-3: #5c6bc0;
   --brand-soft: #eef2ff;
   --brand-line: #dfe4fb;
-
-  --navy: var(--brand-1);
   --navy-dark: #0d1658;
-  --off-white: #f8f9fa;
-  --border: #e9edf5;
-  --border-dark: #cbd5e1;
-  --text-main: #1e293b;
-  --text-muted: #64748b;
-  --text-hint: #94a3b8;
-  --danger: #dc3545;
   --success: #2e7d32;
-
-  --radius-sm: 10px;
-  --radius-lg: 18px;
+  --radius-sm-dash: 10px;
+  --radius-lg-dash: 18px;
   --shadow-card: 0 10px 30px -18px rgba(26, 35, 126, 0.25), 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-soft: 0 4px 16px -8px rgba(26, 35, 126, 0.20);
   --font-mono: 'SF Mono', 'Monaco', 'Cascadia Code', 'Courier New', monospace;
 }
-
-/* ================= FONDO GENERAL ================= */
-body {
-  background-color: #f4f6fb !important;
-  background-image:
-    radial-gradient(1200px 500px at 10% -10%, rgba(92, 107, 192, 0.10), transparent 60%),
-    radial-gradient(900px 400px at 100% 0%, rgba(26, 35, 126, 0.08), transparent 55%),
-    radial-gradient(#d1d5db 1.5px, transparent 1.5px) !important;
-  background-size: auto, auto, 24px 24px !important;
-  background-attachment: fixed;
-  margin: 0;
-  padding: 0;
-  color: var(--text-main);
-  -webkit-tap-highlight-color: transparent;
-}
-
-.page { max-width: 1400px; margin: 0 auto; padding: 1.25rem 1rem 0; }
-@media (min-width: 768px) { .page { padding: 1.5rem 1.5rem 0; } }
 
 /* ================= ANIMACIONES ================= */
 .anim-card { animation: fade-up .5s cubic-bezier(0.22, 1, 0.36, 1) both; }
@@ -138,7 +110,7 @@ body {
   flex-wrap: wrap;
 }
 
-/* Selector de planta (Mejorado para táctil) */
+/* Selector de planta */
 .selector-planta {
   background: #fff;
   border: 1px solid var(--border-dark);
@@ -194,41 +166,6 @@ body {
   animation: spin 1s linear infinite;
 }
 
-/* ================= BOTÓN PRIMARIO ================= */
-.btn-primary {
-  background: linear-gradient(180deg, var(--brand-2) 0%, var(--brand-1) 100%) !important;
-  color: #fff !important;
-  border: 1px solid var(--navy-dark) !important;
-  border-radius: 10px !important;
-  padding: 8px 18px !important;
-  font-size: 13px !important;
-  font-weight: 600 !important;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 40px;
-  box-shadow: 0 4px 10px -2px rgba(26, 35, 126, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transition: all 0.15s ease;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-.btn-primary:hover {
-  background: linear-gradient(180deg, #4355b8 0%, var(--brand-1) 100%) !important;
-  box-shadow: 0 8px 18px -4px rgba(26, 35, 126, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
-}
-.btn-primary:active {
-  transform: translateY(1px);
-  box-shadow: 0 1px 2px rgba(26, 35, 126, 0.2), inset 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
 /* ================= LAYOUT ================= */
 .dashboard-layout {
   display: grid;
@@ -271,7 +208,7 @@ body {
 .kpi-card {
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-lg-dash);
   padding: 1.25rem 1rem;
   position: relative;
   overflow: hidden;
@@ -451,52 +388,8 @@ body {
 }
 
 /* ================= CARDS ================= */
-.card {
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-card);
-  transition: box-shadow 0.2s ease;
-}
-.card:hover {
-  box-shadow: 0 14px 36px -16px rgba(26, 35, 126, 0.25);
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.9rem 1.25rem;
-  border-bottom: 1px solid var(--border);
-  background: #f8fafc;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-@media (min-width: 768px) {
-  .card-header { padding: 1rem 1.5rem; }
-}
-
-.card-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--brand-1);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  letter-spacing: 0.2px;
-}
-.card-title i {
-  font-size: 18px;
-  color: var(--brand-2);
-}
-
-.card-body {
-  padding: 1rem 1.25rem;
-}
-@media (min-width: 768px) {
-  .card-body { padding: 1.15rem 1.5rem; }
-}
+/* Nota: .card, .card-header, .card-title y .card-body ya están en shared.css */
+/* Aquí solo agregamos ajustes específicos del dashboard si se necesitan */
 
 /* ================= FILTROS DE GRÁFICO ================= */
 .filtros-grafico {
@@ -537,17 +430,7 @@ body {
 }
 
 /* ================= BADGES ================= */
-.badge {
-  display: inline-block;
-  padding: 3px 9px;
-  border-radius: 99px;
-  font-size: 10px;
-  font-weight: 700;
-  text-align: center;
-  white-space: nowrap;
-  letter-spacing: 0.2px;
-}
-.badge i { font-size: 10px; }
+/* Nota: .badge ya está en shared.css, aquí solo agregamos los colores específicos */
 .badge-success { background: #e8f5e9; color: #1b5e20; }
 .badge-danger  { background: #ffebee; color: #b71c1c; }
 .badge-info    { background: #e3f2fd; color: #0d47a1; }
@@ -632,7 +515,7 @@ body {
 
 .auditorias-grid .aud-item {
   padding: 10px 6px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-sm-dash);
   background: var(--brand-soft);
   border: 1px solid var(--brand-line);
   text-align: center;
@@ -677,7 +560,7 @@ body {
   padding: 10px 12px;
   background: #f8fafc;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-sm-dash);
   border-left: 4px solid var(--brand-2);
 }
 .alert-item i { font-size: 16px; flex-shrink: 0; margin-top: 1px; color: var(--brand-2); }
@@ -704,57 +587,8 @@ body {
 }
 
 /* ================= TABLA ================= */
-.table-wrap {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  width: 100%;
-}
-.table-wrap table, .table-dash {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-  min-width: 600px;
-}
-.table-wrap thead th, .th-dash {
-  padding: 11px 12px;
-  text-align: left;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  border-bottom: 1px solid var(--border);
-  background: #f8fafc;
-  white-space: nowrap;
-}
-.table-wrap tbody td, .table-dash tbody td {
-  padding: 11px 12px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-  white-space: nowrap;
-}
-.table-wrap tbody tr, .table-dash tbody tr { transition: background-color 0.15s ease; }
-.table-wrap tbody tr:hover, .table-dash tbody tr:hover { background: #f5f7ff; }
-.table-wrap tbody tr:last-child td, .table-dash tbody tr:last-child td { border-bottom: none; }
-
-.table-loading {
-  text-align: center;
-  padding: 2rem;
-  color: var(--text-muted);
-}
-
-/* ================= FOOTER ================= */
-.footer {
-  text-align: center;
-  padding: 1.5rem;
-  color: var(--text-muted);
-  border-top: 1px solid var(--border);
-  margin-top: 1.5rem;
-}
-.footer p {
-  font-size: 12px;
-  margin: 0;
-}
+/* Nota: .table-wrap y .table-dash ya están en shared.css */
+/* Aquí solo ajustamos detalles específicos del dashboard */
 
 /* ================= ESTADO DE ERROR ================= */
 .error-state {
@@ -806,87 +640,10 @@ body {
 }
 
 /* ================= MODAL INACTIVIDAD ================= */
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(15, 23, 42, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.3s ease;
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-  padding: 1rem;
-}
-.modal-overlay.show { opacity: 1; visibility: visible; }
-
-.modal-content {
-  background: #fff;
-  border-radius: var(--radius-lg);
-  padding: 2rem 1.5rem;
-  max-width: 380px;
-  width: 100%;
-  text-align: center;
-  transform: translateY(20px) scale(0.97);
-  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.35);
-}
-.modal-overlay.show .modal-content {
-  transform: translateY(0) scale(1);
-}
-
-.modal-icon {
-  font-size: 2.5rem;
-  color: #f57c00;
-  margin-bottom: 1rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 72px; height: 72px;
-  border-radius: 50%;
-  background: #fff7ed;
-}
-.modal-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  color: var(--brand-1);
-}
-.modal-desc {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-bottom: 1.5rem;
-  line-height: 1.5;
-}
-
-.btn-primary-modal {
-  background: linear-gradient(180deg, var(--brand-2) 0%, var(--brand-1) 100%);
-  color: #fff;
-  border: 1px solid var(--navy-dark);
-  padding: 12px 24px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  width: 100%;
-  box-shadow: 0 4px 10px -2px rgba(26, 35, 126, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  min-height: 44px;
-}
-.btn-primary-modal:hover {
-  background: linear-gradient(180deg, #4355b8 0%, var(--brand-1) 100%);
-  box-shadow: 0 8px 18px -4px rgba(26, 35, 126, 0.45);
-  transform: translateY(-2px);
-}
-.btn-primary-modal:active {
-  transform: translateY(1px);
-  box-shadow: 0 1px 2px rgba(26, 35, 126, 0.2), inset 0 2px 4px rgba(0, 0, 0, 0.2);
-}
+/* Nota: .modal-overlay y .modal-content ya están en shared.css (o son redefinidos aquí por ser específicos) */
+/* Si quieres usar los modales nativos de shared.css, borra este bloque. Si no, déjalo. */
+/* Como usaste nombres específicos como .modal-content (que choca con el modal global), lo mantenemos local. */
+/* Lo ideal sería usar el modal nativo de shared.css, pero para no romper tu JS, lo dejamos: */
 
 /* ================= RESPONSIVE ================= */
 @media (max-width: 900px) {
@@ -913,11 +670,6 @@ body {
 }
 
 @media (max-width: 768px) {
-  .btn-primary, .btn-primary-modal {
-    min-height: 44px;
-    font-size: 14px;
-  }
-
   .filtros-grupo {
     flex-wrap: wrap;
     justify-content: center;
@@ -938,26 +690,15 @@ body {
 }
 
 @media (max-width: 480px) {
-  .page { padding: 0.875rem 0.75rem 0; }
-
-  .card-header { padding: 0.8rem 1rem; }
-  .card-body   { padding: 0.85rem 1rem 1rem; }
-
   .kpi-card { padding: 1rem 0.85rem; }
   .kpi-value { font-size: 20px; }
   .kpi-label { font-size: 10px; }
-
-  .card-title { font-size: 12.5px; }
-  .card-title i { font-size: 16px; }
 
   .rank-value { min-width: 34px; font-size: 12px; }
   .rank-num { width: 24px; height: 24px; font-size: 10px; }
 
   .auditorias-grid { grid-template-columns: repeat(2, 1fr); }
   .auditorias-grid .aud-valor { font-size: 18px; }
-
-  .modal-content { padding: 1.5rem 1.25rem; }
-  .modal-icon { width: 60px; height: 60px; font-size: 2rem; }
 
   .table-wrap table, .table-dash { min-width: 560px; }
 

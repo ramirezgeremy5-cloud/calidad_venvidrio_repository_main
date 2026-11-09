@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - DASHBOARD
-   JS v10 - Fix reloj + Lógica anti-fantasmas + Normalización
+   JS v11 - Limpio, sin duplicar lógica de shared.js
    ========================================== */
 
 // Detectar dinámicamente la URL del servidor
@@ -17,7 +17,6 @@ let aptoChart = null;
 let lineasChart = null;
 let eficienciaChart = null;
 let intervaloCarga = null;
-let intervaloCargaFallback = null;
 let datosDashboard = null;
 let periodoActual = 7;
 let filtroGrafico = 'ambos';
@@ -103,41 +102,6 @@ function normalizarClase(claseStr) {
   if (c.includes('b-') || c.includes('b -')) return 'Mayor B-';
   if (c.includes('menor')) return 'Menor';
   return 'Menor';
-}
-
-/* ==========================================
-   RELOJ (FALLBACK LOCAL)
-   Por si shared.js falla o no se ejecuta.
-========================================== */
-function iniciarRelojFallback() {
-  const reloj = document.getElementById('reloj-real');
-  if (!reloj) {
-    // Si aún no existe el elemento, reintentar en 200ms
-    setTimeout(iniciarRelojFallback, 200);
-    return;
-  }
-
-  // Si ya hay un intervalo corriendo, no duplicar
-  if (intervaloCargaFallback) clearInterval(intervaloCargaFallback);
-
-  const actualizar = () => {
-    try {
-      const ahora = new Date();
-      const fecha = ahora.toLocaleDateString('es-VE', {
-        weekday: 'long', day: 'numeric', month: 'short'
-      });
-      const hora = ahora.toLocaleTimeString('es-VE', {
-        hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit'
-      });
-      reloj.textContent = fecha.charAt(0).toUpperCase() + fecha.slice(1) + ' | ' + hora;
-    } catch (e) {
-      // Silencioso
-    }
-  };
-
-  actualizar();
-  intervaloCargaFallback = setInterval(actualizar, 1000);
-  logSuccess('Reloj (fallback) iniciado');
 }
 
 /* ==========================================
@@ -992,15 +956,6 @@ function recargarDashboard() {
 function iniciarDashboard() {
   log('🚀 Dashboard Venvidrio iniciado');
 
-  // 🔧 FIX DEL RELOJ: Si shared.js no lo arrancó, lo arrancamos localmente
-  setTimeout(() => {
-    const relojEl = document.getElementById('reloj-real');
-    if (relojEl && (relojEl.textContent === '--:--:--' || relojEl.textContent.trim() === '')) {
-      log('⚠️ Reloj no inicializado por shared.js. Aplicando fallback...');
-      iniciarRelojFallback();
-    }
-  }, 800);
-
   initFiltrosTiempo();
   initFiltrosGrafico();
   initFiltroPlanta();
@@ -1033,7 +988,6 @@ document.addEventListener('DOMContentLoaded', iniciarDashboard);
 ========================================== */
 window.addEventListener('beforeunload', () => {
   if (intervaloCarga) clearInterval(intervaloCarga);
-  if (intervaloCargaFallback) clearInterval(intervaloCargaFallback);
   if (abortController) abortController.abort();
   if (productionChart) productionChart.destroy();
   if (defectosChart) defectosChart.destroy();
