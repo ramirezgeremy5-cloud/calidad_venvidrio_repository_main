@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy import text
 from datetime import datetime, timedelta
 import logging
-import requests # 👈 IMPORTANTE: Librería para validar con Google
+import requests # 👈 IMPORTANTE: Librería para validar con Cloudflare
 
 from app.database.connection import engine
 from app.dependencies.security import verify_password, create_access_token, hash_password
@@ -15,25 +15,25 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-# 👇 NUEVA CLAVE SECRETA DE GOOGLE RECAPTCHA 👇
-RECAPTCHA_SECRET_KEY = "6Ld5dhcuAAAAAF0u_rfSAEq9Pe-P73Nfv7xWEOM"
+# 👇 NUEVA CLAVE SECRETA DE CLOUDFLARE TURNSTILE 👇
+TURNSTILE_SECRET_KEY = "0x4AAAAAAAF5fJHYLXA_OcyPmFkPb65YpqQI"
 
 
 # =========================
 # FUNCIÓN AUXILIAR PARA VALIDAR CAPTCHA
 # =========================
 def validar_captcha(token: str) -> bool:
-    """Verifica con los servidores de Google si el token del CAPTCHA es válido."""
+    """Verifica con los servidores de Cloudflare si el token de Turnstile es válido."""
     try:
         response = requests.post(
-            "https://www.google.com/recaptcha/api/siteverify",
-            data={"secret": RECAPTCHA_SECRET_KEY, "response": token},
+            "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+            data={"secret": TURNSTILE_SECRET_KEY, "response": token},
             timeout=5
         )
         result = response.json()
         return result.get("success", False)
     except Exception as e:
-        logger.error(f"Error validando CAPTCHA con Google: {e}")
+        logger.error(f"Error validando Turnstile con Cloudflare: {e}")
         return False
 
 

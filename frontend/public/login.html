@@ -15,8 +15,8 @@
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Bebas+Neue&display=swap" rel="stylesheet" />
 
-  <!-- Script de Google reCAPTCHA -->
-  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+  <!-- Script de Cloudflare Turnstile -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 
 <body>
@@ -111,10 +111,10 @@
         </a>
       </div>
 
-      <!-- Contenedor del CAPTCHA (Oculto por defecto, el JS lo mostrará) -->
-      <div id="captcha-container" style="display: none; margin-bottom: 1rem; justify-content: center;">
-        <!-- 👇 CLAVE DE PRUEBA DE GOOGLE PARA DIAGNÓSTICO 👇 -->
-        <div class="g-recaptcha" data-sitekey="6Le-wvkSAAAAAPBMRTvw0Q4Muexq9bi0DJwx_mJ-"></div>
+      <!-- Contenedor del CAPTCHA de Cloudflare -->
+      <div id="captcha-container" style="margin-bottom: 1rem; display: flex; justify-content: center;">
+        <!-- 👇 AQUÍ VA LA SITE KEY DE CLOUDFLARE 👇 -->
+        <div class="cf-turnstile" data-sitekey="0x4AAAAAAAF5fJGoFoKfN2L2x"></div>
       </div>
 
       <!-- Botón Iniciar Sesión -->

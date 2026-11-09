@@ -7,8 +7,8 @@ class LoginRequest(BaseModel):
     """Esquema para iniciar sesión"""
     correo: EmailStr = Field(..., description="Correo electrónico del usuario")
     password: str = Field(..., min_length=1, description="Contraseña del usuario")
-    # 👇 NUEVO CAMPO: Token de Google reCAPTCHA (opcional para dispositivos ya autorizados)
-    captcha_token: Optional[str] = Field(None, description="Token de verificación de reCAPTCHA")
+    # 👇 NUEVO CAMPO: Token de Cloudflare Turnstile (opcional para dispositivos ya autorizados)
+    captcha_token: Optional[str] = Field(None, description="Token de verificación de Cloudflare Turnstile")
     
     @validator('correo')
     def validar_correo(cls, v):

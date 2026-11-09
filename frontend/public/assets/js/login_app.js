@@ -1,6 +1,6 @@
 /* =============================================
    Venvidrio — Sistema de Control de Calidad
-   login_app.js (Multisesión + CAPTCHA + Alertas)
+   login_app.js (Multisesión + Cloudflare Turnstile)
    ============================================= */
 
 (function () {
@@ -798,13 +798,12 @@
         headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' }
       })
       .then(function (response) {
-        // Solo cerramos la sesión si el token realmente ya no sirve (401)
         if (response.status === 401) {
           clearInterval(heartbeatInterval);
           clearInterval(inactivityInterval);
           localStorage.clear();
           window.mostrarAlertaPersonalizada('Tu sesión ha finalizado (expirada).', 'warning').then(function() {
-            window.location.href = '/login.html'; // 👈 Corregido para evitar 404
+            window.location.href = '/login.html'; 
           });
         }
       })
@@ -833,7 +832,7 @@
     clearInterval(inactivityInterval);
     localStorage.clear();
     window.mostrarAlertaPersonalizada('Tu sesión ha expirado por inactividad. Por favor, inicia sesión de nuevo.', 'error').then(function() {
-      window.location.href = '/login.html'; // 👈 Corregido para evitar 404
+      window.location.href = '/login.html'; 
     });
   }
 
@@ -844,7 +843,7 @@
     var token = localStorage.getItem('token');
 
     if (!token && window.location.pathname.indexOf('login.html') === -1) {
-      window.location.href = '/login.html'; // 👈 Corregido para evitar 404
+      window.location.href = '/login.html'; 
       return;
     }
 
@@ -1014,22 +1013,20 @@
         return;
       }
 
-      // 👇 LÓGICA DEL CAPTCHA PARA DISPOSITIVOS NUEVOS 👇
+      // 👇 LÓGICA DEL CAPTCHA DE CLOUDFLARE 👇
       var esDispositivoNuevo = !localStorage.getItem('dispositivo_autorizado');
-      var captchaContainer = document.getElementById('captcha-container');
       var captchaToken = null;
 
       if (esDispositivoNuevo) {
-        if (captchaContainer) captchaContainer.style.display = 'flex';
+        // Cloudflare guarda el token en un input oculto llamado cf-turnstile-response
+        var cfInput = document.querySelector('input[name="cf-turnstile-response"]');
+        
+        if (cfInput) {
+          captchaToken = cfInput.value;
+        }
 
-        if (typeof grecaptcha !== 'undefined') {
-          captchaToken = grecaptcha.getResponse();
-          if (captchaToken.length === 0) {
-            window.mostrarAlertaPersonalizada('Por seguridad, completa el CAPTCHA para ingresar desde este nuevo dispositivo.', 'warning');
-            return;
-          }
-        } else {
-          window.mostrarAlertaPersonalizada('El CAPTCHA no está disponible. Recarga la página.', 'error');
+        if (!captchaToken) {
+          window.mostrarAlertaPersonalizada('Por seguridad, completa la verificación de Cloudflare para ingresar desde este nuevo dispositivo.', 'warning');
           return;
         }
       }
@@ -1039,7 +1036,7 @@
       // Preparamos los datos a enviar
       var loginData = { correo: correo, password: password };
       if (captchaToken) {
-        loginData.captcha_token = captchaToken; // Enviamos el token al backend
+        loginData.captcha_token = captchaToken; 
       }
 
       fetch(API_URL + '/auth/login', {
@@ -1056,7 +1053,6 @@
         setLoading(false);
 
         if (status === 200 || status === 201) {
-          // 👇 Si el login es exitoso, marcamos este dispositivo como autorizado 👇
           localStorage.setItem('dispositivo_autorizado', 'true');
 
           localStorage.setItem('token', data.access_token);
@@ -1089,26 +1085,26 @@
           window.mostrarAlertaPersonalizada(errorMsg, 'error');
         }
 
-        // Si falla, reseteamos el CAPTCHA para que vuelva a intentar
-        if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
+        // Si falla, reseteamos el CAPTCHA de Cloudflare
+        if (typeof turnstile !== 'undefined') {
+          turnstile.reset();
+        }
         if (passwordInput) { passwordInput.value = ''; passwordInput.focus(); }
       })
       .catch(function (error) {
         setLoading(false);
         console.error('Error de conexión:', error);
+        
+        // Resetear el CAPTCHA de Cloudflare también en caso de error de red
+        if (typeof turnstile !== 'undefined') {
+          turnstile.reset();
+        }
+
         var errorMsg = 'Error de conexión con el servidor. ';
         if (!navigator.onLine) errorMsg += 'Verifica tu conexión a internet.';
         else errorMsg += 'Asegúrate de que el backend esté corriendo en ' + API_URL;
         window.mostrarAlertaPersonalizada(errorMsg, 'error');
       });
-    }
-
-    // 👇 CORRECCIÓN CLAVE: Mostrar CAPTCHA desde el inicio si es dispositivo nuevo
-    if (!localStorage.getItem('dispositivo_autorizado')) {
-      var captchaContainer = document.getElementById('captcha-container');
-      if (captchaContainer) {
-        captchaContainer.style.display = 'flex';
-      }
     }
 
     submitBtn.addEventListener('click', function (e) { e.preventDefault(); handleLogin(); });
@@ -1117,6 +1113,6 @@
 
     localStorage.removeItem('token');
     localStorage.removeItem('lastActivity');
-    console.log('🔐 Venvidrio - Login UI inicializada con reCAPTCHA');
+    console.log('🔐 Venvidrio - Login UI inicializada con Cloudflare Turnstile');
   }
 })();
