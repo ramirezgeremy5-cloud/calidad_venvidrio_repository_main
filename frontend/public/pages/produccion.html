@@ -130,24 +130,31 @@
     </button>
   </div>
 
-  <!-- MÉTRICAS -->
+  <!-- MÉTRICAS ESTILO DASHBOARD -->
   <div class="stats-grid">
-    <div class="stat-card">
+    <div class="stat-card stat-blue">
+      <div class="stat-icon-bg"><i class="ti ti-package"></i></div>
       <div class="stat-label">Lotes Hoy</div>
       <div class="stat-value" id="cnt-lotes"><span class="skeleton"></span></div>
       <div class="stat-sub">Cargando...</div>
     </div>
-    <div class="stat-card">
+    
+    <div class="stat-card stat-green">
+      <div class="stat-icon-bg"><i class="ti ti-box"></i></div>
       <div class="stat-label">Unidades Producidas</div>
       <div class="stat-value" id="cnt-unidades"><span class="skeleton"></span></div>
       <div class="stat-sub" id="sub-unidades">Total producción</div>
     </div>
-    <div class="stat-card">
+    
+    <div class="stat-card stat-orange">
+      <div class="stat-icon-bg"><i class="ti ti-chart-line"></i></div>
       <div class="stat-label">Eficiencia</div>
       <div class="stat-value warning" id="cnt-eficiencia"><span class="skeleton"></span></div>
       <div class="stat-sub" id="estado-lineas">Cargando líneas...</div>
     </div>
-    <div class="stat-card">
+    
+    <div class="stat-card stat-red">
+      <div class="stat-icon-bg"><i class="ti ti-clipboard-list"></i></div>
       <div class="stat-label">Pendientes por Auditar</div>
       <div class="stat-value danger" id="cnt-rechazos"><span class="skeleton"></span></div>
       <div class="stat-sub" id="pct-rechazos">0% del total</div>
@@ -509,8 +516,22 @@
       <table>
         <thead>
           <tr>
-            <th>Código</th><th>Ticket</th><th>Planta</th><th>Molde</th><th>Máquina</th><th>Línea</th>
-            <th>Operador</th><th>Capacidad</th><th>Unidades</th><th>Turno</th><th>Estatus</th><th>Cliente</th><th>Fecha</th><th class="th-acciones">Acciones</th>
+            <!-- 👇 ICONOS AGREGADOS Y COLUMNA HORA -->
+            <th><i class="ti ti-barcode"></i> Código</th>
+            <th><i class="ti ti-ticket"></i> Ticket</th>
+            <th><i class="ti ti-building-factory"></i> Planta</th>
+            <th><i class="ti ti-box"></i> Molde</th>
+            <th><i class="ti ti-settings"></i> Máquina</th>
+            <th><i class="ti ti-route"></i> Línea</th>
+            <th><i class="ti ti-user"></i> Operador</th>
+            <th><i class="ti ti-glass-full"></i> Capacidad</th>
+            <th><i class="ti ti-cubes"></i> Unidades</th>
+            <th><i class="ti ti-clock"></i> Turno</th>
+            <th><i class="ti ti-flag"></i> Estatus</th>
+            <th><i class="ti ti-briefcase"></i> Cliente</th>
+            <th><i class="ti ti-calendar"></i> Fecha</th>
+            <th><i class="ti ti-clock-hour-4"></i> Hora</th>
+            <th class="th-acciones">Acciones</th>
           </tr>
         </thead>
         <tbody id="tabla-lotes"></tbody>

@@ -1,9 +1,9 @@
 /* ==========================================================
    PRODUCCIÓN — VENVIDRIO
-   produccion.css — v14 (Resumen + Hints + Spinner centralizados)
+   produccion.css — v15 (Métricas estilo Dashboard)
    ========================================================== */
 
-/* ================= VARIABLES (idénticas a auditoría/defectos) ================= */
+/* ================= VARIABLES ================= */
 :root {
   --brand-1: #1a237e;
   --brand-2: #3949ab;
@@ -84,11 +84,8 @@ body {
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeTab { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-/* 👇 NUEVO: Spinner para botón Guardar Lote */
-.ti-loader {
-  animation: spin 1s linear infinite;
-  display: inline-block;
-}
+/* Spinner para botón Guardar Lote */
+.ti-loader { animation: spin 1s linear infinite; display: inline-block; }
 
 /* ================= SKELETON ================= */
 .skeleton {
@@ -192,10 +189,10 @@ body {
 .badge-danger  { background: var(--danger-soft); color: #991b1b; border-color: var(--danger-line); }
 .badge-warning { background: var(--warning-soft); color: #92400e; border-color: #fde68a; }
 
-/* ================= STATS GRID ================= */
+/* ================= STATS GRID (ESTILO DASHBOARD) ================= */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
   margin-bottom: 1.5rem;
 }
@@ -204,6 +201,7 @@ body {
 .stat-card {
   background: #fff;
   border: 1px solid var(--border);
+  border-left: 4px solid var(--brand-2); /* Color por defecto */
   border-radius: var(--radius-lg);
   padding: 1.25rem;
   position: relative;
@@ -211,30 +209,58 @@ body {
   overflow: hidden;
   transition: transform var(--transition), box-shadow var(--transition);
 }
-.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
-.stat-card::before {
-  content: '';
-  position: absolute; left: 0; top: 0;
-  width: 4px; height: 100%;
-  background: var(--brand-2);
+
+.stat-card:hover { 
+  transform: translateY(-2px); 
+  box-shadow: var(--shadow-hover); 
 }
-.stat-card:nth-child(2)::before { background: var(--warning); }
-.stat-card:nth-child(3)::before { background: var(--success); }
-.stat-card:nth-child(4)::before { background: var(--danger); }
+
+/* 👇 NUEVO: Icono de fondo translúcido */
+.stat-icon-bg {
+  position: absolute;
+  right: -5px;
+  bottom: -10px;
+  font-size: 90px;
+  color: var(--border);
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 0;
+  transform: rotate(-10deg);
+}
+.stat-icon-bg i { display: block; }
 
 .stat-label {
   font-size: 12px; color: var(--text-muted);
-  margin-bottom: 6px; font-weight: 500;
-  text-transform: uppercase; letter-spacing: 0.02em;
+  margin-bottom: 6px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.03em;
+  position: relative; z-index: 1;
 }
 .stat-value {
-  font-size: 24px; font-weight: 700;
+  font-size: 26px; font-weight: 700;
   color: var(--text-main); line-height: 1.1;
   font-family: var(--font-mono);
+  position: relative; z-index: 1;
 }
 .stat-value.warning { color: var(--warning); }
 .stat-value.danger  { color: var(--danger); }
-.stat-sub { margin-top: 6px; font-size: 11px; color: var(--text-hint); }
+.stat-sub { 
+  margin-top: 6px; font-size: 11px; color: var(--text-hint); 
+  position: relative; z-index: 1;
+}
+
+/* 👇 Colores específicos por tarjeta (borde izquierdo e icono de fondo) */
+.stat-blue   { border-left-color: var(--brand-2); }
+.stat-blue .stat-icon-bg { color: var(--brand-2); opacity: 0.12; }
+
+.stat-green  { border-left-color: var(--success); }
+.stat-green .stat-icon-bg { color: var(--success); opacity: 0.12; }
+
+.stat-orange { border-left-color: var(--warning); }
+.stat-orange .stat-icon-bg { color: var(--warning); opacity: 0.12; }
+
+.stat-red    { border-left-color: var(--danger); }
+.stat-red .stat-icon-bg { color: var(--danger); opacity: 0.12; }
+
 
 /* ================= ACTUALIZACIÓN ================= */
 .ultima-actualizacion {
@@ -367,7 +393,7 @@ body {
   text-align: center;
 }
 
-/* 👇 NUEVO: Hints de cálculo automático */
+/* Hints de cálculo automático */
 .calc-hint {
   display: none;
   font-size: 10.5px;
@@ -378,7 +404,7 @@ body {
 }
 .calc-hint i { font-size: 11px; margin-right: 2px; vertical-align: middle; }
 
-/* 👇 NUEVO: Resumen del lote antes de guardar */
+/* Resumen del lote antes de guardar */
 .resumen-lote {
   display: flex;
   align-items: center;
@@ -899,7 +925,6 @@ body {
   font-weight: 600;
 }
 
-/* 👇 NUEVO: Footer sticky para que el botón Cerrar siempre esté visible */
 .modal-footer {
   display: flex;
   justify-content: flex-end;
@@ -999,6 +1024,7 @@ body {
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
   .stat-card { padding: 1rem; }
   .stat-value { font-size: 20px; }
+  .stat-icon-bg { font-size: 70px; right: -5px; bottom: -5px; }
 }
 
 @media (max-width: 600px) {

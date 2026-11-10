@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v29 (Turnos corregidos)
+   produccion.js - v30 (Hora automática del sistema + Turnos)
    ========================================== */
 
 (function () {
@@ -19,7 +19,7 @@
   const BOTELLAS_POR_GRUESA = 144;  // 12 docenas = 144 botellas
   const BOTELLAS_POR_DOCENA = 12;   // 1 docena
 
-  // 👇 NUEVO: Mapeo de turnos para mostrar texto legible
+  // 👇 Mapeo de turnos para mostrar texto legible
   const TURNOS_MAP = {
     '1': 'Matutino',
     '2': 'Vespertino',
@@ -74,6 +74,21 @@
   function formatearNumero(n, decimales = 2) {
     if (n === null || n === undefined || isNaN(n)) return '';
     return Number(n.toFixed(decimales)).toString();
+  }
+
+  // 🔥 NUEVO: separa un timestamp ISO/string en fecha y hora legibles locales
+  function separarFechaHora(timestamp) {
+    if (!timestamp) return { fecha: '—', hora: '—' };
+    try {
+      const d = new Date(timestamp);
+      if (isNaN(d.getTime())) return { fecha: '—', hora: '—' };
+      return {
+        fecha: d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        hora:  d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      };
+    } catch (e) {
+      return { fecha: '—', hora: '—' };
+    }
   }
 
   function mostrarToast(mensaje, esError = false) {
@@ -572,24 +587,30 @@
       if (!response.ok) { if (response.status === 401) { window.location.href = '../public/login.html'; return; } throw new Error(`Error ${response.status}`); }
       const data = await response.json();
 
-      lotes = data.map(p => ({
-        id: p.id, codigo: p.codigo_lote, ticket_carga: p.ticket_carga || '—', prod: p.tipo_producto, molde: p.molde || p.tipo_producto,
-        item: p.item || '—', acabado: p.acabado || '—', material: p.material || '', tipo_boca: p.tipo_boca || '', maquina: p.maquina || '—',
-        grupo: p.grupo || '—', bpp: p.bpp || 0, 
-        bpc: p.bot_por_caja || p.bpc || 0, 
-        camadas_paleta: p.camadas_por_paleta || 0,
-        cajas_producidas: p.cajas_producidas || 0,
-        capacidad_ml: p.capacidad_ml ?? p.capacidad ?? null, unidad_capacidad: (p.unidad_capacidad === 'l' || p.unidad_capacidad === 'L') ? 'l' : 'ml',
-        linea: p.linea_produccion, planta: p.planta || 'Valera', op: p.operador, uds: p.cantidad, turno: p.turno,
-        paletas: p.paletas || 0, 
-        gruesas: p.gruesas || 0, 
-        docenas: p.docenas || 0,
-        tamano_muestra: p.tamano_muestra || '',
-        bot_por_canada: p.bot_por_canada || 0, bot_por_paleta: p.bot_por_paleta || 0, gruesas_por_paleta: p.gruesas_por_paleta || 0,
-        cliente: p.cliente || 'Sin asignar', estatus: p.estatus || '100', estado_auditoria: p.estado_auditoria || 'Pendiente',
-        observaciones: p.observaciones || '', fecha_prod: p.fecha_produccion || '',
-        fecha: new Date(p.fecha_registro).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-      }));
+      lotes = data.map(p => {
+        // 🔥 HORA AUTOMÁTICA DEL SISTEMA (desde fecha_registro del backend)
+        const { fecha, hora } = separarFechaHora(p.fecha_registro);
+
+        return {
+          id: p.id, codigo: p.codigo_lote, ticket_carga: p.ticket_carga || '—', prod: p.tipo_producto, molde: p.molde || p.tipo_producto,
+          item: p.item || '—', acabado: p.acabado || '—', material: p.material || '', tipo_boca: p.tipo_boca || '', maquina: p.maquina || '—',
+          grupo: p.grupo || '—', bpp: p.bpp || 0, 
+          bpc: p.bot_por_caja || p.bpc || 0, 
+          camadas_paleta: p.camadas_por_paleta || 0,
+          cajas_producidas: p.cajas_producidas || 0,
+          capacidad_ml: p.capacidad_ml ?? p.capacidad ?? null, unidad_capacidad: (p.unidad_capacidad === 'l' || p.unidad_capacidad === 'L') ? 'l' : 'ml',
+          linea: p.linea_produccion, planta: p.planta || 'Valera', op: p.operador, uds: p.cantidad, turno: p.turno,
+          paletas: p.paletas || 0, 
+          gruesas: p.gruesas || 0, 
+          docenas: p.docenas || 0,
+          tamano_muestra: p.tamano_muestra || '',
+          bot_por_canada: p.bot_por_canada || 0, bot_por_paleta: p.bot_por_paleta || 0, gruesas_por_paleta: p.gruesas_por_paleta || 0,
+          cliente: p.cliente || 'Sin asignar', estatus: p.estatus || '100', estado_auditoria: p.estado_auditoria || 'Pendiente',
+          observaciones: p.observaciones || '', fecha_prod: p.fecha_produccion || '',
+          fecha: fecha,   // ✅ solo fecha (dd/mm/yyyy)
+          hora: hora      // ✅ solo hora (hh:mm:ss) automática del sistema
+        };
+      });
 
       actualizarKPIs(lotes);
       renderTabla();
@@ -714,10 +735,11 @@
 
     setTexto('modal-lote-codigo', lote.codigo);
     setTexto('detail-planta', lote.planta);
-    setTexto('detail-fecha', formatearFechaProd(lote.fecha_prod));
+    // 🔥 Mostrar fecha + hora automática del sistema en el modal
+    setTexto('detail-fecha', `${formatearFechaProd(lote.fecha_prod)} · ${lote.hora}`);
     
-    // 👇 TURNOS CORREGIDOS: Mostrar el nombre en lugar del número
-    setTexto('detail-turno', TURNOS_MAP[lote.turno] || lote.turno || '—');
+    // TURNOS: Mostrar el nombre en lugar del número (tolerante a string/número)
+    setTexto('detail-turno', TURNOS_MAP[String(lote.turno)] || lote.turno || '—');
     
     setTexto('detail-producto', lote.prod);
     setTexto('detail-item', lote.item);
@@ -758,7 +780,7 @@
     setTexto('detail-gruesas', lote.gruesas);
     setTexto('detail-gruesas-paleta', lote.gruesas_por_paleta);
     setTexto('detail-cliente', lote.cliente);
-    setTexto('detail-estatus', ESTATUS_LABELS[lote.estatus] || lote.estatus);
+    setTexto('detail-estatus', ESTATUS_LABELS[String(lote.estatus)] || lote.estatus);
     
     let estadoAuditoria = lote.estado_auditoria || 'Pendiente';
     if (lote.estatus === '200' || lote.estatus === '300') estadoAuditoria = 'Evaluado por Calidad';
@@ -790,10 +812,11 @@
     setInText("ticket-planta", `VENVIDRIO ${lote.planta.toUpperCase()}`, "VENVIDRIO VALERA");
     setInText("ticket-cliente", lote.cliente, "CLIENTE STOCK");
     setInText("ticket-obs", lote.observaciones, "NO APLICA"); 
-    setInText("ticket-fecha", formatearFechaProd(lote.fecha_prod), "07/11/2026");
+    // 🔥 Fecha + hora automática en el ticket
+    setInText("ticket-fecha", `${formatearFechaProd(lote.fecha_prod)} · ${lote.hora}`, "07/11/2026");
     
-    // 👇 TURNOS CORREGIDOS EN EL TICKET TAMBIÉN
-    const turnoNombre = TURNOS_MAP[lote.turno] || lote.turno || "1";
+    // TURNOS: nombre legible en el ticket
+    const turnoNombre = TURNOS_MAP[String(lote.turno)] || lote.turno || "1";
     const maquinaStr = `${lote.maquina || "A1"}   ${turnoNombre}   ${lote.grupo || "A"}`;
     setInText("ticket-maquina", maquinaStr, "A1   1   A");
     
@@ -843,21 +866,23 @@
     tbody.innerHTML = '';
 
     if (data.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:2rem;color:var(--text-muted)"><i class="ti ti-inbox" style="font-size:1.5rem;margin-right:0.5rem"></i> No hay lotes registrados</td></tr>`;
+      // 🔥 colspan 15 (15 columnas reales incluyendo Hora)
+      tbody.innerHTML = `<tr><td colspan="15" style="text-align:center;padding:2rem;color:var(--text-muted)"><i class="ti ti-inbox" style="font-size:1.5rem;margin-right:0.5rem"></i> No hay lotes registrados</td></tr>`;
       return;
     }
 
     data.forEach((l, i) => {
       const tr = document.createElement('tr');
       tr.style.animationDelay = `${0.04 * i}s`;
-      const estatusClass = ESTATUS_CLASES[l.estatus] || 'estatus-100';
+      const estatusClass = ESTATUS_CLASES[String(l.estatus)] || 'estatus-100';
       const plantaClass = PLANTA_CLASES[l.planta] || 'planta-valera';
-      const estatusTexto = ESTATUS_LABELS[l.estatus] || l.estatus;
+      const estatusTexto = ESTATUS_LABELS[String(l.estatus)] || l.estatus;
       const capacidadTexto = etiquetaCapacidad(l.capacidad_ml, l.unidad_capacidad);
 
-      // 👇 TURNOS CORREGIDOS EN LA TABLA TAMBIÉN
-      const turnoTexto = TURNOS_MAP[l.turno] || l.turno;
+      // TURNOS: nombre legible (tolerante a string/número)
+      const turnoTexto = TURNOS_MAP[String(l.turno)] || l.turno || '—';
 
+      // 🔥 15 columnas: incluye la HORA automática del sistema
       tr.innerHTML = `
         <td class="font-mono" style="font-size:12px"><span class="badge badge-info">${l.codigo}</span></td>
         <td style="font-family:'Courier New',monospace;font-size:11px">${l.ticket_carga}</td>
@@ -872,7 +897,11 @@
         <td style="text-align:center"><span class="estatus-badge ${estatusClass}">${estatusTexto}</span></td>
         <td><span style="display:block;font-weight:600;color:var(--navy);">${l.cliente}</span></td>
         <td class="text-muted text-sm">${l.fecha}</td>
-        <td><div style="display:flex;gap:4px;justify-content:center;"><button type="button" class="btn btn-primary btn-xs" onclick="verLote(${l.id})"><i class="ti ti-eye"></i></button><button type="button" class="btn btn-danger btn-xs" onclick="eliminarLote(${l.id})"><i class="ti ti-trash"></i></button></div></td>
+        <td class="text-muted text-sm" style="text-align:center;font-family:'Courier New',monospace;">${l.hora}</td>
+        <td><div style="display:flex;gap:4px;justify-content:center;">
+          <button type="button" class="btn btn-primary btn-xs" onclick="verLote(${l.id})"><i class="ti ti-eye"></i></button>
+          <button type="button" class="btn btn-danger btn-xs" onclick="eliminarLote(${l.id})"><i class="ti ti-trash"></i></button>
+        </div></td>
       `;
       tbody.appendChild(tr);
     });
@@ -1051,6 +1080,9 @@
       btn.innerHTML = '<i class="ti ti-loader"></i> Guardando...';
       btn.disabled = true;
 
+      // 🔥 NOTA: NO enviamos "hora" ni "fecha_registro". El backend la genera
+      // automáticamente con datetime.now() al crear el registro. El frontend
+      // solo la lee después en cargarProduccion().
       const body = {
         ticket_carga: ticket_carga || null,
         planta: planta,
@@ -1329,7 +1361,8 @@
   function mostrarError() {
     const tbody = document.getElementById('tabla-lotes');
     if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:2rem;color:var(--text-muted)"><i class="ti ti-alert-circle" style="font-size:1.5rem;margin-right:0.5rem"></i> Error al cargar datos. Verifica que el servidor esté corriendo en ${API_URL}</td></tr>`;
+      // 🔥 colspan 15
+      tbody.innerHTML = `<tr><td colspan="15" style="text-align:center;padding:2rem;color:var(--text-muted)"><i class="ti ti-alert-circle" style="font-size:1.5rem;margin-right:0.5rem"></i> Error al cargar datos. Verifica que el servidor esté corriendo en ${API_URL}</td></tr>`;
     }
   }
 
