@@ -212,14 +212,15 @@
                   <label for="fecha-prod">Fecha de Producción *</label>
                   <input type="date" id="fecha-prod" />
                 </div>
+                
+                <!-- 👇 TURNOS CORREGIDOS -->
                 <div class="field">
                   <label for="turno">Turno (SHIFT) *</label>
                   <select id="turno">
                     <option value="">Seleccionar</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
+                    <option value="1">1 - Matutino</option>
+                    <option value="2">2 - Vespertino</option>
+                    <option value="3">3 - Nocturno</option>
                   </select>
                 </div>
               </div>
@@ -232,7 +233,6 @@
               <p class="form-section-desc">Seleccione un producto existente o cree uno nuevo. Los campos técnicos se autocompletan.</p>
               <div class="grid-2">
                 
-                <!-- BUG CORREGIDO: El botón de nuevo producto ahora está al lado del select, y los inputs extra están ocultos hasta hacer clic en "Nuevo" -->
                 <div class="field field-full-width">
                   <label for="producto-select">Producto / Ítem *</label>
                   <div class="select-with-button" id="producto-select-container">
@@ -242,7 +242,6 @@
                     <button type="button" class="btn-new" id="btn-nuevo-producto" style="width:auto; flex-shrink:0;"><i class="ti ti-plus"></i> Nuevo</button>
                   </div>
                   
-                  <!-- Input para NUEVO producto (oculto por defecto, solo se muestra al hacer clic en "+ Nuevo") -->
                   <div class="input-nuevo-wrapper" id="producto-nuevo-wrapper" style="display: none;">
                     <input type="text" id="producto-nuevo" class="input-nuevo" placeholder="Escriba el nombre del nuevo producto..." />
                     <button type="button" class="btn-clear-input" id="btn-cancelar-producto"><i class="ti ti-x"></i></button>
@@ -293,8 +292,6 @@
                   <label for="camadas_paleta">Camadas por Paleta</label>
                   <input type="number" id="camadas_paleta" min="1" step="1" placeholder="Ej: 10" />
                 </div>
-                
-                <!-- 👇 JUEGO DE ENVASES ELIMINADO DE AQUÍ -->
 
                 <div class="field field-full-width" id="field-dimensiones">
                   <label for="dim_altura_cil">Altura del Envase (pulgadas)</label>
@@ -325,7 +322,6 @@
                     <select id="cliente-select" style="flex:1;"><option value="">-- Seleccione --</option></select>
                     <button type="button" class="btn-new" id="btn-nuevo-cliente" style="width:auto; flex-shrink:0;"><i class="ti ti-plus"></i> Nuevo</button>
                   </div>
-                  <!-- Input para NUEVO cliente (oculto por defecto) -->
                   <div class="input-nuevo-wrapper" id="cliente-nuevo-wrapper" style="display: none;">
                     <input type="text" id="cliente-nuevo" placeholder="Nombre del cliente..." />
                     <button type="button" class="btn-clear-input" id="btn-cancelar-cliente"><i class="ti ti-x"></i></button>
@@ -480,10 +476,18 @@
         <div class="field"><label for="filtro-molde" class="filtro-label">Molde</label><input type="text" id="filtro-molde" list="filtro-lista-moldes" class="input-filtro" /><datalist id="filtro-lista-moldes"></datalist></div>
         <div class="field"><label for="filtro-maquina" class="filtro-label">Máquina</label><input type="text" id="filtro-maquina" list="filtro-lista-maquinas" class="input-filtro" /><datalist id="filtro-lista-maquinas"></datalist></div>
         <div class="field"><label for="filtro-operador" class="filtro-label">Operador</label><input type="text" id="filtro-operador" list="filtro-lista-operadores" class="input-filtro" /><datalist id="filtro-lista-operadores"></datalist></div>
+        
+        <!-- 👇 FILTRO DE TURNO CORREGIDO -->
         <div class="field">
           <label for="filtro-turno" class="filtro-label">Turno</label>
-          <select id="filtro-turno" class="input-filtro"><option value="">Todos</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+          <select id="filtro-turno" class="input-filtro">
+            <option value="">Todos</option>
+            <option value="1">1 - Matutino</option>
+            <option value="2">2 - Vespertino</option>
+            <option value="3">3 - Nocturno</option>
+          </select>
         </div>
+        
         <div class="field">
           <label for="filtro-estatus" class="filtro-label">Estatus</label>
           <select id="filtro-estatus" class="input-filtro">
@@ -575,8 +579,6 @@
             <span class="detail-label">Capacidad (CAP)</span>
             <span class="detail-value detail-value-highlight" id="detail-capacidad">—</span>
           </div>
-          
-          <!-- 👇 JUEGO DE ENVASES ELIMINADO DEL MODAL TAMBIÉN -->
           
           <div class="detail-item">
             <span class="detail-label">Envases por Camada</span>
