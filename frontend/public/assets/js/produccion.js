@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v31 (Hora Local Caracas + Turnos)
+   produccion.js - v33 (Hora Caracas manual + Fix Eliminar)
    ========================================== */
 
 (function () {
@@ -76,34 +76,35 @@
     return Number(n.toFixed(decimales)).toString();
   }
 
-  // 🔥 HORA LOCAL DE CARACAS (America/Caracas - UTC-4)
-  // Convierte cualquier timestamp (UTC, ISO, etc.) a la hora exacta de Venezuela.
+  // 🔥 LEE LA FECHA Y HORA EXACTA DE SUPABASE Y RESTA 4 HORAS (UTC-4)
   function separarFechaHora(timestamp) {
     if (!timestamp) return { fecha: '—', hora: '—' };
     
     try {
-      const d = new Date(timestamp);
-      if (isNaN(d.getTime())) return { fecha: '—', hora: '—' };
+      // Extraemos los números exactos del string sin conversiones del navegador
+      const match = String(timestamp).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+      
+      if (!match) return { fecha: '—', hora: '—' };
 
-      // Formateador estricto para la zona horaria de Venezuela
-      const formatterFecha = new Intl.DateTimeFormat('es-VE', {
-        timeZone: 'America/Caracas',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
+      let [_, year, month, day, hours, minutes] = match;
+      let h = parseInt(hours, 10);
 
-      const formatterHora = new Intl.DateTimeFormat('es-VE', {
-        timeZone: 'America/Caracas',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false // Formato 24h (07:46:09)
-      });
+      // Restamos 4 horas manualmente (Venezuela es UTC-4)
+      h = h - 4;
+
+      // Si al restar nos da negativo, pasó al día anterior
+      if (h < 0) {
+        h = h + 24;
+        let dObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        dObj.setDate(dObj.getDate() - 1);
+        day = String(dObj.getDate()).padStart(2, '0');
+        month = String(dObj.getMonth() + 1).padStart(2, '0');
+        year = String(dObj.getFullYear());
+      }
 
       return {
-        fecha: formatterFecha.format(d), // ej: "10/11/2026"
-        hora: formatterHora.format(d)    // ej: "07:46:09"
+        fecha: `${day}/${month}/${year}`,
+        hora: `${String(h).padStart(2, '0')}:${minutes}`
       };
     } catch (e) {
       return { fecha: '—', hora: '—' };
@@ -902,6 +903,7 @@
       const turnoTexto = TURNOS_MAP[String(l.turno)] || l.turno || '—';
 
       // 🔥 15 columnas: incluye la HORA automática del sistema
+      // 🔥 En eliminarLote pasamos el ID entre comillas simples para evitar fallos
       tr.innerHTML = `
         <td class="font-mono" style="font-size:12px"><span class="badge badge-info">${l.codigo}</span></td>
         <td style="font-family:'Courier New',monospace;font-size:11px">${l.ticket_carga}</td>
@@ -918,8 +920,8 @@
         <td class="text-muted text-sm">${l.fecha}</td>
         <td class="text-muted text-sm" style="text-align:center;font-family:'Courier New',monospace;">${l.hora}</td>
         <td><div style="display:flex;gap:4px;justify-content:center;">
-          <button type="button" class="btn btn-primary btn-xs" onclick="verLote(${l.id})"><i class="ti ti-eye"></i></button>
-          <button type="button" class="btn btn-danger btn-xs" onclick="eliminarLote(${l.id})"><i class="ti ti-trash"></i></button>
+          <button type="button" class="btn btn-primary btn-xs" onclick="verLote('${l.id}')"><i class="ti ti-eye"></i></button>
+          <button type="button" class="btn btn-danger btn-xs" onclick="eliminarLote('${l.id}')"><i class="ti ti-trash"></i></button>
         </div></td>
       `;
       tbody.appendChild(tr);
@@ -927,7 +929,10 @@
   }
 
   window.eliminarLote = async function (id) {
-    if (!confirm('¿Estás seguro de eliminar este lote?')) return;
+    // 🔥 FIX: Evaluamos estrictamente para evitar borrados accidentales
+    const confirmado = window.confirm('¿Estás seguro de eliminar este lote?');
+    if (confirmado !== true) return;
+
     try {
       const response = await fetch(`${API_URL}/produccion/${id}`, { method: 'DELETE', headers: tokenHeader() });
       if (!response.ok) throw new Error('Error al eliminar');
