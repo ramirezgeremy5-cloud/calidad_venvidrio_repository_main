@@ -1,10 +1,10 @@
 /* ==========================================
    VENVIDRIO - DASHBOARD
-   JS v13 - Limpio + Ajustes de renderizado para Cards
+   JS v15 - Unidades puras en gráfico, KPIs reales
    ========================================== */
 
 // ==========================================
-// 1. CONTROL DE ALERTAS NATIVAS (ANTÍDOTO CONTRA CARTELES FEOS)
+// 1. CONTROL DE ALERTAS NATIVAS
 // ==========================================
 (function() {
   var _alert = window.alert;
@@ -46,11 +46,10 @@ let eficienciaChart = null;
 let intervaloCarga = null;
 let datosDashboard = null;
 let periodoActual = 7;
-let filtroGrafico = 'ambos';
+let filtroGrafico = 'unidades'; // 👈 FIX: Solo unidades
 let filtroPlanta = '';
 let abortController = null;
 
-// Colores de clasificación
 const CLASE_COLOR = {
   "Crítico": "#dc3545",
   "Mayor B+": "#e65100",
@@ -120,7 +119,6 @@ function filtrarPorDias(lista, campoFecha) {
   });
 }
 
-// 🔧 NORMALIZADOR DE CLASIFICACIÓN
 function normalizarClase(claseStr) {
   if (!claseStr) return 'Menor';
   const c = String(claseStr).toLowerCase().trim();
@@ -209,7 +207,7 @@ async function cargarDashboard(isBackground = false) {
     renderChartLineas(lotes);
     renderTopProductos(lotes);
     renderTopTiposDefecto(defectosFiltrados);
-    renderChartEficiencia(lotes, defectosFiltrados);
+    renderChartEficiencia(lotes);
     renderTopClientesRetencion(lotes);
     renderAuditoriasPendientes(lotes, defectosFiltrados);
     renderAlertas(lotes, defectosFiltrados);
@@ -251,6 +249,7 @@ function renderKPIs(lotes, defectos) {
 
   const pendientes = lotesFiltrados.filter(l => String(l.estatus || '100') === '100').length;
 
+  // 👇 FIX CALIDAD 1: Tasa de Rechazo (Aptos vs Total Evaluado a nivel de paletas)
   const retenidos = lotesFiltrados.filter(l => String(l.estatus) === '300');
   const paletasInspeccionadas = lotesFiltrados.reduce((a, l) => a + (l.paletas || 0), 0);
   const paletasRetenidas = retenidos.reduce((a, l) => a + (l.paletas || 0), 0);
@@ -258,8 +257,13 @@ function renderKPIs(lotes, defectos) {
     ? ((paletasRetenidas / paletasInspeccionadas) * 100).toFixed(2)
     : '0.00';
 
-  const eficiencia = totalUnidades > 0
-    ? (((totalUnidades - totalDefectos) / totalUnidades) * 100).toFixed(1)
+  // 👇 FIX CALIDAD 2: Eficiencia General (Aptos vs Total Evaluado)
+  const lotesEvaluados = lotesFiltrados.filter(l => String(l.estatus) === '200' || String(l.estatus) === '300');
+  const unidadesEvaluadas = lotesEvaluados.reduce((a, l) => a + (l.cantidad || 0), 0);
+  const unidadesAptas = lotesFiltrados.filter(l => String(l.estatus) === '200').reduce((a, l) => a + (l.cantidad || 0), 0);
+
+  const eficiencia = unidadesEvaluadas > 0
+    ? ((unidadesAptas / unidadesEvaluadas) * 100).toFixed(1)
     : '0.0';
 
   setText('dash-unidades', fmtNum(totalUnidades));
@@ -272,7 +276,7 @@ function renderKPIs(lotes, defectos) {
 }
 
 /* ==========================================
-   GRÁFICA: PRODUCCIÓN
+   GRÁFICA: PRODUCCIÓN (SOLO UNIDADES)
 ========================================== */
 function renderChartProduccion(lotes) {
   const canvas = document.getElementById('productionChart');
@@ -284,9 +288,8 @@ function renderChartProduccion(lotes) {
   lotesFiltrados.forEach(l => {
     if (!l.fecha_produccion) return;
     const key = new Date(l.fecha_produccion).toISOString().split('T')[0];
-    if (!porDia[key]) porDia[key] = { unidades: 0, lotes: 0 };
+    if (!porDia[key]) porDia[key] = { unidades: 0 };
     porDia[key].unidades += (l.cantidad || 0);
-    porDia[key].lotes += 1;
   });
 
   const fechas = Object.keys(porDia).sort().slice(-14);
@@ -295,29 +298,16 @@ function renderChartProduccion(lotes) {
     return `${d.getDate()}/${d.getMonth() + 1}`;
   });
 
-  const datasets = [];
-  if (filtroGrafico === 'unidades' || filtroGrafico === 'ambos') {
-    datasets.push({
-      label: 'Unidades',
-      data: fechas.map(f => porDia[f].unidades),
-      backgroundColor: 'rgba(26, 35, 126, 0.75)',
-      borderColor: 'rgba(26, 35, 126, 1)',
-      borderWidth: 2,
-      borderRadius: 6,
-      order: 1
-    });
-  }
-  if (filtroGrafico === 'lotes' || filtroGrafico === 'ambos') {
-    datasets.push({
-      label: 'Lotes',
-      data: fechas.map(f => porDia[f].lotes),
-      backgroundColor: 'rgba(76, 175, 80, 0.75)',
-      borderColor: 'rgba(76, 175, 80, 1)',
-      borderWidth: 2,
-      borderRadius: 6,
-      order: 2
-    });
-  }
+  // 👇 FIX: Solo mostramos el dataset de Unidades para que la gráfica sea legible
+  const datasets = [{
+    label: 'Unidades Producidas',
+    data: fechas.map(f => porDia[f].unidades),
+    backgroundColor: 'rgba(26, 35, 126, 0.75)',
+    borderColor: 'rgba(26, 35, 126, 1)',
+    borderWidth: 2,
+    borderRadius: 6,
+    barPercentage: 0.6
+  }];
 
   if (productionChart) productionChart.destroy();
 
@@ -638,7 +628,7 @@ function renderTopTiposDefecto(defectos) {
 /* ==========================================
    EFICIENCIA MENSUAL
 ========================================== */
-function renderChartEficiencia(lotes, defectos) {
+function renderChartEficiencia(lotes) {
   const canvas = document.getElementById('eficienciaChart');
   if (!canvas) return;
 
@@ -658,15 +648,15 @@ function renderChartEficiencia(lotes, defectos) {
       const d = new Date(l.fecha_produccion);
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === m.key;
     });
-    const defMes = defectos.filter(d => {
-      if (!d.fecha_registro) return false;
-      const f = new Date(d.fecha_registro);
-      return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}` === m.key;
-    });
 
-    const unidades = lotesMes.reduce((a, l) => a + (l.cantidad || 0), 0);
-    const def = defMes.length;
-    return unidades > 0 ? Math.round(((unidades - def) / unidades) * 100) : 0;
+    // 👇 FIX: Eficiencia mensual basada en estatus real
+    const evaluadosMes = lotesMes.filter(l => String(l.estatus) === '200' || String(l.estatus) === '300');
+    const totalEvaluado = evaluadosMes.reduce((a, l) => a + (l.cantidad || 0), 0);
+    
+    const aptosMes = lotesMes.filter(l => String(l.estatus) === '200');
+    const totalAptos = aptosMes.reduce((a, l) => a + (l.cantidad || 0), 0);
+
+    return totalEvaluado > 0 ? Math.round((totalAptos / totalEvaluado) * 100) : 0;
   });
 
   if (eficienciaChart) eficienciaChart.destroy();
@@ -751,7 +741,7 @@ function renderTopClientesRetencion(lotes) {
 }
 
 /* ==========================================
-   AUDITORÍAS PENDIENTES (ANTI-FANTASMAS)
+   AUDITORÍAS PENDIENTES
 ========================================== */
 function renderAuditoriasPendientes(lotes, defectos) {
   const el = document.getElementById('auditorias-pendientes');
@@ -919,21 +909,10 @@ function initFiltrosTiempo() {
         renderChartLineas(lotes);
         renderTopProductos(lotes);
         renderTopTiposDefecto(defectos);
-        renderChartEficiencia(lotes, defectos);
+        renderChartEficiencia(lotes);
         renderTopClientesRetencion(lotes);
         renderAuditoriasPendientes(lotes, defectos);
       }
-    });
-  });
-}
-
-function initFiltrosGrafico() {
-  document.querySelectorAll('.filtro-grafico').forEach(btn => {
-    btn.addEventListener('click', function () {
-      document.querySelectorAll('.filtro-grafico').forEach(b => b.classList.remove('active'));
-      this.classList.add('active');
-      filtroGrafico = this.dataset.filtro;
-      if (datosDashboard) renderChartProduccion(datosDashboard.lotes);
     });
   });
 }
@@ -984,7 +963,6 @@ function iniciarDashboard() {
   log('🚀 Dashboard Venvidrio iniciado');
 
   initFiltrosTiempo();
-  initFiltrosGrafico();
   initFiltroPlanta();
   initShortcuts();
 
