@@ -1,6 +1,6 @@
 /* ==========================================================
    PRODUCCIÓN — VENVIDRIO
-   produccion.css — v15 (Métricas estilo Dashboard)
+   produccion.css — v17 (Fix Modal + Estilos Generales)
    ========================================================== */
 
 /* ================= VARIABLES ================= */
@@ -753,8 +753,14 @@ body {
   background: #fff;
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   min-width: 0;
+  border-top: 1px solid var(--border);
 }
-.table-wrap table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
+.table-wrap table { 
+  width: 100%; 
+  border-collapse: collapse; 
+  font-size: 13px; 
+  min-width: 900px; 
+}
 .table-wrap thead th {
   padding: 12px 16px;
   text-align: left;
@@ -809,19 +815,25 @@ body {
   font-family: var(--font-mono);
 }
 
-/* ================= MODAL ================= */
+/* ================= MODAL (FIX DEFINITIVO) ================= */
 .modal-overlay-detalle {
   position: fixed;
   top: 0; left: 0;
   width: 100%; height: 100%;
   background: rgba(15, 23, 42, 0.6);
-  display: flex;
+  /* 👇 Oculto por defecto */
+  display: none;
   align-items: flex-end;
   justify-content: center;
   z-index: 9999;
   padding: 0;
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
+}
+
+/* 👇 Nueva clase para mostrar el modal */
+.modal-overlay-detalle.show {
+  display: flex;
   animation: fadeIn 0.2s ease;
 }
 

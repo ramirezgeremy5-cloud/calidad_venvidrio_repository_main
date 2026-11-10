@@ -538,7 +538,8 @@
 </main>
 
 <!-- MODAL: VISUALIZADOR DE LOTE -->
-<div class="modal-overlay-detalle" id="modal-ver-lote" style="display: none;">
+<!-- 👇 QUITAMOS EL style="display: none;" PARA QUE EL CSS CONTROLE TODO -->
+<div class="modal-overlay-detalle" id="modal-ver-lote">
   <div class="modal-container-detalle modal-large">
     <div class="modal-header">
       <div class="modal-title">
@@ -824,6 +825,10 @@
     </div>
 
     <div class="modal-footer">
+      <!-- 👇 BOTÓN EDITAR -->
+      <button type="button" class="btn btn-outline" id="btn-editar-lote-modal" style="margin-right: auto; color: var(--brand-1); border-color: var(--brand-2);">
+        <i class="ti ti-pencil"></i> Editar Lote
+      </button>
       <button type="button" class="btn btn-outline" id="btn-cerrar-modal-lote-footer">
         <i class="ti ti-x"></i> Cerrar
       </button>
