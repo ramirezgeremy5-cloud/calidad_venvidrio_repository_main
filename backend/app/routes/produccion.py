@@ -85,7 +85,7 @@ def listar_produccion(
     fecha_desde: Optional[date] = Query(None),
     fecha_hasta: Optional[date] = Query(None),
     skip: int = Query(0),
-    limit: int = Query(2000), # 👈 SUBIDO A 2000 (lo que pide el front)
+    limit: int = Query(2000),
     db: Session = Depends(get_db)
 ):
     """Lista producción con filtros opcionales"""
@@ -123,8 +123,6 @@ def listar_produccion(
 
     query = query.order_by(Produccion.fecha_registro.desc())
     
-    # Usamos .all() con el limit. Si sigue dando timeout,
-    # en el futuro se debería implementar paginación en el frontend.
     return query.offset(skip).limit(limit).all()
 
 
@@ -139,7 +137,6 @@ def obtener_opciones_filtros(db: Session = Depends(get_db)):
         rows = db.query(columna).distinct().all()
         return sorted([r[0] for r in rows if r[0]])
 
-    # 👈 NUEVO: valores únicos de camadas por paleta (para datalist)
     try:
         camadas_rows = db.query(Produccion.camadas_por_paleta).filter(
             Produccion.camadas_por_paleta.isnot(None)
@@ -159,7 +156,7 @@ def obtener_opciones_filtros(db: Session = Depends(get_db)):
         "acabados": unicos(Produccion.acabado),
         "grupos": unicos(Produccion.grupo),
         "ordenes": unicos(Produccion.orden),
-        "camadas_paleta": camadas_unicas,  # 👈 NUEVO
+        "camadas_paleta": camadas_unicas,
         "turnos": [1, 2, 3, 4]
     }
 
@@ -210,10 +207,11 @@ def debug_schema(db: Session = Depends(get_db)):
             "paletas": ultimo.paletas,
             "cajas_producidas": getattr(ultimo, 'cajas_producidas', None),
             "gruesas": ultimo.gruesas,
+            "docenas": getattr(ultimo, 'docenas', None),  # 👈 NUEVO
             "juego_envases": ultimo.juego_envases,
             "tamano_muestra": ultimo.tamano_muestra,
             "bot_por_canada": ultimo.bot_por_canada,
-            "camadas_por_paleta": getattr(ultimo, 'camadas_por_paleta', None),  # 👈 NUEVO
+            "camadas_por_paleta": getattr(ultimo, 'camadas_por_paleta', None),
             "bot_por_paleta": ultimo.bot_por_paleta,
             "gruesas_por_paleta": ultimo.gruesas_por_paleta,
             "turno": ultimo.turno
@@ -272,7 +270,7 @@ def listar_productos(db: Session = Depends(get_db)):
                 "capacidad_ml": p.capacidad_ml, 
                 "bpp": p.bpp, 
                 "bpc": p.bpc,
-                "camadas_por_paleta": getattr(p, 'camadas_por_paleta', None),  # 👈 NUEVO
+                "camadas_por_paleta": getattr(p, 'camadas_por_paleta', None),
                 "item": getattr(p, 'item', None),
                 "acabado": getattr(p, 'acabado', None),
                 "material": getattr(p, 'material', None),
@@ -299,7 +297,7 @@ def crear_producto(
     capacidad_ml: Optional[int] = Query(None),
     bpp: Optional[float] = Query(None),
     bpc: Optional[int] = Query(None),
-    camadas_por_paleta: Optional[int] = Query(None),  # 👈 NUEVO
+    camadas_por_paleta: Optional[int] = Query(None),
     item: Optional[str] = Query(None),
     acabado: Optional[str] = Query(None),
     material: Optional[str] = Query(None),
@@ -322,7 +320,7 @@ def crear_producto(
 
         nuevo = Producto(
             nombre=nombre, capacidad_ml=capacidad_ml, bpp=bpp, bpc=bpc, 
-            camadas_por_paleta=camadas_por_paleta,  # 👈 NUEVO
+            camadas_por_paleta=camadas_por_paleta,
             item=item, acabado=acabado, material=material, tipo_boca=tipo_boca,
             juego_envases=juego_envases, dimensiones=dimensiones
         )
@@ -392,9 +390,11 @@ def crear_produccion(datos: ProduccionCreate, db: Session = Depends(get_db)):
         item=datos.item, bpp=datos.bpp, capacidad=datos.capacidad,
         unidad_capacidad=getattr(datos, 'unidad_capacidad', 'ml'), cliente=datos.cliente,
         cantidad=datos.cantidad, paletas=datos.paletas, cajas_producidas=getattr(datos, 'cajas_producidas', None),
-        gruesas=datos.gruesas, juego_envases=datos.juego_envases, tamano_muestra=datos.tamano_muestra,
+        gruesas=datos.gruesas, 
+        docenas=getattr(datos, 'docenas', None),  # 👈 NUEVO
+        juego_envases=datos.juego_envases, tamano_muestra=datos.tamano_muestra,
         bot_por_canada=datos.bot_por_canada, 
-        camadas_por_paleta=getattr(datos, 'camadas_por_paleta', None),  # 👈 NUEVO
+        camadas_por_paleta=getattr(datos, 'camadas_por_paleta', None),
         bot_por_paleta=datos.bot_por_paleta,
         gruesas_por_paleta=datos.gruesas_por_paleta, estatus="100",
         observaciones=datos.observaciones, fecha_produccion=datos.fecha_produccion

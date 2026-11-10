@@ -34,6 +34,7 @@ class ProduccionBase(BaseModel):
     paletas: Optional[float] = None
     cajas_producidas: Optional[float] = None
     gruesas: Optional[float] = None
+    docenas: Optional[float] = None  # 👈 NUEVO: Docenas (12 uds)
     juego_envases: Optional[str] = None
 
     # Datos para reporte de inspección

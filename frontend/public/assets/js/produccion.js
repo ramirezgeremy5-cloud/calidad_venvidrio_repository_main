@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v25 (Cálculo bidireccional + Feedback visual + Resumen + Spinner)
+   produccion.js - v27 (Docenas + Estándar Industrial 144)
    ========================================== */
 
 (function () {
@@ -15,7 +15,9 @@
   }
 
   const VALOR_NUEVO = "__NUEVO__";
-  const BOTELLAS_POR_GRUESA = 12;
+  
+  const BOTELLAS_POR_GRUESA = 144;  // 12 docenas = 144 botellas
+  const BOTELLAS_POR_DOCENA = 12;   // 1 docena
 
   let lotes = [];
   let intervaloCarga = null;
@@ -79,7 +81,6 @@
     }
   }
 
-  // 👇 MEJORA 1: Mostrar hint temporal de cálculo
   function mostrarHint(id) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -93,7 +94,6 @@
     if (el) el.style.display = 'none';
   }
 
-  // 👇 MEJORA 2: Actualizar resumen del lote
   function actualizarResumen(bppCalculado = null) {
     const resumenEl = document.getElementById('resumen-lote');
     const resumenTexto = document.getElementById('resumen-texto');
@@ -117,7 +117,13 @@
 
     const partes = [];
     if (loteCode) partes.push(`Lote: <strong>${loteCode}</strong>`);
-    if (cantidad) partes.push(`<strong>${cantidad.toLocaleString()}</strong> unidades`);
+    if (cantidad) {
+      partes.push(`<strong>${cantidad.toLocaleString()}</strong> unidades`);
+      const docenas = cantidad / BOTELLAS_POR_DOCENA;
+      const gruesas = cantidad / BOTELLAS_POR_GRUESA;
+      partes.push(`<strong>${formatearNumero(docenas, 0)}</strong> docenas`);
+      partes.push(`<strong>${formatearNumero(gruesas, 2)}</strong> gruesas`);
+    }
     if (paletas) partes.push(`<strong>${paletas}</strong> paletas`);
     if (bpp) partes.push(`BPP: <strong>${bpp}</strong>`);
 
@@ -502,21 +508,30 @@
       cajasEl.value = '';
     }
 
-    // 4. Gruesas
+    // 4. Gruesas (ahora con 144)
     if (cantidadFinal && gruesasEl) {
       gruesasEl.value = formatearNumero(cantidadFinal / BOTELLAS_POR_GRUESA, 2);
     } else if (gruesasEl) {
       gruesasEl.value = '';
     }
 
-    // 5. Gruesas por Paleta
+    // 5. Gruesas por Paleta (ahora con 144)
     if (bppCalculado && gruesasPaletaEl) {
       gruesasPaletaEl.value = formatearNumero(bppCalculado / BOTELLAS_POR_GRUESA, 2);
     } else if (gruesasPaletaEl) {
       gruesasPaletaEl.value = '';
     }
 
-    // 👇 MEJORA: Actualizar resumen
+    // 6. Docenas
+    const docenasEl = document.getElementById('docenas');
+    if (docenasEl) {
+      if (cantidadFinal) {
+        docenasEl.value = formatearNumero(cantidadFinal / BOTELLAS_POR_DOCENA, 0);
+      } else {
+        docenasEl.value = '';
+      }
+    }
+
     actualizarResumen(bppCalculado);
   }
 
@@ -560,7 +575,10 @@
         cajas_producidas: p.cajas_producidas || 0,
         capacidad_ml: p.capacidad_ml ?? p.capacidad ?? null, unidad_capacidad: (p.unidad_capacidad === 'l' || p.unidad_capacidad === 'L') ? 'l' : 'ml',
         linea: p.linea_produccion, planta: p.planta || 'Valera', op: p.operador, uds: p.cantidad, turno: p.turno,
-        paletas: p.paletas || 0, gruesas: p.gruesas || 0, juego_envases: p.juego_envases || '', tamano_muestra: p.tamano_muestra || '',
+        paletas: p.paletas || 0, 
+        gruesas: p.gruesas || 0, 
+        docenas: p.docenas || 0,  // 👈 NUEVO: mapear docenas
+        juego_envases: p.juego_envases || '', tamano_muestra: p.tamano_muestra || '',
         bot_por_canada: p.bot_por_canada || 0, bot_por_paleta: p.bot_por_paleta || 0, gruesas_por_paleta: p.gruesas_por_paleta || 0,
         cliente: p.cliente || 'Sin asignar', estatus: p.estatus || '100', estado_auditoria: p.estado_auditoria || 'Pendiente',
         observaciones: p.observaciones || '', fecha_prod: p.fecha_produccion || '',
@@ -720,6 +738,15 @@
     if (lote.cajas_producidas > 0) cajasMostrar = formatearNumero(lote.cajas_producidas, 2);
     else if (lote.uds > 0 && bpcMostrar > 0) cajasMostrar = formatearNumero(lote.uds / bpcMostrar, 2);
     setTexto('detail-cajas', cajasMostrar);
+
+    // 👇 NUEVO: Docenas (del backend, o calculadas si no vienen)
+    let docenasMostrar = '—';
+    if (lote.docenas && Number(lote.docenas) > 0) {
+      docenasMostrar = formatearNumero(lote.docenas, 0);
+    } else if (lote.uds > 0) {
+      docenasMostrar = formatearNumero(lote.uds / BOTELLAS_POR_DOCENA, 0);
+    }
+    setTexto('detail-docenas', docenasMostrar);
 
     setTexto('detail-gruesas', lote.gruesas);
     setTexto('detail-gruesas-paleta', lote.gruesas_por_paleta);
@@ -953,7 +980,7 @@
   }
 
   // ==========================================
-  // REGISTRAR (con spinner y deshabilitado)
+  // REGISTRAR (ahora incluye docenas)
   // ==========================================
   function initFormularioRegistro() {
     const btnRegistrar = document.getElementById('btn-registrar');
@@ -988,6 +1015,7 @@
       const cajas_producidas = document.getElementById('cajas_producidas').value;
       const gruesas = document.getElementById('gruesas').value;
       const gruesas_paleta = document.getElementById('gruesas_paleta').value;
+      const docenas = document.getElementById('docenas')?.value;  // 👈 NUEVO
       const fecha = document.getElementById('fecha-prod').value;
       const estatus = document.getElementById('estatus').value;
       const observaciones = document.getElementById('obs-prod').value.trim();
@@ -998,7 +1026,6 @@
       const dimensiones = obtenerDimensiones();
       const guardarEnCatalogo = document.getElementById('guardar-en-catalogo')?.checked || false;
 
-      // Validaciones
       if (!planta) { mostrarToast('Selecciona una planta.', true); return; }
       if (!maquina) { mostrarToast('Selecciona una máquina.', true); return; }
       if (!turno) { mostrarToast('Selecciona un turno.', true); return; }
@@ -1009,7 +1036,6 @@
       if (!cant || parseInt(cant) <= 0) { mostrarToast('La cantidad debe ser mayor a 0.', true); return; }
       if (capacidadValor !== null && capacidadValor <= 0) { mostrarToast('El volumen debe ser mayor a 0.', true); return; }
 
-      // 👇 MEJORA: Spinner y deshabilitar botón
       btn.innerHTML = '<i class="ti ti-loader"></i> Guardando...';
       btn.disabled = true;
 
@@ -1037,6 +1063,7 @@
         paletas: paletas ? parseFloat(paletas) : null,
         cajas_producidas: cajas_producidas ? parseFloat(cajas_producidas) : null,
         gruesas: gruesas ? parseFloat(gruesas) : null,
+        docenas: docenas ? parseFloat(docenas) : null,  // 👈 NUEVO
         juego_envases: juego_envases,
         tamano_muestra: dimensiones,
         bot_por_canada: bpc ? parseInt(bpc) : null,
@@ -1120,7 +1147,7 @@
     btnLimpiar.addEventListener('click', async (e) => {
       e.preventDefault();
 
-      const campos = ['ticket_carga', 'grupo', 'linea', 'acabado', 'item', 'material', 'tipo_boca', 'molde', 'bpp', 'bpc', 'camadas_paleta', 'cantidad', 'paletas', 'cajas_producidas', 'gruesas', 'juego_envases', 'capacidad', 'dim_altura_cil', 'gruesas_paleta', 'obs-prod'];
+      const campos = ['ticket_carga', 'grupo', 'linea', 'acabado', 'item', 'material', 'tipo_boca', 'molde', 'bpp', 'bpc', 'camadas_paleta', 'cantidad', 'paletas', 'cajas_producidas', 'gruesas', 'juego_envases', 'capacidad', 'dim_altura_cil', 'gruesas_paleta', 'docenas', 'obs-prod'];
 
       campos.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       ['planta', 'maquina', 'turno'].forEach(id => { const el = document.getElementById(id); if (el) el.selectedIndex = 0; });
@@ -1142,7 +1169,6 @@
       generarCodigoLoteLocal();
       recalcularTodo('cantidad');
 
-      // Ocultar hints y resumen
       ocultarHint('calc-hint-cantidad');
       ocultarHint('calc-hint-paletas');
       ocultarHint('calc-hint-bpp');
