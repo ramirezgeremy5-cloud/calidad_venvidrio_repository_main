@@ -8,8 +8,15 @@ from sqlalchemy.orm import configure_mappers
 from datetime import datetime
 import os
 import traceback
+import logging
 
 from app.database.connection import engine, Base
+
+# =========================
+# LOGGER
+# =========================
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("moondrago")
 
 # =========================
 # MODELOS (ORDEN CRÍTICO)
@@ -43,25 +50,24 @@ from app.routes import escaner
 # =========================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("=" * 60)
-    print("🐉 MoonDRAGO — Sistema de Control de Calidad")
-    print("   Desarrollado para Venvidrio C.A.")
-    print("=" * 60)
-    print("🚀 MoonDRAGO API iniciada")
+    logger.info("=" * 60)
+    logger.info("🐉 MoonDRAGO — Sistema de Control de Calidad")
+    logger.info("   Desarrollado para Venvidrio C.A.")
+    logger.info("=" * 60)
+    logger.info("🚀 MoonDRAGO API iniciada")
     
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-        print("📦 Base de datos conectada correctamente")
+        logger.info("📦 Base de datos conectada correctamente")
     except Exception as e:
-        print(f"❌ ERROR CRÍTICO: No se pudo conectar a la base de datos: {e}")
+        logger.error(f"❌ ERROR CRÍTICO: No se pudo conectar a la base de datos: {e}")
 
-    print("=" * 60)
-    print("🌐 CORS habilitado para puertos locales y Render")
-    print("=" * 60)
+    logger.info("🌐 CORS habilitado para puertos locales y Render")
+    logger.info("=" * 60)
 
     yield
-    print("👋 MoonDRAGO API detenida")
+    logger.info("👋 MoonDRAGO API detenida")
 
 # =========================
 # CREACIÓN APP
@@ -74,7 +80,7 @@ app = FastAPI(
 )
 
 # =========================
-# CONFIGURACIÓN DE ARCHIVOS ESTÁTICOS (FOTOS)
+# ARCHIVOS ESTÁTICOS (FOTOS)
 # =========================
 UPLOAD_DIR = "app/static/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -112,39 +118,44 @@ app.add_middleware(
 )
 
 # =========================
-# MIDDLEWARE CSP (Content Security Policy) - CORREGIDO
+# MIDDLEWARE CSP
 # =========================
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     
-    # Política CSP corregida (incluye jsdelivr en connect-src)
     csp = (
         "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: "
         "https://*.cloudflare.com https://*.cloudflarecaptcha.com "
         "https://challenges.cloudflare.com https://cdn.jsdelivr.net "
+        "https://cdnjs.cloudflare.com https://unpkg.com "
         "https://fonts.googleapis.com https://fonts.gstatic.com "
         "https://calidad-venvidrio-repository-main.onrender.com "
+        "https://venvidrio-calidad.onrender.com "
         "https://zjubkwzrtggykladkycy.supabase.co; "
         
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: "
-        "https://challenges.cloudflare.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+        "https://challenges.cloudflare.com https://cdn.jsdelivr.net "
+        "https://cdnjs.cloudflare.com https://unpkg.com; "
         
         "frame-src 'self' data: blob: https://challenges.cloudflare.com; "
         
         "connect-src 'self' data: blob: https://challenges.cloudflare.com "
         "https://*.cloudflare.com https://*.cloudflarecaptcha.com "
-        "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
+        "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com "
         "https://calidad-venvidrio-repository-main.onrender.com "
+        "https://venvidrio-calidad.onrender.com "
         "https://zjubkwzrtggykladkycy.supabase.co; "
         
         "img-src 'self' data: blob: https://*.cloudflare.com "
         "https://challenges.cloudflare.com https://zjubkwzrtggykladkycy.supabase.co "
         "https://calidad-venvidrio-repository-main.onrender.com; "
         
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com "
+        "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
         
-        "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net;"
+        "font-src 'self' data: https://fonts.gstatic.com "
+        "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;"
     )
     
     response.headers["Content-Security-Policy"] = csp
@@ -155,11 +166,11 @@ async def add_security_headers(request: Request, call_next):
 # =========================
 try:
     configure_mappers()
-    print("✅ Mapeo de modelos verificado correctamente.")
+    logger.info("✅ Mapeo de modelos verificado correctamente.")
     Base.metadata.create_all(bind=engine)
-    print("✅ Tablas creadas/verificadas exitosamente.")
+    logger.info("✅ Tablas creadas/verificadas exitosamente.")
 except Exception as e:
-    print(f"⚠️ Error al configurar mappers o crear tablas: {e}")
+    logger.warning(f"⚠️ Error al configurar mappers o crear tablas: {e}")
 
 # =========================
 # REGISTRO ROUTERS
@@ -229,25 +240,62 @@ def health_check():
     }
 
 # =========================
-# MANEJO DE ERRORES GLOBAL
+# MANEJO DE ERRORES GLOBAL (SEGURO)
 # =========================
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    print(f"❌ [MoonDRAGO] ERROR NO MANEJADO en {request.url.path}: {exc}")
-    traceback.print_exc()
+    """
+    Atrapa cualquier excepción no manejada y devuelve un JSON limpio
+    SIN exponer el traceback al cliente.
+    El traceback completo se loguea en el servidor (Render).
+    """
+    # 1. Loguear SIEMPRE el error real en el servidor
+    logger.error(
+        f"❌ [MoonDRAGO] ERROR NO MANEJADO en {request.url.path}: {exc}",
+        exc_info=True
+    )
+    
+    # 2. Detectar si es un error de la base de datos para dar mensaje útil
+    exc_str = str(exc).lower()
+    if "undefinedcolumn" in exc_str or "does not exist" in exc_str:
+        user_message = (
+            "Error de esquema de base de datos. "
+            "Falta una columna o migración pendiente. "
+            "Consulta los logs del servidor para más detalles."
+        )
+    elif "infailedsqltransaction" in exc_str:
+        user_message = (
+            "Error de transacción en la base de datos. "
+            "Es posible que una migración esté pendiente o una consulta anterior falló."
+        )
+    elif "connection" in exc_str or "timeout" in exc_str:
+        user_message = "Error de conexión con la base de datos. Intenta de nuevo en unos segundos."
+    else:
+        user_message = "Error interno del servidor. Consulta los logs para más detalles."
+    
+    # 3. Construir headers CORS manualmente (para que el navegador no bloquee)
+    origin = request.headers.get("origin", "")
+    cors_headers = {
+        "Access-Control-Allow-Origin": origin if origin else "*",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+        "Access-Control-Allow-Headers": "*",
+    }
+    
+    # 4. Devolver respuesta limpia
     return JSONResponse(
         status_code=500,
         content={
             "status": "error",
             "service": "MoonDRAGO",
-            "detail": str(exc),
+            "detail": user_message,
             "path": request.url.path,
-            "traceback": traceback.format_exc()
-        }
+        },
+        headers=cors_headers,
     )
 
 # =========================
-# EJECUCIÓN (Opcional)
+# EJECUCIÓN LOCAL (Opcional)
 # =========================
 if __name__ == "__main__":
     import uvicorn
