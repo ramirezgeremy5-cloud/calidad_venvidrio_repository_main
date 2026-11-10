@@ -20,7 +20,6 @@
     <div class="nav-brand">
       <img src="./assets/img/logo-venvidrio_index.png" alt="Venvidrio Logo">
     </div>
-
     <div class="nav-reloj">
       <i class="ti ti-clock"></i>
       <span id="reloj-real">--:--:--</span>
@@ -32,17 +31,9 @@
     <li><a href="../pages/produccion.html"><i class="ti ti-building-factory-2"></i> Producción</a></li>
     <li><a href="../pages/defectos.html"><i class="ti ti-alert-triangle"></i> Defectos</a></li>
     <li><a href="../pages/etiquetas.html"><i class="ti ti-qrcode"></i> Etiquetas y QR</a></li>
-
-    <li id="navAuditoriaInternaLink">
-      <a href="../pages/auditoria_interna.html"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a>
-    </li>
-    <li id="navAuditoriaProductoLink">
-      <a href="../pages/auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a>
-    </li>
-
-    <li id="navUsuariosLink">
-      <a href="../pages/usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
-    </li>
+    <li id="navAuditoriaInternaLink"><a href="../pages/auditoria_interna.html"><i class="ti ti-clipboard-check"></i> Auditoría Interna</a></li>
+    <li id="navAuditoriaProductoLink"><a href="../pages/auditoria_producto.html"><i class="ti ti-file-search"></i> Aud. Producto</a></li>
+    <li id="navUsuariosLink"><a href="../pages/usuarios.html"><i class="ti ti-users"></i> Usuarios</a></li>
   </ul>
 
   <div class="nav-user" id="navUserContainer">
@@ -57,9 +48,7 @@
         </div>
       </div>
       <div class="dropdown-divider"></div>
-      <a class="dropdown-item" id="dropdownPerfil" style="cursor:pointer;">
-        <i class="ti ti-user-circle"></i> Mi Perfil
-      </a>
+      <a class="dropdown-item" id="dropdownPerfil" style="cursor:pointer;"><i class="ti ti-user-circle"></i> Mi Perfil</a>
       <div class="dropdown-divider"></div>
       <a class="dropdown-item dropdown-danger" id="dropdownLogout"><i class="ti ti-logout"></i> Cerrar Sesión</a>
     </div>
@@ -68,6 +57,7 @@
 
 <main class="page">
 
+  <!-- FILTROS GLOBALES -->
   <div class="filtros-container">
     <div class="filtros-grupo">
       <button class="filtro-tiempo active" data-dias="7">7 días</button>
@@ -77,6 +67,14 @@
     </div>
 
     <div class="ultima-actualizacion">
+      <!-- 👇 NUEVO FILTRO DE ESTATUS -->
+      <select id="filtro-estatus" class="selector-planta" title="Filtrar por estatus" style="margin-right: 10px;">
+        <option value="">Todos los estatus</option>
+        <option value="100">Pendientes</option>
+        <option value="200">Aptos</option>
+        <option value="300">Retenidos</option>
+      </select>
+
       <select id="filtro-planta" class="selector-planta" title="Filtrar por planta">
         <option value="">Todas las plantas</option>
         <option value="Valera">Planta Valera</option>
@@ -86,22 +84,20 @@
       <i class="ti ti-clock"></i>
       Última actualización: <span id="ultima-actualizacion">--:--:--</span>
 
-      <button class="btn-refresh" title="Recargar datos (Ctrl+R)" id="btn-refresh">
-        <i class="ti ti-refresh"></i>
-      </button>
-      <button class="btn btn-sm btn-primary" id="btn-exportar-word" title="Exportar Dashboard a Word">
-        <i class="ti ti-file-type-doc"></i> Exportar Word
-      </button>
+      <button class="btn-refresh" title="Recargar datos (Ctrl+R)" id="btn-refresh"><i class="ti ti-refresh"></i></button>
+      <button class="btn btn-sm btn-primary" id="btn-exportar-word" title="Exportar Dashboard a Word"><i class="ti ti-file-type-doc"></i> Exportar Word</button>
     </div>
   </div>
 
+  <!-- KPIs -->
   <section class="kpi-grid kpi-grid-6">
     <div class="kpi-card anim-card produccion" title="Ver producción total">
       <a href="../pages/produccion.html">
         <i class="ti ti-box kpi-bg-icon"></i>
         <p class="kpi-label">Producción Total</p>
         <div class="kpi-value" id="dash-unidades"><span class="skeleton"></span></div>
-        <div class="kpi-meta">Unidades producidas</div>
+        <!-- 👇 MEJORA: Muestra Aptas vs Producidas -->
+        <div class="kpi-meta" id="dash-produccion-meta">Unidades producidas</div>
       </a>
     </div>
 
@@ -141,7 +137,7 @@
 
     <div class="kpi-card anim-card eficiencia" title="Eficiencia general">
       <i class="ti ti-trending-up kpi-bg-icon"></i>
-      <p class="kpi-label">Eficiencia</p>
+      <p class="kpi-label">Eficiencia (Calidad)</p>
       <div class="kpi-value" id="dash-eficiencia"><span class="skeleton"></span></div>
       <div class="kpi-meta">Rendimiento general</div>
     </div>
@@ -151,12 +147,7 @@
     <div class="card anim-card">
       <div class="card-header">
         <div class="card-title"><i class="ti ti-chart-bar"></i> Producción de Unidades (Tiempo Real)</div>
-        <div class="flex gap-2 align-center">
-          <!-- Se eliminaron los botones de "Ambos" y "Lotes" porque distorsionaban la gráfica -->
-          <span class="badge badge-success" title="Los datos se actualizan automáticamente">
-            <i class="ti ti-circle-dot"></i> Actualizado
-          </span>
-        </div>
+        <span class="badge badge-success" title="Los datos se actualizan automáticamente"><i class="ti ti-circle-dot"></i> Actualizado</span>
       </div>
       <div class="card-body pie-chart-body">
         <canvas id="productionChart" class="chart-production"></canvas>
@@ -214,7 +205,7 @@
     <div class="card anim-card">
       <div class="card-header">
         <div class="card-title"><i class="ti ti-alert-triangle"></i> Tipos de Defecto Más Frecuentes</div>
-        <span class="badge badge-danger"><i class="ti ti-flame"></i> Ranking</span>
+        <span class="badge badge-danger"><i class="ti ti-flame"></i> Impacto (Piezas)</span>
       </div>
       <div class="card-body placeholder-body" id="top-tipos-defecto">
         <div class="loading-placeholder"><i class="ti ti-loader-2 loading-spinner"></i> Cargando datos...</div>
@@ -262,9 +253,7 @@
       </div>
       <div class="card-body placeholder-body-alerts">
         <ul class="alert-list" id="dashboard-alerts">
-          <li class="alert-loading">
-            <i class="ti ti-loader-2 loading-spinner"></i> Cargando alertas...
-          </li>
+          <li class="alert-loading"><i class="ti ti-loader-2 loading-spinner"></i> Cargando alertas...</li>
         </ul>
       </div>
     </div>
@@ -290,11 +279,7 @@
             </tr>
           </thead>
           <tbody id="dashboard-table">
-            <tr>
-              <td colspan="7" class="table-loading">
-                <i class="ti ti-loader-2 loading-spinner"></i> Cargando registros...
-              </td>
-            </tr>
+            <tr><td colspan="7" class="table-loading"><i class="ti ti-loader-2 loading-spinner"></i> Cargando registros...</td></tr>
           </tbody>
         </table>
       </div>
@@ -307,7 +292,6 @@
   <p>© 2026 Venvidrio — Sistema de Control de Calidad</p>
 </footer>
 
-<!-- ================= SCRIPTS ================= -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="./assets/js/shared.js?v=7"></script>
 <script src="./assets/js/login_app.js?v=7"></script>

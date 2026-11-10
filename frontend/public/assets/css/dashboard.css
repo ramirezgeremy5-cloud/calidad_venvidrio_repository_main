@@ -1,6 +1,6 @@
 /* =============================================
    DASHBOARD — VENVIDRIO
-   dashboard.css — v8 (Ajustes de UI para KPIs y Gráficos)
+   dashboard.css — v9 (Soporte para nuevos KPIs y Filtro Global)
    ============================================= */
 
 /* ================= VARIABLES ESPECÍFICAS DEL DASHBOARD ================= */
@@ -284,7 +284,7 @@ html, body {
   font-family: var(--font-mono);
   transition: color 0.3s ease;
   line-height: 1.1;
-  word-break: break-word; /* Para que los números grandes no se salgan */
+  word-break: break-word; /* Para números grandes */
 }
 @media (min-width: 768px) {
   .kpi-value { font-size: 28px; }
@@ -297,6 +297,7 @@ html, body {
   margin-top: 6px;
   font-size: 10px;
   color: var(--text-hint);
+  line-height: 1.3;
 }
 
 /* ============================================= */

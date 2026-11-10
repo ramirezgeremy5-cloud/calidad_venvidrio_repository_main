@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - DASHBOARD
-   JS v15 - Unidades puras en gráfico, KPIs reales
+   JS v16 - Filtro Global, KPIs de Calidad y Visualización Mejorada
    ========================================== */
 
 // ==========================================
@@ -46,8 +46,8 @@ let eficienciaChart = null;
 let intervaloCarga = null;
 let datosDashboard = null;
 let periodoActual = 7;
-let filtroGrafico = 'unidades'; // 👈 FIX: Solo unidades
 let filtroPlanta = '';
+let filtroEstatus = ''; // 👈 NUEVO: Filtro Global
 let abortController = null;
 
 const CLASE_COLOR = {
@@ -198,20 +198,26 @@ async function cargarDashboard(isBackground = false) {
 
     datosDashboard = { lotes, defectos: defectosFiltrados };
 
-    logSuccess(`${lotes.length} lotes | ${defectosFiltrados.length} defectos`);
+    // 👇 FILTRO GLOBAL DE ESTATUS
+    let lotesFinales = lotes;
+    if (filtroEstatus) {
+      lotesFinales = lotes.filter(l => String(l.estatus) === filtroEstatus);
+    }
 
-    renderKPIs(lotes, defectosFiltrados);
-    renderChartProduccion(lotes);
+    logSuccess(`${lotesFinales.length} lotes | ${defectosFiltrados.length} defectos`);
+
+    renderKPIs(lotesFinales, defectosFiltrados);
+    renderChartProduccion(lotesFinales);
     renderChartDefectos(defectosFiltrados);
-    renderChartApto(lotes);
-    renderChartLineas(lotes);
-    renderTopProductos(lotes);
+    renderChartApto(lotesFinales);
+    renderChartLineas(lotesFinales);
+    renderTopProductos(lotesFinales);
     renderTopTiposDefecto(defectosFiltrados);
-    renderChartEficiencia(lotes);
-    renderTopClientesRetencion(lotes);
-    renderAuditoriasPendientes(lotes, defectosFiltrados);
-    renderAlertas(lotes, defectosFiltrados);
-    renderTablaUltimosRegistros(lotes);
+    renderChartEficiencia(lotesFinales);
+    renderTopClientesRetencion(lotesFinales);
+    renderAuditoriasPendientes(lotesFinales, defectosFiltrados);
+    renderAlertas(lotesFinales, defectosFiltrados);
+    renderTablaUltimosRegistros(lotesFinales);
 
     setText('ultima-actualizacion', new Date().toLocaleTimeString('es-VE'));
 
@@ -246,25 +252,22 @@ function renderKPIs(lotes, defectos) {
   const totalUnidades = lotesFiltrados.reduce((a, l) => a + (l.cantidad || 0), 0);
   const totalLotes = lotesFiltrados.length;
   const totalDefectos = defectosFiltrados.length;
-
   const pendientes = lotesFiltrados.filter(l => String(l.estatus || '100') === '100').length;
 
-  // 👇 FIX CALIDAD 1: Tasa de Rechazo (Aptos vs Total Evaluado a nivel de paletas)
+  // Unidades Aptas para el meta
+  const unidadesAptas = lotesFiltrados.filter(l => String(l.estatus) === '200').reduce((a, l) => a + (l.cantidad || 0), 0);
+  setText('dash-produccion-meta', `${fmtNum(unidadesAptas)} unidades aptas`);
+
+  // Tasa de rechazo por paletas
   const retenidos = lotesFiltrados.filter(l => String(l.estatus) === '300');
   const paletasInspeccionadas = lotesFiltrados.reduce((a, l) => a + (l.paletas || 0), 0);
   const paletasRetenidas = retenidos.reduce((a, l) => a + (l.paletas || 0), 0);
-  const tasaRechazo = paletasInspeccionadas > 0
-    ? ((paletasRetenidas / paletasInspeccionadas) * 100).toFixed(2)
-    : '0.00';
+  const tasaRechazo = paletasInspeccionadas > 0 ? ((paletasRetenidas / paletasInspeccionadas) * 100).toFixed(2) : '0.00';
 
-  // 👇 FIX CALIDAD 2: Eficiencia General (Aptos vs Total Evaluado)
+  // Eficiencia real
   const lotesEvaluados = lotesFiltrados.filter(l => String(l.estatus) === '200' || String(l.estatus) === '300');
   const unidadesEvaluadas = lotesEvaluados.reduce((a, l) => a + (l.cantidad || 0), 0);
-  const unidadesAptas = lotesFiltrados.filter(l => String(l.estatus) === '200').reduce((a, l) => a + (l.cantidad || 0), 0);
-
-  const eficiencia = unidadesEvaluadas > 0
-    ? ((unidadesAptas / unidadesEvaluadas) * 100).toFixed(1)
-    : '0.0';
+  const eficiencia = unidadesEvaluadas > 0 ? ((unidadesAptas / unidadesEvaluadas) * 100).toFixed(1) : '0.0';
 
   setText('dash-unidades', fmtNum(totalUnidades));
   setText('dash-lotes', fmtNum(totalLotes));
@@ -276,14 +279,13 @@ function renderKPIs(lotes, defectos) {
 }
 
 /* ==========================================
-   GRÁFICA: PRODUCCIÓN (SOLO UNIDADES)
+   GRÁFICA: PRODUCCIÓN
 ========================================== */
 function renderChartProduccion(lotes) {
   const canvas = document.getElementById('productionChart');
   if (!canvas) return;
 
   const lotesFiltrados = filtrarPorDias(lotes, 'fecha_produccion');
-
   const porDia = {};
   lotesFiltrados.forEach(l => {
     if (!l.fecha_produccion) return;
@@ -293,43 +295,30 @@ function renderChartProduccion(lotes) {
   });
 
   const fechas = Object.keys(porDia).sort().slice(-14);
-  const labels = fechas.map(f => {
-    const d = new Date(f + 'T00:00:00');
-    return `${d.getDate()}/${d.getMonth() + 1}`;
-  });
+  const labels = fechas.map(f => { const d = new Date(f + 'T00:00:00'); return `${d.getDate()}/${d.getMonth() + 1}`; });
 
-  // 👇 FIX: Solo mostramos el dataset de Unidades para que la gráfica sea legible
   const datasets = [{
     label: 'Unidades Producidas',
     data: fechas.map(f => porDia[f].unidades),
-    backgroundColor: 'rgba(26, 35, 126, 0.75)',
-    borderColor: 'rgba(26, 35, 126, 1)',
-    borderWidth: 2,
-    borderRadius: 6,
-    barPercentage: 0.6
+    backgroundColor: 'rgba(26, 35, 126, 0.75)', borderColor: 'rgba(26, 35, 126, 1)',
+    borderWidth: 2, borderRadius: 6, barPercentage: 0.6
   }];
 
   if (productionChart) productionChart.destroy();
 
   productionChart = new Chart(canvas, {
-    type: 'bar',
-    data: { labels, datasets },
+    type: 'bar', data: { labels, datasets },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       onClick: (e, activeElements) => {
         if (activeElements.length > 0) {
-          const index = activeElements[0].index;
-          const fecha = fechas[index];
+          const fecha = fechas[activeElements[0].index];
           window.location.href = `../pages/produccion.html?fecha=${fecha}`;
         }
       },
       plugins: {
         legend: { position: 'top', labels: { usePointStyle: true, padding: 20, font: { size: 12, weight: '500' } } },
-        tooltip: {
-          backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1a237e', bodyColor: '#333', borderColor: '#e0e0e0', borderWidth: 1, cornerRadius: 8, padding: 12,
-          callbacks: { afterBody: () => 'Haz clic para ver detalle' }
-        }
+        tooltip: { backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1a237e', bodyColor: '#333', borderColor: '#e0e0e0', borderWidth: 1, cornerRadius: 8, padding: 12, callbacks: { afterBody: () => 'Haz clic para ver detalle' } }
       },
       scales: {
         y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 11 } } },
@@ -349,11 +338,7 @@ function renderChartDefectos(defectos) {
 
   const defectosFiltrados = filtrarPorDias(defectos, 'fecha_registro');
   const porClase = { 'Crítico': 0, 'Mayor B+': 0, 'Mayor B-': 0, 'Menor': 0 };
-
-  defectosFiltrados.forEach(d => {
-    const claseNorm = normalizarClase(d.clasificacion);
-    if (porClase[claseNorm] !== undefined) porClase[claseNorm]++;
-  });
+  defectosFiltrados.forEach(d => { const claseNorm = normalizarClase(d.clasificacion); if (porClase[claseNorm] !== undefined) porClase[claseNorm]++; });
 
   const labels = Object.keys(porClase);
   const values = Object.values(porClase);
@@ -363,15 +348,9 @@ function renderChartDefectos(defectos) {
   if (defectosChart) defectosChart.destroy();
 
   defectosChart = new Chart(canvas, {
-    type: 'pie',
-    data: {
-      labels,
-      datasets: [{ data: values, backgroundColor: colors, borderColor: '#fff', borderWidth: 2, hoverOffset: 6 }]
-    },
+    type: 'pie', data: { labels, datasets: [{ data: values, backgroundColor: colors, borderColor: '#fff', borderWidth: 2, hoverOffset: 6 }] },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      layout: { padding: { top: 4, bottom: 4, left: 4, right: 4 } },
+      responsive: true, maintainAspectRatio: false, layout: { padding: { top: 4, bottom: 4, left: 4, right: 4 } },
       onClick: (e, activeElements) => {
         if (activeElements.length > 0) {
           const clase = labels[activeElements[0].index];
@@ -379,31 +358,15 @@ function renderChartDefectos(defectos) {
         }
       },
       plugins: {
-        legend: {
-          position: 'bottom', align: 'center',
-          labels: {
-            usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 8, font: { size: 10, weight: '500' },
-            generateLabels: function (chart) {
-              const data = chart.data;
-              return data.labels.map((label, i) => {
-                const value = data.datasets[0].data[i];
-                const pct = total > 0 ? Math.round((value / total) * 100) : 0;
-                return { text: `${label} (${pct}%)`, fillStyle: data.datasets[0].backgroundColor[i], strokeStyle: data.datasets[0].borderColor, lineWidth: data.datasets[0].borderWidth, pointStyle: 'circle', hidden: false, index: i };
-              });
-            }
-          }
-        },
-        tooltip: {
-          backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1a237e', bodyColor: '#333', borderColor: '#e0e0e0', borderWidth: 1, cornerRadius: 8, padding: 12,
-          callbacks: {
-            label: ctx => {
-              const v = ctx.raw || 0;
-              const pct = total > 0 ? Math.round((v / total) * 100) : 0;
-              return ` ${ctx.label}: ${v} (${pct}%)`;
-            },
-            afterBody: () => 'Haz clic para ver en Defectos'
-          }
-        }
+        legend: { position: 'bottom', align: 'center', labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 8, font: { size: 10, weight: '500' }, generateLabels: function (chart) {
+          const data = chart.data;
+          return data.labels.map((label, i) => {
+            const value = data.datasets[0].data[i];
+            const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+            return { text: `${label} (${pct}%)`, fillStyle: data.datasets[0].backgroundColor[i], strokeStyle: data.datasets[0].borderColor, lineWidth: data.datasets[0].borderWidth, pointStyle: 'circle', hidden: false, index: i };
+          });
+        }}},
+        tooltip: { backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1a237e', bodyColor: '#333', borderColor: '#e0e0e0', borderWidth: 1, cornerRadius: 8, padding: 12, callbacks: { label: ctx => { const v = ctx.raw || 0; const pct = total > 0 ? Math.round((v / total) * 100) : 0; return ` ${ctx.label}: ${v} (${pct}%)`; }, afterBody: () => 'Haz clic para ver en Defectos' } }
       },
       animation: { animateRotate: true, duration: 1000, easing: 'easeOutQuart' }
     }
@@ -428,46 +391,20 @@ function renderChartApto(lotes) {
   if (aptoChart) aptoChart.destroy();
 
   aptoChart = new Chart(canvas, {
-    type: 'pie',
-    data: {
-      labels: ['APTO', 'RETENIDO'],
-      datasets: [{ data: [aptos, retenidos], backgroundColor: ['#2e7d32', '#dc3545'], borderColor: '#fff', borderWidth: 2, hoverOffset: 6 }]
-    },
+    type: 'pie', data: { labels: ['APTO', 'RETENIDO'], datasets: [{ data: [aptos, retenidos], backgroundColor: ['#2e7d32', '#dc3545'], borderColor: '#fff', borderWidth: 2, hoverOffset: 6 }] },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      layout: { padding: { top: 4, bottom: 4, left: 4, right: 4 } },
-      onClick: (e, activeElements) => {
-        if (activeElements.length > 0) {
-          const index = activeElements[0].index;
-          if (index === 1) window.location.href = `../pages/defectos.html`;
-        }
-      },
+      responsive: true, maintainAspectRatio: false, layout: { padding: { top: 4, bottom: 4, left: 4, right: 4 } },
+      onClick: (e, activeElements) => { if (activeElements.length > 0 && activeElements[0].index === 1) window.location.href = `../pages/defectos.html`; },
       plugins: {
-        legend: {
-          position: 'bottom', align: 'center',
-          labels: {
-            usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 8, font: { size: 10, weight: '500' },
-            generateLabels: function (chart) {
-              const data = chart.data;
-              return data.labels.map((label, i) => {
-                const value = data.datasets[0].data[i];
-                const pct = total > 0 ? Math.round((value / total) * 100) : 0;
-                return { text: `${label} (${pct}%)`, fillStyle: data.datasets[0].backgroundColor[i], strokeStyle: data.datasets[0].borderColor, lineWidth: data.datasets[0].borderWidth, pointStyle: 'circle', hidden: false, index: i };
-              });
-            }
-          }
-        },
-        tooltip: {
-          backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1a237e', bodyColor: '#333', borderColor: '#e0e0e0', borderWidth: 1, cornerRadius: 8, padding: 12,
-          callbacks: {
-            label: ctx => {
-              const v = ctx.raw || 0;
-              const pct = total > 0 ? Math.round((v / total) * 100) : 0;
-              return ` ${ctx.label}: ${v} (${pct}%)`;
-            }
-          }
-        }
+        legend: { position: 'bottom', align: 'center', labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 8, font: { size: 10, weight: '500' }, generateLabels: function (chart) {
+          const data = chart.data;
+          return data.labels.map((label, i) => {
+            const value = data.datasets[0].data[i];
+            const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+            return { text: `${label} (${pct}%)`, fillStyle: data.datasets[0].backgroundColor[i], strokeStyle: data.datasets[0].borderColor, lineWidth: data.datasets[0].borderWidth, pointStyle: 'circle', hidden: false, index: i };
+          });
+        }}},
+        tooltip: { backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1a237e', bodyColor: '#333', borderColor: '#e0e0e0', borderWidth: 1, cornerRadius: 8, padding: 12, callbacks: { label: ctx => { const v = ctx.raw || 0; const pct = total > 0 ? Math.round((v / total) * 100) : 0; return ` ${ctx.label}: ${v} (${pct}%)`; } } }
       },
       animation: { animateRotate: true, duration: 1000, easing: 'easeOutQuart' }
     }
@@ -486,7 +423,6 @@ function renderChartLineas(lotes) {
 
   const lotesFiltrados = filtrarPorDias(lotes, 'fecha_produccion');
   const porLinea = {};
-
   lotesFiltrados.forEach(l => {
     const linea = l.linea_produccion || 'Sin línea';
     if (!porLinea[linea]) porLinea[linea] = 0;
@@ -497,43 +433,16 @@ function renderChartLineas(lotes) {
   const labels = ordenados.map(([k]) => k);
   const valores = ordenados.map(([, v]) => v);
   const total = valores.reduce((a, b) => a + b, 0);
-
-  const colores = [
-    'rgba(26, 35, 126, 0.8)', 'rgba(76, 175, 80, 0.8)', 'rgba(255, 152, 0, 0.8)',
-    'rgba(220, 53, 69, 0.8)', 'rgba(23, 162, 184, 0.8)', 'rgba(156, 39, 176, 0.8)',
-    'rgba(255, 87, 34, 0.8)', 'rgba(63, 81, 181, 0.8)'
-  ];
+  const colores = ['rgba(26, 35, 126, 0.8)', 'rgba(76, 175, 80, 0.8)', 'rgba(255, 152, 0, 0.8)', 'rgba(220, 53, 69, 0.8)', 'rgba(23, 162, 184, 0.8)', 'rgba(156, 39, 176, 0.8)', 'rgba(255, 87, 34, 0.8)', 'rgba(63, 81, 181, 0.8)'];
 
   if (lineasChart) lineasChart.destroy();
 
   lineasChart = new Chart(canvas, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Unidades',
-        data: valores,
-        backgroundColor: colores.slice(0, valores.length),
-        borderColor: colores.slice(0, valores.length).map(c => c.replace('0.8', '1')),
-        borderWidth: 2,
-        borderRadius: 6,
-        barPercentage: 0.6
-      }]
-    },
+    type: 'bar', data: { labels, datasets: [{ label: 'Unidades', data: valores, backgroundColor: colores.slice(0, valores.length), borderColor: colores.slice(0, valores.length).map(c => c.replace('0.8', '1')), borderWidth: 2, borderRadius: 6, barPercentage: 0.6 }] },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1a237e', bodyColor: '#333', borderColor: '#e0e0e0', borderWidth: 1, cornerRadius: 8, padding: 12,
-          callbacks: { label: ctx => { const pct = total > 0 ? Math.round((ctx.raw / total) * 100) : 0; return `${ctx.raw.toLocaleString()} unidades (${pct}%)`; } }
-        }
-      },
-      scales: {
-        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 11 } } },
-        x: { grid: { display: false }, ticks: { font: { size: 10, weight: '500' } } }
-      },
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1a237e', bodyColor: '#333', borderColor: '#e0e0e0', borderWidth: 1, cornerRadius: 8, padding: 12, callbacks: { label: ctx => { const pct = total > 0 ? Math.round((ctx.raw / total) * 100) : 0; return `${ctx.raw.toLocaleString()} unidades (${pct}%)`; } } } },
+      scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 11 } } }, x: { grid: { display: false }, ticks: { font: { size: 10, weight: '500' } } } },
       animation: { duration: 800, easing: 'easeOutQuart' }
     }
   });
@@ -548,7 +457,6 @@ function renderTopProductos(lotes) {
 
   const lotesFiltrados = filtrarPorDias(lotes, 'fecha_produccion');
   const porProducto = {};
-
   lotesFiltrados.forEach(l => {
     const prod = l.tipo_producto || 'Sin producto';
     if (!porProducto[prod]) porProducto[prod] = { unidades: 0, lotes: 0, cliente: l.cliente };
@@ -558,25 +466,12 @@ function renderTopProductos(lotes) {
 
   const ordenados = Object.entries(porProducto).sort((a, b) => b[1].unidades - a[1].unidades).slice(0, 5);
 
-  if (ordenados.length === 0) {
-    el.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:1rem 0;"><i class="ti ti-inbox" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;"></i>Sin datos en este período</div>`;
-    return;
-  }
-
+  if (ordenados.length === 0) { el.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:1rem 0;"><i class="ti ti-inbox" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;"></i>Sin datos en este período</div>`; return; }
   const maxUnidades = ordenados[0][1].unidades;
 
   el.innerHTML = ordenados.map(([prod, data], i) => {
     const pct = maxUnidades > 0 ? (data.unidades / maxUnidades) * 100 : 0;
-    return `
-      <div class="rank-item">
-        <div class="rank-num">${i + 1}</div>
-        <div class="rank-info">
-          <div class="rank-name">${esc(prod)}</div>
-          <div class="rank-meta">${data.lotes} lote${data.lotes !== 1 ? 's' : ''} · ${esc(data.cliente || '—')}</div>
-          <div class="rank-bar"><div class="rank-bar-fill" style="width:${pct}%"></div></div>
-        </div>
-        <div class="rank-value">${fmtNum(data.unidades)}</div>
-      </div>`;
+    return `<div class="rank-item"><div class="rank-num">${i + 1}</div><div class="rank-info"><div class="rank-name">${esc(prod)}</div><div class="rank-meta">${data.lotes} lote${data.lotes !== 1 ? 's' : ''} · ${esc(data.cliente || '—')}</div><div class="rank-bar"><div class="rank-bar-fill" style="width:${pct}%"></div></div></div><div class="rank-value">${fmtNum(data.unidades)}</div></div>`;
   }).join('');
 }
 
@@ -589,39 +484,22 @@ function renderTopTiposDefecto(defectos) {
 
   const defectosFiltrados = filtrarPorDias(defectos, 'fecha_registro');
   const porTipo = {};
-
   defectosFiltrados.forEach(d => {
     const tipo = d.tipo_defecto || 'Sin tipo';
     if (!porTipo[tipo]) porTipo[tipo] = { piezas: 0, registros: 0, clase: normalizarClase(d.clasificacion) };
-    porTipo[tipo].piezas += (d.cantidad_piezas || 0);
+    porTipo[tipo].piezas += (d.cantidad_piezas || 0); // 👈 MEJORA: Evaluamos por piezas
     porTipo[tipo].registros += 1;
   });
 
   const ordenados = Object.entries(porTipo).sort((a, b) => b[1].piezas - a[1].piezas).slice(0, 5);
 
-  if (ordenados.length === 0) {
-    el.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:1rem 0;"><i class="ti ti-circle-check" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;color:var(--success);"></i>Sin defectos en este período</div>`;
-    return;
-  }
-
+  if (ordenados.length === 0) { el.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:1rem 0;"><i class="ti ti-circle-check" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;color:var(--success);"></i>Sin defectos en este período</div>`; return; }
   const maxPiezas = ordenados[0][1].piezas;
 
   el.innerHTML = ordenados.map(([tipo, data], i) => {
     const pct = maxPiezas > 0 ? (data.piezas / maxPiezas) * 100 : 0;
     const color = CLASE_COLOR[data.clase] || '#1565c0';
-    return `
-      <div class="rank-item">
-        <div class="rank-num danger">${i + 1}</div>
-        <div class="rank-info">
-          <div class="rank-name">${esc(tipo)}</div>
-          <div class="rank-meta">
-            <span style="color:${color};font-weight:600;">${esc(data.clase)}</span>
-            · ${data.registros} registro${data.registros !== 1 ? 's' : ''}
-          </div>
-          <div class="rank-bar"><div class="rank-bar-fill danger" style="width:${pct}%"></div></div>
-        </div>
-        <div class="rank-value danger">${fmtNum(data.piezas)}</div>
-      </div>`;
+    return `<div class="rank-item"><div class="rank-num danger">${i + 1}</div><div class="rank-info"><div class="rank-name">${esc(tipo)}</div><div class="rank-meta"><span style="color:${color};font-weight:600;">${esc(data.clase)}</span> · ${data.registros} reg.</div><div class="rank-bar"><div class="rank-bar-fill danger" style="width:${pct}%"></div></div></div><div class="rank-value danger">${fmtNum(data.piezas)}</div></div>`;
   }).join('');
 }
 
@@ -636,62 +514,26 @@ function renderChartEficiencia(lotes) {
   const meses = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-    meses.push({
-      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-      label: d.toLocaleDateString('es-VE', { month: 'short' })
-    });
+    meses.push({ key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, label: d.toLocaleDateString('es-VE', { month: 'short' }) });
   }
 
   const valores = meses.map(m => {
-    const lotesMes = lotes.filter(l => {
-      if (!l.fecha_produccion) return false;
-      const d = new Date(l.fecha_produccion);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === m.key;
-    });
-
-    // 👇 FIX: Eficiencia mensual basada en estatus real
+    const lotesMes = lotes.filter(l => { if (!l.fecha_produccion) return false; const d = new Date(l.fecha_produccion); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === m.key; });
     const evaluadosMes = lotesMes.filter(l => String(l.estatus) === '200' || String(l.estatus) === '300');
     const totalEvaluado = evaluadosMes.reduce((a, l) => a + (l.cantidad || 0), 0);
-    
     const aptosMes = lotesMes.filter(l => String(l.estatus) === '200');
     const totalAptos = aptosMes.reduce((a, l) => a + (l.cantidad || 0), 0);
-
     return totalEvaluado > 0 ? Math.round((totalAptos / totalEvaluado) * 100) : 0;
   });
 
   if (eficienciaChart) eficienciaChart.destroy();
 
   eficienciaChart = new Chart(canvas, {
-    type: 'line',
-    data: {
-      labels: meses.map(m => m.label),
-      datasets: [{
-        label: 'Eficiencia (%)',
-        data: valores,
-        borderColor: 'rgba(26, 35, 126, 1)',
-        backgroundColor: 'rgba(26, 35, 126, 0.1)',
-        fill: true,
-        tension: 0.4,
-        pointBackgroundColor: 'rgba(26, 35, 126, 1)',
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-        pointRadius: 4
-      }]
-    },
+    type: 'line', data: { labels: meses.map(m => m.label), datasets: [{ label: 'Eficiencia (%)', data: valores, borderColor: 'rgba(26, 35, 126, 1)', backgroundColor: 'rgba(26, 35, 126, 0.1)', fill: true, tension: 0.4, pointBackgroundColor: 'rgba(26, 35, 126, 1)', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 4 }] },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1a237e', bodyColor: '#333', borderColor: '#e0e0e0', borderWidth: 1, cornerRadius: 8, padding: 12,
-          callbacks: { label: ctx => `${ctx.raw}%` }
-        }
-      },
-      scales: {
-        y: { beginAtZero: true, max: 100, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 11 }, callback: v => v + '%' } },
-        x: { grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
-      },
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1a237e', bodyColor: '#333', borderColor: '#e0e0e0', borderWidth: 1, cornerRadius: 8, padding: 12, callbacks: { label: ctx => `${ctx.raw}%` } } },
+      scales: { y: { beginAtZero: true, max: 100, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 11 }, callback: v => v + '%' } }, x: { grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } },
       animation: { duration: 800, easing: 'easeOutQuart' }
     }
   });
@@ -718,25 +560,12 @@ function renderTopClientesRetencion(lotes) {
 
   const ordenados = Object.entries(porCliente).sort((a, b) => b[1].paletas - a[1].paletas).slice(0, 5);
 
-  if (ordenados.length === 0) {
-    el.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:1rem 0;"><i class="ti ti-circle-check" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;color:var(--success);"></i>Sin retenciones en este período</div>`;
-    return;
-  }
-
+  if (ordenados.length === 0) { el.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:1rem 0;"><i class="ti ti-circle-check" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;color:var(--success);"></i>Sin retenciones en este período</div>`; return; }
   const maxPaletas = ordenados[0][1].paletas;
 
   el.innerHTML = ordenados.map(([cliente, data], i) => {
     const pct = maxPaletas > 0 ? (data.paletas / maxPaletas) * 100 : 0;
-    return `
-      <div class="rank-item">
-        <div class="rank-num danger">${i + 1}</div>
-        <div class="rank-info">
-          <div class="rank-name">${esc(cliente)}</div>
-          <div class="rank-meta">${data.lotes} lote${data.lotes !== 1 ? 's' : ''} retenido${data.lotes !== 1 ? 's' : ''} · ${fmtNum(data.unidades)} uds</div>
-          <div class="rank-bar"><div class="rank-bar-fill danger" style="width:${pct}%"></div></div>
-        </div>
-        <div class="rank-value danger">${fmtNum(data.paletas)} pal.</div>
-      </div>`;
+    return `<div class="rank-item"><div class="rank-num danger">${i + 1}</div><div class="rank-info"><div class="rank-name">${esc(cliente)}</div><div class="rank-meta">${data.lotes} lote${data.lotes !== 1 ? 's' : ''} retenido${data.lotes !== 1 ? 's' : ''} · ${fmtNum(data.unidades)} uds</div><div class="rank-bar"><div class="rank-bar-fill danger" style="width:${pct}%"></div></div></div><div class="rank-value danger">${fmtNum(data.paletas)} pal.</div></div>`;
   }).join('');
 }
 
@@ -748,51 +577,21 @@ function renderAuditoriasPendientes(lotes, defectos) {
   if (!el) return;
 
   const lotesFiltrados = filtrarPorDias(lotes, 'fecha_produccion');
-
-  let pendientes = 0;
-  let aptos = 0;
-  let retenidos = 0;
-  let despachados = 0;
-  let otros = 0;
+  let pendientes = 0, aptos = 0, retenidos = 0, despachados = 0, otros = 0;
 
   lotesFiltrados.forEach(l => {
     const est = String(l.estatus || '100').trim();
     const tieneDefectos = defectos.some(d => String(d.produccion_id) === String(l.id) || String(l.lote_id) === String(l.id));
-
-    if (est === '100') {
-      pendientes++;
-    } else if (est === '200') {
-      if (!tieneDefectos && !l.inspector && !l.observaciones) {
-        pendientes++;
-      } else {
-        aptos++;
-      }
-    } else if (est === '300') {
-      retenidos++;
-    } else if (est === '600') {
-      despachados++;
-    } else {
-      otros++;
-    }
+    if (est === '100') { pendientes++; }
+    else if (est === '200') { if (!tieneDefectos && !l.inspector && !l.observaciones) pendientes++; else aptos++; }
+    else if (est === '300') { retenidos++; }
+    else if (est === '600') { despachados++; }
+    else { otros++; }
   });
 
-  const items = [
-    { valor: pendientes, label: 'Pendientes', color: '#f57c00' },
-    { valor: aptos, label: 'Aptos', color: '#2e7d32' },
-    { valor: retenidos, label: 'Retenidos', color: '#dc3545' },
-    { valor: despachados, label: 'Despachados', color: '#1a237e' },
-    { valor: otros, label: 'Otros', color: '#757575' }
-  ];
+  const items = [{ valor: pendientes, label: 'Pendientes', color: '#f57c00' }, { valor: aptos, label: 'Aptos', color: '#2e7d32' }, { valor: retenidos, label: 'Retenidos', color: '#dc3545' }, { valor: despachados, label: 'Despachados', color: '#1a237e' }, { valor: otros, label: 'Otros', color: '#757575' }];
 
-  el.innerHTML = `
-    <div class="auditorias-grid">
-      ${items.map(it => `
-        <div class="aud-item">
-          <div class="aud-valor" style="color:${it.color};">${it.valor}</div>
-          <div class="aud-label">${it.label}</div>
-        </div>
-      `).join('')}
-    </div>`;
+  el.innerHTML = `<div class="auditorias-grid">${items.map(it => `<div class="aud-item"><div class="aud-valor" style="color:${it.color};">${it.valor}</div><div class="aud-label">${it.label}</div></div>`).join('')}</div>`;
 }
 
 /* ==========================================
@@ -805,50 +604,26 @@ function renderAlertas(lotes, defectos) {
   const alertas = [];
   const lotesConRechazo = lotes.filter(l => String(l.estatus) === '300');
 
-  if (lotesConRechazo.length > 0) {
-    alertas.push({ tipo: 'danger', icono: 'ti ti-alert-triangle', titulo: `${lotesConRechazo.length} lote(s) retenido(s)`, desc: 'Requieren revisión inmediata de calidad.' });
-  }
+  if (lotesConRechazo.length > 0) alertas.push({ tipo: 'danger', icono: 'ti ti-alert-triangle', titulo: `${lotesConRechazo.length} lote(s) retenido(s)`, desc: 'Requieren revisión inmediata de calidad.' });
 
   const criticos = defectos.filter(d => normalizarClase(d.clasificacion) === 'Crítico');
-  if (criticos.length > 0) {
-    alertas.push({ tipo: 'danger', icono: 'ti ti-flame', titulo: `${criticos.length} defecto(s) crítico(s)`, desc: 'Se recomienda auditar los lotes afectados.' });
-  }
+  if (criticos.length > 0) alertas.push({ tipo: 'danger', icono: 'ti ti-flame', titulo: `${criticos.length} defecto(s) crítico(s)`, desc: 'Se recomienda auditar los lotes afectados.' });
 
   const pendientes = lotes.filter(l => String(l.estatus || '100') === '100');
-  if (pendientes.length > 0) {
-    alertas.push({ tipo: 'warning', icono: 'ti ti-clock', titulo: `${pendientes.length} lote(s) sin evaluar`, desc: 'Pendientes de aprobación en el módulo Defectos.' });
-  }
+  if (pendientes.length > 0) alertas.push({ tipo: 'warning', icono: 'ti ti-clock', titulo: `${pendientes.length} lote(s) sin evaluar`, desc: 'Pendientes de aprobación en el módulo Defectos.' });
 
-  if (lotesConRechazo.length === 0 && criticos.length === 0) {
-    alertas.push({ tipo: 'success', icono: 'ti ti-circle-check', titulo: 'Sin alertas críticas', desc: 'Todos los lotes evaluados sin observaciones.' });
-  }
+  if (lotesConRechazo.length === 0 && criticos.length === 0) alertas.push({ tipo: 'success', icono: 'ti ti-circle-check', titulo: 'Sin alertas críticas', desc: 'Todos los lotes evaluados sin observaciones.' });
 
   const lotesEval = lotes.filter(l => ['200', '300'].includes(String(l.estatus)));
   if (lotesEval.length > 0) {
     const efic = (lotes.filter(l => String(l.estatus) === '200').length / lotesEval.length) * 100;
-    if (efic >= 90) {
-      alertas.push({ tipo: 'success', icono: 'ti ti-trending-up', titulo: `Eficiencia del ${efic.toFixed(1)}%`, desc: 'Buen desempeño en control de calidad.' });
-    } else if (efic >= 70) {
-      alertas.push({ tipo: 'warning', icono: 'ti ti-chart-line', titulo: `Eficiencia del ${efic.toFixed(1)}%`, desc: 'Revisar procesos con mayor tasa de rechazo.' });
-    } else {
-      alertas.push({ tipo: 'danger', icono: 'ti ti-trending-down', titulo: `Eficiencia del ${efic.toFixed(1)}%`, desc: 'Atención: tasa de rechazo elevada.' });
-    }
+    if (efic >= 90) alertas.push({ tipo: 'success', icono: 'ti ti-trending-up', titulo: `Eficiencia del ${efic.toFixed(1)}%`, desc: 'Buen desempeño en control de calidad.' });
+    else if (efic >= 70) alertas.push({ tipo: 'warning', icono: 'ti ti-chart-line', titulo: `Eficiencia del ${efic.toFixed(1)}%`, desc: 'Revisar procesos con mayor tasa de rechazo.' });
+    else alertas.push({ tipo: 'danger', icono: 'ti ti-trending-down', titulo: `Eficiencia del ${efic.toFixed(1)}%`, desc: 'Atención: tasa de rechazo elevada.' });
   }
 
-  if (alertas.length === 0) {
-    lista.innerHTML = `<li style="display:flex;align-items:center;gap:10px;padding:12px 0;color:var(--text-muted);"><i class="ti ti-circle-check" style="font-size:1.2rem;color:var(--success);"></i>Sin alertas activas</li>`;
-    return;
-  }
-
-  lista.innerHTML = alertas.map(a => `
-    <li class="alert-item ${a.tipo}">
-      <i class="${a.icono}"></i>
-      <div class="alert-item-body">
-        <div class="alert-item-title">${esc(a.titulo)}</div>
-        <div class="alert-item-desc">${esc(a.desc)}</div>
-      </div>
-    </li>
-  `).join('');
+  if (alertas.length === 0) { lista.innerHTML = `<li style="display:flex;align-items:center;gap:10px;padding:12px 0;color:var(--text-muted);"><i class="ti ti-circle-check" style="font-size:1.2rem;color:var(--success);"></i>Sin alertas activas</li>`; return; }
+  lista.innerHTML = alertas.map(a => `<li class="alert-item ${a.tipo}"><i class="${a.icono}"></i><div class="alert-item-body"><div class="alert-item-title">${esc(a.titulo)}</div><div class="alert-item-desc">${esc(a.desc)}</div></div></li>`).join('');
 }
 
 /* ==========================================
@@ -858,28 +633,14 @@ function renderTablaUltimosRegistros(lotes) {
   const tbody = document.getElementById('dashboard-table');
   if (!tbody) return;
 
-  const recientes = [...lotes]
-    .sort((a, b) => new Date(b.fecha_produccion || b.fecha_registro) - new Date(a.fecha_produccion || a.fecha_registro))
-    .slice(0, 8);
+  const recientes = [...lotes].sort((a, b) => new Date(b.fecha_produccion || b.fecha_registro) - new Date(a.fecha_produccion || a.fecha_registro)).slice(0, 8);
 
-  if (recientes.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);"><i class="ti ti-inbox" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;"></i>No hay registros recientes</td></tr>`;
-    return;
-  }
+  if (recientes.length === 0) { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);"><i class="ti ti-inbox" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;"></i>No hay registros recientes</td></tr>`; return; }
 
   tbody.innerHTML = recientes.map(l => {
     const est = String(l.estatus || '100');
     const badge = ESTATUS_BADGE[est] || { class: 'badge-info', label: est };
-    return `
-      <tr>
-        <td style="padding:8px 12px;font-size:12px;">${fmtFecha(l.fecha_produccion || l.fecha_registro)}</td>
-        <td style="padding:8px 12px;font-size:12px;font-family:monospace;">${esc(l.ticket_carga || '—')}</td>
-        <td style="padding:8px 12px;font-size:12px;font-family:monospace;">${esc(l.codigo_lote || '—')}</td>
-        <td style="padding:8px 12px;font-size:12px;">${esc(l.tipo_producto || '—')}</td>
-        <td style="padding:8px 12px;font-size:12px;">${esc(l.cliente || '—')}</td>
-        <td style="padding:8px 12px;font-size:12px;text-align:right;font-weight:600;">${fmtNum(l.cantidad || 0)}</td>
-        <td style="padding:8px 12px;text-align:center;"><span class="badge ${badge.class}">${badge.label}</span></td>
-      </tr>`;
+    return `<tr><td style="padding:8px 12px;font-size:12px;">${fmtFecha(l.fecha_produccion || l.fecha_registro)}</td><td style="padding:8px 12px;font-size:12px;font-family:monospace;">${esc(l.ticket_carga || '—')}</td><td style="padding:8px 12px;font-size:12px;font-family:monospace;">${esc(l.codigo_lote || '—')}</td><td style="padding:8px 12px;font-size:12px;">${esc(l.tipo_producto || '—')}</td><td style="padding:8px 12px;font-size:12px;">${esc(l.cliente || '—')}</td><td style="padding:8px 12px;font-size:12px;text-align:right;font-weight:600;">${fmtNum(l.cantidad || 0)}</td><td style="padding:8px 12px;text-align:center;"><span class="badge ${badge.class}">${badge.label}</span></td></tr>`;
   }).join('');
 
   const badge = document.getElementById('total-registros-badge');
@@ -894,24 +655,21 @@ function initFiltrosTiempo() {
     btn.addEventListener('click', function () {
       document.querySelectorAll('.filtro-tiempo').forEach(b => b.classList.remove('active'));
       this.classList.add('active');
-
       const dias = this.dataset.dias;
       periodoActual = dias === 'all' ? 'all' : parseInt(dias);
-
-      log(`🔄 Período cambiado a: ${periodoActual} días`);
-
       if (datosDashboard) {
         const { lotes, defectos } = datosDashboard;
-        renderKPIs(lotes, defectos);
-        renderChartProduccion(lotes);
+        let lotesFinales = filtroEstatus ? lotes.filter(l => String(l.estatus) === filtroEstatus) : lotes;
+        renderKPIs(lotesFinales, defectos);
+        renderChartProduccion(lotesFinales);
         renderChartDefectos(defectos);
-        renderChartApto(lotes);
-        renderChartLineas(lotes);
-        renderTopProductos(lotes);
+        renderChartApto(lotesFinales);
+        renderChartLineas(lotesFinales);
+        renderTopProductos(lotesFinales);
         renderTopTiposDefecto(defectos);
-        renderChartEficiencia(lotes);
-        renderTopClientesRetencion(lotes);
-        renderAuditoriasPendientes(lotes, defectos);
+        renderChartEficiencia(lotesFinales);
+        renderTopClientesRetencion(lotesFinales);
+        renderAuditoriasPendientes(lotesFinales, defectos);
       }
     });
   });
@@ -920,77 +678,64 @@ function initFiltrosTiempo() {
 function initFiltroPlanta() {
   const select = document.getElementById('filtro-planta');
   if (!select) return;
+  select.addEventListener('change', function () { filtroPlanta = this.value; cargarDashboard(); });
+}
 
+// 👇 NUEVO: Listener para el filtro global de estatus
+function initFiltroEstatus() {
+  const select = document.getElementById('filtro-estatus');
+  if (!select) return;
   select.addEventListener('change', function () {
-    filtroPlanta = this.value;
-    log(`🔄 Filtro de planta cambiado a: ${filtroPlanta || 'Todas'}`);
-    cargarDashboard();
+    filtroEstatus = this.value;
+    if (datosDashboard) {
+      const { lotes, defectos } = datosDashboard;
+      let lotesFinales = filtroEstatus ? lotes.filter(l => String(l.estatus) === filtroEstatus) : lotes;
+      renderKPIs(lotesFinales, defectos);
+      renderChartProduccion(lotesFinales);
+      renderChartDefectos(defectos);
+      renderChartApto(lotesFinales);
+      renderChartLineas(lotesFinales);
+      renderTopProductos(lotesFinales);
+      renderTopTiposDefecto(defectos);
+      renderChartEficiencia(lotesFinales);
+      renderTopClientesRetencion(lotesFinales);
+      renderAuditoriasPendientes(lotesFinales, defectos);
+      renderAlertas(lotesFinales, defectos);
+      renderTablaUltimosRegistros(lotesFinales);
+    }
   });
 }
 
-/* ==========================================
-   EXPORTAR WORD
-========================================== */
 function exportarDashboardWord() {
-  log('📤 Exportando dashboard a Word...');
   const link = document.createElement('a');
   link.href = `${API_URL}/dashboard/exportar/word`;
   link.setAttribute('download', 'Reporte_Dashboard.docx');
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
 }
 
-/* ==========================================
-   SHORTCUTS
-========================================== */
 function initShortcuts() {
   document.addEventListener('keydown', e => {
-    if (e.ctrlKey && e.key === 'r') { e.preventDefault(); recargarDashboard(); }
+    if (e.ctrlKey && e.key === 'r') { e.preventDefault(); cargarDashboard(); }
     if (e.ctrlKey && e.key === 'e') { e.preventDefault(); exportarDashboardWord(); }
   });
 }
 
-function recargarDashboard() {
-  log('🔄 Recargando dashboard manualmente...');
-  cargarDashboard();
-}
-
-/* ==========================================
-   INIT
-========================================== */
 function iniciarDashboard() {
-  log('🚀 Dashboard Venvidrio iniciado');
-
   initFiltrosTiempo();
   initFiltroPlanta();
+  initFiltroEstatus(); // 👈 Inicializamos el nuevo filtro
   initShortcuts();
 
   document.getElementById('btn-exportar-word')?.addEventListener('click', exportarDashboardWord);
-  document.getElementById('btn-refresh')?.addEventListener('click', recargarDashboard);
-
+  document.getElementById('btn-refresh')?.addEventListener('click', () => cargarDashboard());
   cargarDashboard();
 
   if (intervaloCarga) clearInterval(intervaloCarga);
-  intervaloCarga = setInterval(() => {
-    if (document.visibilityState === 'visible') {
-      log('🔄 Auto-actualización de datos en segundo plano...');
-      cargarDashboard(true);
-    }
-  }, 30000);
-
-  document.querySelectorAll('.kpi-card').forEach(card => {
-    card.addEventListener('click', recargarDashboard);
-  });
-
-  logSuccess('Dashboard inicializado');
+  intervaloCarga = setInterval(() => { if (document.visibilityState === 'visible') cargarDashboard(true); }, 30000);
 }
 
 document.addEventListener('DOMContentLoaded', iniciarDashboard);
 
-/* ==========================================
-   LIMPIEZA AL SALIR
-========================================== */
 window.addEventListener('beforeunload', () => {
   if (intervaloCarga) clearInterval(intervaloCarga);
   if (abortController) abortController.abort();
