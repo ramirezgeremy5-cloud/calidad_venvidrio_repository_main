@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v30 (Hora automática del sistema + Turnos)
+   produccion.js - v31 (Hora Local Caracas + Turnos)
    ========================================== */
 
 (function () {
@@ -76,15 +76,34 @@
     return Number(n.toFixed(decimales)).toString();
   }
 
-  // 🔥 NUEVO: separa un timestamp ISO/string en fecha y hora legibles locales
+  // 🔥 HORA LOCAL DE CARACAS (America/Caracas - UTC-4)
+  // Convierte cualquier timestamp (UTC, ISO, etc.) a la hora exacta de Venezuela.
   function separarFechaHora(timestamp) {
     if (!timestamp) return { fecha: '—', hora: '—' };
+    
     try {
       const d = new Date(timestamp);
       if (isNaN(d.getTime())) return { fecha: '—', hora: '—' };
+
+      // Formateador estricto para la zona horaria de Venezuela
+      const formatterFecha = new Intl.DateTimeFormat('es-VE', {
+        timeZone: 'America/Caracas',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+
+      const formatterHora = new Intl.DateTimeFormat('es-VE', {
+        timeZone: 'America/Caracas',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false // Formato 24h (07:46:09)
+      });
+
       return {
-        fecha: d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-        hora:  d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        fecha: formatterFecha.format(d), // ej: "10/11/2026"
+        hora: formatterHora.format(d)    // ej: "07:46:09"
       };
     } catch (e) {
       return { fecha: '—', hora: '—' };
