@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v33 (Hora Caracas manual + Fix Eliminar)
+   produccion.js - v35 (Fix Modal + Editar Lote)
    ========================================== */
 
 (function () {
@@ -36,6 +36,7 @@
 
   let timeoutBusqueda = null;
   let timeoutsHint = {};
+  let editandoLoteId = null; // 🔥 Variable para saber si estamos editando
 
   const MAQUINA_LINEA_MAP = {
     'A1': 'Línea A', 'A2': 'Línea A', 'A3': 'Línea A', 'A4': 'Línea A',
@@ -77,17 +78,20 @@
   }
 
   // 🔥 LEE LA FECHA Y HORA EXACTA DE SUPABASE Y RESTA 4 HORAS (UTC-4)
+  // Formato de 12 horas con AM/PM y segundos.
   function separarFechaHora(timestamp) {
     if (!timestamp) return { fecha: '—', hora: '—' };
     
     try {
-      // Extraemos los números exactos del string sin conversiones del navegador
-      const match = String(timestamp).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+      // Extraemos los números exactos del string (incluyendo los segundos)
+      const match = String(timestamp).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
       
       if (!match) return { fecha: '—', hora: '—' };
 
-      let [_, year, month, day, hours, minutes] = match;
+      let [_, year, month, day, hours, minutes, seconds] = match;
       let h = parseInt(hours, 10);
+      let m = minutes || '00';
+      let s = seconds || '00';
 
       // Restamos 4 horas manualmente (Venezuela es UTC-4)
       h = h - 4;
@@ -102,9 +106,14 @@
         year = String(dObj.getFullYear());
       }
 
+      // Formato de 12 horas con AM/PM
+      let ampm = h >= 12 ? 'PM' : 'AM';
+      let h12 = h % 12;
+      if (h12 === 0) h12 = 12; // La medianoche y el mediodía se muestran como 12
+
       return {
         fecha: `${day}/${month}/${year}`,
-        hora: `${String(h).padStart(2, '0')}:${minutes}`
+        hora: `${String(h12).padStart(2, '0')}:${m}:${s} ${ampm}`
       };
     } catch (e) {
       return { fecha: '—', hora: '—' };
@@ -628,7 +637,7 @@
           cliente: p.cliente || 'Sin asignar', estatus: p.estatus || '100', estado_auditoria: p.estado_auditoria || 'Pendiente',
           observaciones: p.observaciones || '', fecha_prod: p.fecha_produccion || '',
           fecha: fecha,   // ✅ solo fecha (dd/mm/yyyy)
-          hora: hora      // ✅ solo hora (hh:mm:ss) automática del sistema
+          hora: hora      // ✅ solo hora (hh:mm:ss AM/PM) automática del sistema
         };
       });
 
@@ -750,7 +759,7 @@
   }
 
   window.verLote = function (id) {
-    const lote = lotes.find(l => l.id === id);
+    const lote = lotes.find(l => String(l.id) === String(id));
     if (!lote) return;
 
     setTexto('modal-lote-codigo', lote.codigo);
@@ -869,13 +878,102 @@
       nuevoBtnPDF.addEventListener("click", descargarEtiquetaPDF);
     }
 
-    document.getElementById('modal-ver-lote').style.display = 'flex';
+    // 🔥 Abrimos el modal usando classList
+    document.getElementById('modal-ver-lote').classList.add('show');
   };
 
+  // ==========================================
+  // CONFIGURAR EVENTOS DEL MODAL (CERRAR Y EDITAR)
+  // ==========================================
   function configurarModalLote() {
-    document.getElementById('btn-cerrar-modal-lote')?.addEventListener('click', () => document.getElementById('modal-ver-lote').style.display = 'none');
-    document.getElementById('btn-cerrar-modal-lote-footer')?.addEventListener('click', () => document.getElementById('modal-ver-lote').style.display = 'none');
-    document.getElementById('modal-ver-lote')?.addEventListener('click', (e) => { if (e.target.id === 'modal-ver-lote') e.target.style.display = 'none'; });
+    const modal = document.getElementById('modal-ver-lote');
+    
+    const cerrarModal = () => {
+      if (modal) modal.classList.remove('show');
+    };
+
+    document.getElementById('btn-cerrar-modal-lote')?.addEventListener('click', cerrarModal);
+    document.getElementById('btn-cerrar-modal-lote-footer')?.addEventListener('click', cerrarModal);
+    
+    modal?.addEventListener('click', (e) => { 
+      if (e.target.id === 'modal-ver-lote') cerrarModal();
+    });
+
+    // 🔥 Lógica del botón Editar
+    document.getElementById('btn-editar-lote-modal')?.addEventListener('click', () => {
+      const codigo = document.getElementById('modal-lote-codigo').innerText;
+      const lote = lotes.find(l => l.codigo === codigo);
+      if (!lote) return;
+
+      cerrarModal();
+
+      // Rellenar formulario
+      document.getElementById('ticket_carga').value = lote.ticket_carga !== '—' ? lote.ticket_carga : '';
+      document.getElementById('planta').value = lote.planta || '';
+      document.getElementById('maquina').value = lote.maquina !== '—' ? lote.maquina : '';
+      document.getElementById('turno').value = lote.turno || '';
+      document.getElementById('grupo').value = lote.grupo !== '—' ? lote.grupo : '';
+      document.getElementById('linea').value = lote.linea !== '—' ? lote.linea : '';
+      document.getElementById('operador').value = lote.op || '';
+      document.getElementById('molde').value = lote.molde || '';
+      document.getElementById('item').value = lote.item !== '—' ? lote.item : '';
+      document.getElementById('acabado').value = lote.acabado !== '—' ? lote.acabado : '';
+      document.getElementById('material').value = lote.material || '';
+      document.getElementById('tipo_boca').value = lote.tipo_boca || '';
+      
+      // Capacidad
+      document.getElementById('capacidad').value = lote.capacidad_ml || '';
+      document.getElementById('capacidad_unidad').value = lote.unidad_capacidad || 'ml';
+
+      // Producto
+      const prodSelect = document.getElementById('producto-select');
+      if (prodSelect) {
+        const match = Array.from(prodSelect.options).find(o => o.value.toUpperCase() === lote.prod.toUpperCase());
+        if (match) prodSelect.value = match.value;
+      }
+
+      // Cliente
+      const cliSelect = document.getElementById('cliente-select');
+      if (cliSelect) {
+        const matchCli = Array.from(cliSelect.options).find(o => o.value.toUpperCase() === lote.cliente.toUpperCase());
+        if (matchCli) cliSelect.value = matchCli.value;
+      }
+
+      // Cantidades
+      document.getElementById('cantidad').value = lote.uds || '';
+      document.getElementById('paletas').value = lote.paletas || '';
+      document.getElementById('bpp').value = lote.bpp || '';
+      document.getElementById('bpc').value = lote.bpc || '';
+      document.getElementById('camadas_paleta').value = lote.camadas_paleta || '';
+      document.getElementById('cajas_producidas').value = lote.cajas_producidas || '';
+      document.getElementById('gruesas').value = lote.gruesas || '';
+      document.getElementById('gruesas_paleta').value = lote.gruesas_por_paleta || '';
+      document.getElementById('docenas').value = lote.docenas || '';
+      
+      // Dimensiones
+      if (lote.tamano_muestra) aplicarDimensionesDesdeString(lote.tamano_muestra);
+      
+      // Fecha
+      if (lote.fecha_prod) document.getElementById('fecha-prod').value = lote.fecha_prod.split('T')[0];
+      
+      // Observaciones
+      document.getElementById('obs-prod').value = lote.observaciones || '';
+
+      // 🔥 Cambiamos el modo a "Editando"
+      editandoLoteId = lote.id;
+      
+      // Cambiar texto del botón
+      const btnRegistrar = document.getElementById('btn-registrar');
+      if (btnRegistrar) {
+        btnRegistrar.innerHTML = '<i class="ti ti-edit"></i> Actualizar Lote';
+      }
+
+      // Hacer scroll hacia el formulario
+      document.querySelector('.prod-layout').scrollIntoView({ behavior: 'smooth' });
+      
+      // Ir a la pestaña de cantidades o contexto para que el usuario vea los cambios
+      document.querySelector('[data-tab="tab-contexto"]')?.click();
+    });
   }
 
   function renderTabla(filtro = '') {
@@ -1046,7 +1144,7 @@
   }
 
   // ==========================================
-  // REGISTRAR
+  // REGISTRAR / ACTUALIZAR
   // ==========================================
   function initFormularioRegistro() {
     const btnRegistrar = document.getElementById('btn-registrar');
@@ -1104,9 +1202,6 @@
       btn.innerHTML = '<i class="ti ti-loader"></i> Guardando...';
       btn.disabled = true;
 
-      // 🔥 NOTA: NO enviamos "hora" ni "fecha_registro". El backend la genera
-      // automáticamente con datetime.now() al crear el registro. El frontend
-      // solo la lee después en cargarProduccion().
       const body = {
         ticket_carga: ticket_carga || null,
         planta: planta,
@@ -1144,7 +1239,11 @@
       if (fecha) body.fecha_produccion = fecha;
 
       try {
-        if (modoNuevoProducto && prod && guardarEnCatalogo) {
+        // Si hay un ID en edición, hacemos PUT, si no, POST
+        const method = editandoLoteId ? 'PUT' : 'POST';
+        const urlEndpoint = editandoLoteId ? `${API_URL}/produccion/${editandoLoteId}` : `${API_URL}/produccion`;
+
+        if (modoNuevoProducto && prod && guardarEnCatalogo && method === 'POST') {
           const productBody = { 
             nombre: prod, item: item || null, acabado: acabado || null, 
             capacidad_ml: capacidadMl !== null ? Math.round(capacidadMl) : null, 
@@ -1161,7 +1260,7 @@
           }
         }
 
-        if (modoNuevoCliente && cliente) {
+        if (modoNuevoCliente && cliente && method === 'POST') {
           const resCli = await fetch(`${API_URL}/clientes`, { method: 'POST', headers: jsonHeader(), body: JSON.stringify({ nombre: cliente }) });
           if (!resCli.ok) {
             const err = await resCli.json().catch(() => ({}));
@@ -1170,7 +1269,7 @@
           }
         }
 
-        const response = await fetch(`${API_URL}/produccion`, { method: 'POST', headers: jsonHeader(), body: JSON.stringify(body) });
+        const response = await fetch(urlEndpoint, { method: method, headers: jsonHeader(), body: JSON.stringify(body) });
         if (!response.ok) {
           if (response.status === 401) { window.location.href = '../public/login.html'; return; }
           const errorData = await response.json().catch(() => ({}));
@@ -1183,23 +1282,27 @@
         await cargarOpcionesRegistradas();
         await cargarProduccion(filtrosActivos);
 
-        if (modoNuevoProducto && prod) {
+        if (modoNuevoProducto && prod && method === 'POST') {
           const sp = document.getElementById('producto-select');
           if (sp) { const match = Array.from(sp.options).find(o => o.value.toUpperCase() === prod.toUpperCase()); if (match) sp.value = match.value; }
         }
-        if (modoNuevoCliente && cliente) {
+        if (modoNuevoCliente && cliente && method === 'POST') {
           const sc = document.getElementById('cliente-select');
           if (sc) { const match = Array.from(sc.options).find(o => o.value.toUpperCase() === cliente.toUpperCase()); if (match) sc.value = match.value; }
         }
 
-        mostrarToast('✅ Lote registrado correctamente');
+        mostrarToast(method === 'PUT' ? '✅ Lote actualizado correctamente' : '✅ Lote registrado correctamente');
+        
+        // Resetear estado de edición
+        editandoLoteId = null;
+        document.getElementById('btn-registrar').innerHTML = '<i class="ti ti-device-floppy"></i> Guardar Lote';
         document.getElementById('btn-limpiar').click();
 
       } catch (error) {
         console.error('Error registrando producción:', error);
         mostrarToast(error.message || 'No se pudo registrar la producción', true);
       } finally {
-        btn.innerHTML = originalHtml;
+        btn.innerHTML = editandoLoteId ? '<i class="ti ti-edit"></i> Actualizar Lote' : '<i class="ti ti-device-floppy"></i> Guardar Lote';
         btn.disabled = false;
       }
     });
@@ -1213,6 +1316,12 @@
     if (!btnLimpiar) return;
     btnLimpiar.addEventListener('click', async (e) => {
       e.preventDefault();
+
+      // 🔥 Si estamos editando, cancelamos la edición
+      if (editandoLoteId) {
+        editandoLoteId = null;
+        document.getElementById('btn-registrar').innerHTML = '<i class="ti ti-device-floppy"></i> Guardar Lote';
+      }
 
       const campos = ['ticket_carga', 'grupo', 'linea', 'acabado', 'item', 'material', 'tipo_boca', 'molde', 'bpp', 'bpc', 'camadas_paleta', 'cantidad', 'paletas', 'cajas_producidas', 'gruesas', 'capacidad', 'dim_altura_cil', 'gruesas_paleta', 'docenas', 'obs-prod'];
 
