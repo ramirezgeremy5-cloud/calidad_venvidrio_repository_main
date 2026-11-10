@@ -1,7 +1,6 @@
 /* ==========================================================
    PRODUCCIÓN — VENVIDRIO
-   produccion.css — v12 (Alineado a auditoria_producto.css v3
-   y defectos.css v14)
+   produccion.css — v13 (Alineado a HTML con Altura + Cálculo Bidireccional)
    ========================================================== */
 
 /* ================= VARIABLES (idénticas a auditoría/defectos) ================= */
@@ -308,25 +307,51 @@ body {
 .field textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 .field-hint { font-size: 11.5px; color: var(--text-hint); margin-top: 2px; line-height: 1.4; }
 
-/* ================= CAMPOS BLOQUEADOS ================= */
-.field-auto input, .field-auto select {
+/* ================= CAMPOS BLOQUEADOS Y EDITABLES ================= */
+.field-auto input, 
+.field-auto select {
   background: #f8fafc;
   color: var(--text-muted);
   border-color: var(--border);
   cursor: not-allowed;
 }
-.field-auto.editando input, .field-auto.editando select {
+
+/* Campos editables que rompen la regla general */
+#capacidad_unidad, 
+#bpc, 
+#camadas_paleta,
+#paletas {
   background: #fff !important;
   color: var(--text-main) !important;
-  border-color: var(--brand-2) !important;
   cursor: text !important;
+  border-color: var(--brand-1) !important;
+  border-width: 1.5px;
 }
-#capacidad_unidad, #bpc {
-  background: #fff !important;
-  color: var(--text-main) !important;
-  cursor: text !important;
-}
+
+/* Solo los select mantienen cursor pointer */
 #capacidad_unidad { cursor: pointer !important; }
+
+/* BPP es calculado, debe verse como readonly */
+#bpp {
+  background: var(--brand-soft) !important;
+  color: var(--brand-1) !important;
+  font-weight: 600;
+  border-color: var(--brand-line) !important;
+  cursor: not-allowed !important;
+  text-align: center;
+}
+
+/* Campos auto-calculados visualmente distintos */
+#cajas_producidas,
+#gruesas,
+#gruesas_paleta {
+  background: var(--brand-soft) !important;
+  color: var(--brand-1) !important;
+  font-weight: 600;
+  border-color: var(--brand-line) !important;
+  cursor: not-allowed !important;
+  text-align: center;
+}
 
 .input-lote-auto {
   font-family: var(--font-mono) !important;

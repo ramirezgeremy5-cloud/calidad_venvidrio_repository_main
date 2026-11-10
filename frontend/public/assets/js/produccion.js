@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v22 (PDF Expandido al 100% de A4)
+   produccion.js - v24 (Cálculo bidireccional Unidades ↔ Paletas)
    ========================================== */
 
 (function () {
@@ -25,7 +25,6 @@
   let modoNuevoCliente = false;
   let productosCache = {};
 
-  let geometriaActual = 'cilindrico';
   let timeoutBusqueda = null;
 
   const MAQUINA_LINEA_MAP = {
@@ -55,11 +54,13 @@
   // ==========================================
   function tokenHeader() { return { 'Authorization': `Bearer ${localStorage.getItem('token')}` }; }
   function jsonHeader() { return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` }; }
+  
   function parseNumero(valor) {
     if (valor === null || valor === undefined || valor === '') return null;
     const n = parseFloat(valor);
     return isNaN(n) ? null : n;
   }
+  
   function formatearNumero(n, decimales = 2) {
     if (n === null || n === undefined || isNaN(n)) return '';
     return Number(n.toFixed(decimales)).toString();
@@ -97,6 +98,7 @@
         if (document.getElementById('dropdownAvatar')) document.getElementById('dropdownAvatar').innerHTML = avatarHtml;
         ['navUsername', 'dropdownName'].forEach(id => { if (document.getElementById(id)) document.getElementById(id).textContent = user.nombre || 'Usuario'; });
         if (document.getElementById('dropdownEmail')) document.getElementById('dropdownEmail').textContent = user.correo || 'usuario@email.com';
+        
         const operadorInput = document.getElementById('operador');
         if (operadorInput && !operadorInput.value) operadorInput.value = user.nombre || '';
       } catch (e) { console.error(e); }
@@ -154,7 +156,7 @@
   }
 
   // ==========================================
-  // CAPACIDAD Y GEOMETRÍA
+  // CAPACIDAD
   // ==========================================
   function unidadActual() { return document.getElementById('capacidad_unidad')?.value === 'l' ? 'l' : 'ml'; }
   function capacidadMlActual() {
@@ -186,34 +188,16 @@
     });
   }
 
-  function cambiarGeometria(tipo) {
-    geometriaActual = tipo;
-    document.querySelectorAll('.geo-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.geo === tipo));
-    const panelCil = document.getElementById('dim-cilindrico');
-    const panelRect = document.getElementById('dim-rectangular');
-    if (panelCil) panelCil.style.display = tipo === 'cilindrico' ? 'block' : 'none';
-    if (panelRect) panelRect.style.display = tipo === 'rectangular' ? 'block' : 'none';
-    actualizarPreviewDimensiones();
-  }
+  // ==========================================
+  // DIMENSIONES (SOLO ALTURA)
+  // ==========================================
   function obtenerDimensiones() {
-    if (geometriaActual === 'cilindrico') {
-      const d = document.getElementById('dim_diametro')?.value?.trim() || '';
-      const h = document.getElementById('dim_altura_cil')?.value?.trim() || '';
-      if (!d && !h) return null;
-      const dFmt = d ? (/cm|mm|pulg/i.test(d) ? d : `${d} cm`) : '';
-      const hFmt = h ? (/cm|mm|pulg/i.test(h) ? h : `${h} cm`) : '';
-      return `Ø ${dFmt} × H ${hFmt}`.trim();
-    } else {
-      const l = document.getElementById('dim_largo')?.value?.trim() || '';
-      const a = document.getElementById('dim_ancho')?.value?.trim() || '';
-      const h = document.getElementById('dim_alto')?.value?.trim() || '';
-      if (!l && !a && !h) return null;
-      const lFmt = l ? (/cm|mm|pulg/i.test(l) ? l : `${l} cm`) : '';
-      const aFmt = a ? (/cm|mm|pulg/i.test(a) ? a : `${a} cm`) : '';
-      const hFmt = h ? (/cm|mm|pulg/i.test(h) ? h : `${h} cm`) : '';
-      return `L ${lFmt} × A ${aFmt} × H ${hFmt}`.trim();
-    }
+    const h = document.getElementById('dim_altura_cil')?.value?.trim() || '';
+    if (!h) return null;
+    const hFmt = /cm|mm|pulg|"/i.test(h) ? h : `${h} pulg`;
+    return `H ${hFmt}`.trim();
   }
+
   function actualizarPreviewDimensiones() {
     const preview = document.getElementById('dim-preview');
     const previewText = document.getElementById('dim-preview-text');
@@ -221,34 +205,18 @@
     const dim = obtenerDimensiones();
     if (dim) { previewText.textContent = dim; preview.style.display = 'flex'; } else { preview.style.display = 'none'; }
   }
+
   function configurarEventosDimensiones() {
-    document.querySelectorAll('.geo-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => { e.preventDefault(); cambiarGeometria(btn.dataset.geo); });
-    });
-    ['dim_diametro', 'dim_altura_cil', 'dim_largo', 'dim_ancho', 'dim_alto'].forEach(id => {
-      document.getElementById(id)?.addEventListener('input', actualizarPreviewDimensiones);
-    });
-    cambiarGeometria('cilindrico');
+    document.getElementById('dim_altura_cil')?.addEventListener('input', actualizarPreviewDimensiones);
   }
+
   function aplicarDimensionesDesdeString(dimensiones) {
     if (!dimensiones || typeof dimensiones !== 'string') return;
     const str = dimensiones.trim();
     if (!str) return;
-    const esRectangular = /^L\s/i.test(str) || /^L\d/i.test(str);
-    if (esRectangular) {
-      cambiarGeometria('rectangular');
-      const lMatch = str.match(/L\s*([\d.,]+\s*(?:cm|mm|pulg)?)/i);
-      const aMatch = str.match(/A\s*([\d.,]+\s*(?:cm|mm|pulg)?)/i);
-      const hMatch = str.match(/H\s*([\d.,]+\s*(?:cm|mm|pulg)?)/i);
-      if (document.getElementById('dim_largo') && lMatch) document.getElementById('dim_largo').value = lMatch[1].trim();
-      if (document.getElementById('dim_ancho') && aMatch) document.getElementById('dim_ancho').value = aMatch[1].trim();
-      if (document.getElementById('dim_alto') && hMatch) document.getElementById('dim_alto').value = hMatch[1].trim();
-    } else {
-      cambiarGeometria('cilindrico');
-      const dMatch = str.match(/[ØDø]\s*([\d.,]+\s*(?:cm|mm|pulg)?)/i);
-      const hMatch = str.match(/H\s*([\d.,]+\s*(?:cm|mm|pulg)?)/i);
-      if (document.getElementById('dim_diametro') && dMatch) document.getElementById('dim_diametro').value = dMatch[1].trim();
-      if (document.getElementById('dim_altura_cil') && hMatch) document.getElementById('dim_altura_cil').value = hMatch[1].trim();
+    const hMatch = str.match(/H\s*([\d.,]+\s*(?:cm|mm|pulg|")?)/i);
+    if (document.getElementById('dim_altura_cil') && hMatch) {
+      document.getElementById('dim_altura_cil').value = hMatch[1].trim();
     }
     actualizarPreviewDimensiones();
   }
@@ -289,10 +257,8 @@
       const el = document.getElementById(id); if (el) el.value = '';
     });
     const unidad = document.getElementById('capacidad_unidad'); if (unidad) unidad.value = 'ml';
-    ['dim_diametro', 'dim_altura_cil', 'dim_largo', 'dim_ancho', 'dim_alto'].forEach(id => {
-      const el = document.getElementById(id); if (el) el.value = '';
-    });
-    cambiarGeometria('cilindrico'); actualizarPreviewDimensiones();
+    const alturaInput = document.getElementById('dim_altura_cil'); if (alturaInput) alturaInput.value = '';
+    actualizarPreviewDimensiones();
   }
 
   function autocompletarFichaTecnica(producto) {
@@ -302,12 +268,14 @@
     if (document.getElementById('material')) document.getElementById('material').value = producto.material || '';
     if (document.getElementById('tipo_boca')) document.getElementById('tipo_boca').value = producto.tipo_boca || '';
     if (document.getElementById('juego_envases')) document.getElementById('juego_envases').value = producto.juego_envases || '';
-    if (document.getElementById('bpp')) document.getElementById('bpp').value = (producto.bpp !== null && producto.bpp !== undefined) ? producto.bpp : '';
+    
+    if (document.getElementById('bpc')) document.getElementById('bpc').value = (producto.bpc !== null && producto.bpc !== undefined) ? producto.bpc : '';
+    if (document.getElementById('camadas_paleta')) document.getElementById('camadas_paleta').value = (producto.camadas_por_paleta !== null && producto.camadas_por_paleta !== undefined) ? producto.camadas_por_paleta : '';
     
     if (document.getElementById('capacidad_unidad')) document.getElementById('capacidad_unidad').value = 'ml';
     escribirCapacidadEnMl(producto.capacidad_ml ?? null);
     if (producto.dimensiones) aplicarDimensionesDesdeString(producto.dimensiones);
-    recalcularTodo();
+    recalcularTodo('cantidad');
   }
 
   function toggleNuevoProducto(forzarActivo) {
@@ -422,23 +390,79 @@
     if (lineaEl && maquina && MAQUINA_LINEA_MAP[maquina]) lineaEl.value = MAQUINA_LINEA_MAP[maquina];
   }
 
-  function recalcularTodo() {
-    const cantidad = parseNumero(document.getElementById('cantidad')?.value);
-    const bpp = parseNumero(document.getElementById('bpp')?.value);
-    const bpc = parseNumero(document.getElementById('bpc')?.value);
+  // ==========================================
+  // CÁLCULO BIDIRECCIONAL (Unidades ↔ Paletas)
+  // ==========================================
+  function recalcularTodo(origen = 'cantidad') {
+    const cantidadEl = document.getElementById('cantidad');
     const paletasEl = document.getElementById('paletas');
+    const bppEl = document.getElementById('bpp');
+    const bpcEl = document.getElementById('bpc');
+    const camadasEl = document.getElementById('camadas_paleta');
     const cajasEl = document.getElementById('cajas_producidas');
     const gruesasEl = document.getElementById('gruesas');
     const gruesasPaletaEl = document.getElementById('gruesas_paleta');
 
-    if (cantidad && bpp && bpp > 0 && paletasEl) paletasEl.value = formatearNumero(cantidad / bpp, 2); else if (paletasEl) paletasEl.value = '';
-    if (cantidad && bpc && bpc > 0 && cajasEl) cajasEl.value = formatearNumero(cantidad / bpc, 2); else if (cajasEl) cajasEl.value = '';
-    if (cantidad && gruesasEl) gruesasEl.value = formatearNumero(cantidad / BOTELLAS_POR_GRUESA, 2); else if (gruesasEl) gruesasEl.value = '';
-    if (bpp && bpp > 0 && gruesasPaletaEl) gruesasPaletaEl.value = formatearNumero(bpp / BOTELLAS_POR_GRUESA, 2); else if (gruesasPaletaEl) gruesasPaletaEl.value = '';
+    const cantidad = parseNumero(cantidadEl?.value);
+    const paletasInput = parseNumero(paletasEl?.value);
+    const bpc = parseNumero(bpcEl?.value);
+    const camadasPaleta = parseNumero(camadasEl?.value);
+
+    // 1. Calcular BPP automáticamente
+    let bppCalculado = null;
+    if (bpc && camadasPaleta && bpc > 0 && camadasPaleta > 0) {
+      bppCalculado = bpc * camadasPaleta;
+      if (bppEl) bppEl.value = formatearNumero(bppCalculado, 0);
+    } else {
+      if (bppEl) bppEl.value = '';
+    }
+
+    // 2. Lógica bidireccional
+    let cantidadFinal = cantidad;
+    let paletasFinal = paletasInput;
+
+    if (origen === 'paletas' && paletasInput && bppCalculado) {
+      // El operador escribió las paletas -> calcular unidades
+      cantidadFinal = paletasInput * bppCalculado;
+      if (cantidadEl) cantidadEl.value = formatearNumero(cantidadFinal, 0);
+    } else if (origen === 'cantidad' && cantidad && bppCalculado) {
+      // El operador escribió las unidades -> calcular paletas
+      paletasFinal = cantidad / bppCalculado;
+      if (paletasEl) paletasEl.value = formatearNumero(paletasFinal, 2);
+    }
+
+    // 3. Cajas / Canastas
+    if (cantidadFinal && bpc && bpc > 0 && cajasEl) {
+      cajasEl.value = formatearNumero(cantidadFinal / bpc, 2);
+    } else if (cajasEl) {
+      cajasEl.value = '';
+    }
+
+    // 4. Gruesas
+    if (cantidadFinal && gruesasEl) {
+      gruesasEl.value = formatearNumero(cantidadFinal / BOTELLAS_POR_GRUESA, 2);
+    } else if (gruesasEl) {
+      gruesasEl.value = '';
+    }
+
+    // 5. Gruesas por Paleta
+    if (bppCalculado && gruesasPaletaEl) {
+      gruesasPaletaEl.value = formatearNumero(bppCalculado / BOTELLAS_POR_GRUESA, 2);
+    } else if (gruesasPaletaEl) {
+      gruesasPaletaEl.value = '';
+    }
   }
 
   function configurarAutoCalculos() {
-    ['cantidad', 'bpp', 'bpc'].forEach(id => document.getElementById(id)?.addEventListener('input', recalcularTodo));
+    // Cantidad: recalcula paletas
+    document.getElementById('cantidad')?.addEventListener('input', () => recalcularTodo('cantidad'));
+    
+    // Paletas: recalcula unidades
+    document.getElementById('paletas')?.addEventListener('input', () => recalcularTodo('paletas'));
+    
+    // BPC y Camadas: al cambiarlas recalculamos en base a la cantidad
+    document.getElementById('bpc')?.addEventListener('input', () => recalcularTodo('cantidad'));
+    document.getElementById('camadas_paleta')?.addEventListener('input', () => recalcularTodo('cantidad'));
   }
 
   // ==========================================
@@ -468,9 +492,12 @@
       lotes = data.map(p => ({
         id: p.id, codigo: p.codigo_lote, ticket_carga: p.ticket_carga || '—', prod: p.tipo_producto, molde: p.molde || p.tipo_producto,
         item: p.item || '—', acabado: p.acabado || '—', material: p.material || '', tipo_boca: p.tipo_boca || '', maquina: p.maquina || '—',
-        grupo: p.grupo || '—', bpp: p.bpp || 0, bpc: p.bot_por_caja || p.bpc || 0, cajas_producidas: p.cajas_producidas || 0,
+        grupo: p.grupo || '—', bpp: p.bpp || 0, 
+        bpc: p.bot_por_caja || p.bpc || 0, 
+        camadas_paleta: p.camadas_por_paleta || 0,
+        cajas_producidas: p.cajas_producidas || 0,
         capacidad_ml: p.capacidad_ml ?? p.capacidad ?? null, unidad_capacidad: (p.unidad_capacidad === 'l' || p.unidad_capacidad === 'L') ? 'l' : 'ml',
-        orden: p.orden || '—', linea: p.linea_produccion, planta: p.planta || 'Valera', op: p.operador, uds: p.cantidad, turno: p.turno,
+        linea: p.linea_produccion, planta: p.planta || 'Valera', op: p.operador, uds: p.cantidad, turno: p.turno,
         paletas: p.paletas || 0, gruesas: p.gruesas || 0, juego_envases: p.juego_envases || '', tamano_muestra: p.tamano_muestra || '',
         bot_por_canada: p.bot_por_canada || 0, bot_por_paleta: p.bot_por_paleta || 0, gruesas_por_paleta: p.gruesas_por_paleta || 0,
         cliente: p.cliente || 'Sin asignar', estatus: p.estatus || '100', estado_auditoria: p.estado_auditoria || 'Pendiente',
@@ -531,7 +558,7 @@
     try { const d = new Date(fechaStr + 'T00:00:00'); return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (e) { return fechaStr; }
   }
 
-  // --- FUNCIONES PARA DESCARGAR IMAGEN Y PDF (AHORA OCUPA TODA LA HOJA A4) ---
+  // --- FUNCIONES PARA DESCARGAR IMAGEN Y PDF ---
   function descargarEtiquetaJPG() {
     const elementoCaptura = document.getElementById("ticket-para-captura");
     if (!elementoCaptura) return;
@@ -545,10 +572,7 @@
 
     setTimeout(() => {
       html2canvas(elementoCaptura, { 
-        scale: 3, 
-        useCORS: true, 
-        backgroundColor: '#ffffff',
-        width: 420
+        scale: 3, useCORS: true, backgroundColor: '#ffffff', width: 420
       }).then(canvas => {
         const imgData = canvas.toDataURL("image/jpeg", 1.0);
         const enlace = document.createElement('a');
@@ -561,10 +585,8 @@
         btn.innerHTML = originalHtml;
         btn.disabled = false;
       }).catch(err => { 
-        console.error(err); 
-        mostrarToast("Error al generar la imagen", true); 
-        btn.innerHTML = originalHtml;
-        btn.disabled = false;
+        console.error(err); mostrarToast("Error al generar la imagen", true); 
+        btn.innerHTML = originalHtml; btn.disabled = false;
       });
     }, 100);
   }
@@ -582,37 +604,24 @@
 
     setTimeout(() => {
       html2canvas(elementoCaptura, { 
-        scale: 3, 
-        useCORS: true, 
-        backgroundColor: '#ffffff',
-        width: 420
+        scale: 3, useCORS: true, backgroundColor: '#ffffff', width: 420
       }).then(canvas => {
         const imgData = canvas.toDataURL("image/jpeg", 1.0);
         const { jsPDF } = window.jspdf;
-        
         const pdf = new jsPDF('p', 'mm', 'a4');
-        
-        // 👇 AQUÍ ESTÁ EL CAMBIO: Ancho de 190mm (deja 10mm de margen a cada lado)
         const imgWidth = 190; 
         const imgHeight = (canvas.height * imgWidth) / canvas.width; 
-
-        const x = 10; 
-        const y = 10; 
-
-        pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
+        pdf.addImage(imgData, 'JPEG', 10, 10, imgWidth, imgHeight);
         pdf.save("etiqueta_lote_" + (document.getElementById("modal-lote-codigo").innerText || "sin_id") + ".pdf");
         
         btn.innerHTML = originalHtml;
         btn.disabled = false;
       }).catch(err => { 
-        console.error(err); 
-        mostrarToast("Error al generar el PDF", true); 
-        btn.innerHTML = originalHtml;
-        btn.disabled = false;
+        console.error(err); mostrarToast("Error al generar el PDF", true); 
+        btn.innerHTML = originalHtml; btn.disabled = false;
       });
     }, 100);
   }
-  // ---------------------------------------------
 
   window.verLote = function (id) {
     const lote = lotes.find(l => l.id === id);
@@ -630,21 +639,18 @@
     setTexto('detail-bpp', lote.bpp);
     setTexto('detail-acabado', lote.acabado);
     setTexto('detail-juego-envases', lote.juego_envases);
-    
-    let dimensionesMostrar = '—';
-    if (productosCache[lote.prod] && productosCache[lote.prod].dimensiones) dimensionesMostrar = productosCache[lote.prod].dimensiones;
-    else if (lote.tamano_muestra && typeof lote.tamano_muestra === 'string' && lote.tamano_muestra.includes('cm')) dimensionesMostrar = lote.tamano_muestra;
-    setTexto('detail-dimensiones', dimensionesMostrar);
+    setTexto('detail-dimensiones', lote.tamano_muestra || '—');
 
     let bpcMostrar = lote.bpc || lote.bot_por_canada || 0;
     if (bpcMostrar === 0 && productosCache[lote.prod]) bpcMostrar = productosCache[lote.prod].bpc || 0;
     setTexto('detail-bpc', bpcMostrar || '—');
+    
+    setTexto('detail-camadas-paleta', lote.camadas_paleta || '—');
     setTexto('detail-maquina', lote.maquina);
     setTexto('detail-linea', lote.linea);
     setTexto('detail-molde', lote.molde);
     setTexto('detail-grupo', lote.grupo);
     setTexto('detail-operador', lote.op);
-    setTexto('detail-orden', lote.orden);
     setTexto('detail-ticket', lote.ticket_carga);
     setTexto('detail-cantidad', lote.uds ? lote.uds.toLocaleString() : '—');
     setTexto('detail-paletas', lote.paletas);
@@ -664,35 +670,24 @@
     setTexto('detail-estado-auditoria', estadoAuditoria);
     setTexto('detail-observaciones', lote.observaciones);
 
-    // ==========================================
-    // GENERAR CÓDIGO QR PARA LA ETIQUETA EXTERNA
-    // ==========================================
+    // QR
     const qrContainer = document.getElementById('modal-qr-container');
     if (qrContainer) {
       qrContainer.innerHTML = ''; 
-      
       const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
       const urlEtiqueta = `${baseUrl}/etiqueta.html?lote=${encodeURIComponent(lote.codigo)}`;
 
       if (typeof QRCode !== 'undefined') {
         new QRCode(qrContainer, {
-          text: urlEtiqueta,
-          width: 128,
-          height: 128,
-          colorDark : "#1e3a8a", 
-          colorLight : "#ffffff",
-          correctLevel : QRCode.CorrectLevel.H
+          text: urlEtiqueta, width: 128, height: 128,
+          colorDark : "#1e3a8a", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H
         });
       } else {
         qrContainer.innerHTML = '<span style="font-size:12px;color:#ef4444;">Error: Librería QR no cargada.</span>';
       }
     }
 
-    // ==========================================
-    // ACTUALIZAR Y ENLAZAR BOTONES DE DESCARGA
-    // ==========================================
-    
-    // 1. Inyectar los datos en el ticket visual oculto (NUEVOS IDs)
+    // Ticket oculto
     const setInText = (id, valor, defecto) => {
       const el = document.getElementById(id);
       if (el) el.innerText = valor || defecto;
@@ -701,7 +696,6 @@
     setInText("ticket-title-code", lote.ticket_carga, "TICKET-PRUEBA-123");
     setInText("ticket-planta", `VENVIDRIO ${lote.planta.toUpperCase()}`, "VENVIDRIO VALERA");
     setInText("ticket-cliente", lote.cliente, "CLIENTE STOCK");
-    setInText("ticket-orden", lote.orden, "NO APLICA");
     setInText("ticket-obs", lote.observaciones, "NO APLICA"); 
     setInText("ticket-fecha", formatearFechaProd(lote.fecha_prod), "07/11/2026");
     
@@ -722,7 +716,6 @@
         });
     }
 
-    // 2. Asignar eventos a los botones de descarga
     const btnJPG = document.getElementById("btn-descargar-jpg");
     const btnPDF = document.getElementById("btn-descargar-pdf");
     
@@ -798,7 +791,7 @@
   };
 
   // ==========================================
-  // ESCÁNER: CONEXIÓN CON EL MÓDULO
+  // ESCÁNER
   // ==========================================
   function initEscanerGlobal() {
     EscanerApp.init(
@@ -830,15 +823,15 @@
             const matchCli = Array.from(cliSelect.options).find(o => o.value.toUpperCase() === lote.cliente.toUpperCase());
             if (matchCli) cliSelect.value = matchCli.value;
           }
-          document.getElementById('bpp').value = lote.bpp || '';
-          document.getElementById('bpc').value = lote.bpc || lote.bot_por_canada || '';
+          
+          if (document.getElementById('bpc')) document.getElementById('bpc').value = lote.bpc || lote.bot_por_canada || '';
+          if (document.getElementById('camadas_paleta')) document.getElementById('camadas_paleta').value = lote.camadas_por_paleta || '';
 
           document.getElementById('maquina').value = lote.maquina || '';
           document.getElementById('ticket_carga').value = lote.ticket_carga || codigoEscaneado;
           document.getElementById('grupo').value = lote.grupo || '';
           document.getElementById('linea').value = lote.linea_produccion || '';
           document.getElementById('operador').value = lote.operador || '';
-          document.getElementById('orden').value = lote.orden || '';
 
           document.getElementById('cantidad').value = lote.cantidad || '';
           document.getElementById('paletas').value = lote.paletas || '';
@@ -849,7 +842,10 @@
 
           document.getElementById('maquina').dispatchEvent(new Event('change'));
           document.getElementById('fecha-prod').dispatchEvent(new Event('change'));
-          recalcularTodo();
+          
+          // Prioridad: si tiene cantidad, recalcular desde cantidad; si no, desde paletas
+          if (lote.cantidad) recalcularTodo('cantidad');
+          else if (lote.paletas) recalcularTodo('paletas');
 
           const tabContexto = document.querySelector('[data-tab="tab-contexto"]');
           if (tabContexto) tabContexto.click();
@@ -857,7 +853,6 @@
           mostrarToast(`✅ Lote ${lote.codigo_lote} encontrado y autocompletado.`);
 
         } else if (response.status === 404) {
-          
           document.getElementById('ticket_carga').value = codigoEscaneado;
           document.getElementById('fecha-prod').value = new Date().toISOString().split('T')[0];
           
@@ -915,7 +910,6 @@
         const grupo = document.getElementById('grupo').value.trim();
         const linea = document.getElementById('linea').value.trim();
         const operador = document.getElementById('operador').value.trim();
-        const orden = document.getElementById('orden').value.trim();
         const acabado = document.getElementById('acabado').value.trim();
         const item = document.getElementById('item').value.trim();
         const material = document.getElementById('material')?.value?.trim() || '';
@@ -923,6 +917,7 @@
         const molde = document.getElementById('molde').value.trim();
         const bpp = document.getElementById('bpp').value;
         const bpc = document.getElementById('bpc')?.value;
+        const camadas_paleta = document.getElementById('camadas_paleta')?.value;
         const capacidadValor = parseNumero(document.getElementById('capacidad')?.value);
         const capacidadUnidad = unidadActual();
         const capacidadMl = capacidadMlActual();
@@ -959,7 +954,6 @@
           grupo: grupo || null,
           linea_produccion: linea || null,
           operador: operador,
-          orden: orden || null,
           tipo_producto: prod,
           acabado: acabado || null,
           material: material || null,
@@ -968,6 +962,7 @@
           molde: molde || null,
           bpp: bpp ? parseFloat(bpp) : null,
           bpc: bpc ? parseInt(bpc) : null,
+          camadas_por_paleta: camadas_paleta ? parseInt(camadas_paleta) : null,
           capacidad: capacidadMl,
           capacidad_ml: capacidadMl,
           unidad_capacidad: capacidadUnidad,
@@ -989,7 +984,14 @@
 
         try {
           if (modoNuevoProducto && prod && guardarEnCatalogo) {
-            const productBody = { nombre: prod, item: item || null, acabado: acabado || null, capacidad_ml: capacidadMl !== null ? Math.round(capacidadMl) : null, bpp: bpp ? parseFloat(bpp) : null, bpc: bpc ? parseInt(bpc) : null, juego_envases: juego_envases || null, material: material || null, tipo_boca: tipo_boca || null, dimensiones: dimensiones || null };
+            const productBody = { 
+              nombre: prod, item: item || null, acabado: acabado || null, 
+              capacidad_ml: capacidadMl !== null ? Math.round(capacidadMl) : null, 
+              bpp: bpp ? parseFloat(bpp) : null, bpc: bpc ? parseInt(bpc) : null,
+              camadas_por_paleta: camadas_paleta ? parseInt(camadas_paleta) : null,
+              juego_envases: juego_envases || null, material: material || null, 
+              tipo_boca: tipo_boca || null, dimensiones: dimensiones || null 
+            };
             const resProd = await fetch(`${API_URL}/productos`, { method: 'POST', headers: jsonHeader(), body: JSON.stringify(productBody) });
             if (!resProd.ok) {
               const err = await resProd.json().catch(() => ({}));
@@ -1033,7 +1035,7 @@
           document.getElementById('btn-limpiar').click();
 
         } catch (error) {
-          logError('Error registrando producción:', error);
+          console.error('Error registrando producción:', error);
           mostrarToast(error.message || 'No se pudo registrar la producción', true);
         }
       });
@@ -1049,7 +1051,7 @@
     btnLimpiar.addEventListener('click', async (e) => {
       e.preventDefault();
 
-      const campos = ['ticket_carga', 'grupo', 'linea', 'orden', 'acabado', 'item', 'material', 'tipo_boca', 'molde', 'bpp', 'bpc', 'cantidad', 'paletas', 'cajas_producidas', 'gruesas', 'juego_envases', 'capacidad', 'dim_diametro', 'dim_altura_cil', 'dim_largo', 'dim_ancho', 'dim_alto', 'gruesas_paleta', 'obs-prod'];
+      const campos = ['ticket_carga', 'grupo', 'linea', 'acabado', 'item', 'material', 'tipo_boca', 'molde', 'bpp', 'bpc', 'camadas_paleta', 'cantidad', 'paletas', 'cajas_producidas', 'gruesas', 'juego_envases', 'capacidad', 'dim_altura_cil', 'gruesas_paleta', 'obs-prod'];
 
       campos.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       ['planta', 'maquina', 'turno'].forEach(id => { const el = document.getElementById(id); if (el) el.selectedIndex = 0; });
@@ -1069,7 +1071,7 @@
       activarModoEdicionLibre(false);
       limpiarFichaTecnica();
       generarCodigoLoteLocal();
-      recalcularTodo();
+      recalcularTodo('cantidad'); // Forzar recálculo desde cantidad al limpiar
     });
   }
 
@@ -1102,7 +1104,7 @@
         selectProd.appendChild(optNuevo);
         if (valorActual) selectProd.value = valorActual;
       }
-    } catch (e) { logError('Error de red cargando productos:', e); }
+    } catch (e) { console.error('Error de red cargando productos:', e); }
 
     try {
       const resCli = await fetch(`${API_URL}/clientes`, { headers: tokenHeader() });
@@ -1125,7 +1127,7 @@
         selectCli.appendChild(optNuevoCli);
         if (valorActual) selectCli.value = valorActual;
       }
-    } catch (e) { logError('Error de red cargando clientes:', e); }
+    } catch (e) { console.error('Error de red cargando clientes:', e); }
   }
 
   // ==========================================
@@ -1174,7 +1176,6 @@
         { id: 'lista-moldes', opciones: data.moldes || [] },
         { id: 'lista-acabados', opciones: data.acabados || [] },
         { id: 'lista-grupos', opciones: data.grupos || [] },
-        { id: 'lista-ordenes', opciones: data.ordenes || [] },
         { id: 'filtro-lista-moldes', opciones: data.moldes || [] },
         { id: 'filtro-lista-maquinas', opciones: data.maquinas || [] },
         { id: 'filtro-lista-operadores', opciones: data.operadores || [] }
@@ -1188,7 +1189,7 @@
           if (val) { const opt = document.createElement('option'); opt.value = val; datalist.appendChild(opt); }
         });
       });
-    } catch (error) { logError('Error cargando opciones registradas:', error); }
+    } catch (error) { console.error('Error cargando opciones registradas:', error); }
   }
 
   // ==========================================
