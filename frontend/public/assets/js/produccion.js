@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v28 (Fix Bug visual + Eliminado Juego de Envases)
+   produccion.js - v29 (Turnos corregidos)
    ========================================== */
 
 (function () {
@@ -18,6 +18,13 @@
   
   const BOTELLAS_POR_GRUESA = 144;  // 12 docenas = 144 botellas
   const BOTELLAS_POR_DOCENA = 12;   // 1 docena
+
+  // 👇 NUEVO: Mapeo de turnos para mostrar texto legible
+  const TURNOS_MAP = {
+    '1': 'Matutino',
+    '2': 'Vespertino',
+    '3': 'Nocturno'
+  };
 
   let lotes = [];
   let intervaloCarga = null;
@@ -278,7 +285,6 @@
   // PRODUCTOS Y CLIENTES
   // ==========================================
   function activarModoEdicionLibre(activo) {
-    // Ya no incluimos juego_envases porque fue eliminado del HTML
     const camposTecnicos = ['item', 'acabado', 'material', 'tipo_boca', 'capacidad'];
     camposTecnicos.forEach(id => {
       const el = document.getElementById(id);
@@ -709,7 +715,10 @@
     setTexto('modal-lote-codigo', lote.codigo);
     setTexto('detail-planta', lote.planta);
     setTexto('detail-fecha', formatearFechaProd(lote.fecha_prod));
-    setTexto('detail-turno', lote.turno);
+    
+    // 👇 TURNOS CORREGIDOS: Mostrar el nombre en lugar del número
+    setTexto('detail-turno', TURNOS_MAP[lote.turno] || lote.turno || '—');
+    
     setTexto('detail-producto', lote.prod);
     setTexto('detail-item', lote.item);
     setTexto('detail-material', lote.material);
@@ -783,8 +792,11 @@
     setInText("ticket-obs", lote.observaciones, "NO APLICA"); 
     setInText("ticket-fecha", formatearFechaProd(lote.fecha_prod), "07/11/2026");
     
-    const maquinaStr = `${lote.maquina || "A1"}   ${lote.turno || "1"}   ${lote.grupo || "A"}`;
+    // 👇 TURNOS CORREGIDOS EN EL TICKET TAMBIÉN
+    const turnoNombre = TURNOS_MAP[lote.turno] || lote.turno || "1";
+    const maquinaStr = `${lote.maquina || "A1"}   ${turnoNombre}   ${lote.grupo || "A"}`;
     setInText("ticket-maquina", maquinaStr, "A1   1   A");
+    
     setInText("ticket-producto", lote.prod, "BOTELLA PRUEBA 500ML");
     setInText("ticket-acabado", lote.acabado, "26-600-BEAD");
     setInText("ticket-item-code", lote.item, "V-TEST-001");
@@ -843,6 +855,9 @@
       const estatusTexto = ESTATUS_LABELS[l.estatus] || l.estatus;
       const capacidadTexto = etiquetaCapacidad(l.capacidad_ml, l.unidad_capacidad);
 
+      // 👇 TURNOS CORREGIDOS EN LA TABLA TAMBIÉN
+      const turnoTexto = TURNOS_MAP[l.turno] || l.turno;
+
       tr.innerHTML = `
         <td class="font-mono" style="font-size:12px"><span class="badge badge-info">${l.codigo}</span></td>
         <td style="font-family:'Courier New',monospace;font-size:11px">${l.ticket_carga}</td>
@@ -853,7 +868,7 @@
         <td>${l.op}</td>
         <td style="text-align:center"><span class="cell-capacidad">${capacidadTexto || '—'}</span></td>
         <td style="text-align:center">${l.uds}</td>
-        <td><span class="badge badge-info">${l.turno}</span></td>
+        <td><span class="badge badge-info">${turnoTexto}</span></td>
         <td style="text-align:center"><span class="estatus-badge ${estatusClass}">${estatusTexto}</span></td>
         <td><span style="display:block;font-weight:600;color:var(--navy);">${l.cliente}</span></td>
         <td class="text-muted text-sm">${l.fecha}</td>
@@ -1337,7 +1352,6 @@
     initFormularioRegistro();
     initLimpiar();
 
-    // 👇 FIX DEL BUG: Forzamos a que el formulario inicie limpio y cerrado
     toggleNuevoProducto(false);
     toggleNuevoCliente(false);
     activarModoEdicionLibre(false);
