@@ -38,7 +38,11 @@ class ProduccionBase(BaseModel):
 
     # Datos para reporte de inspección
     tamano_muestra: Optional[str] = None
-    bot_por_canada: Optional[int] = None
+    bot_por_canada: Optional[int] = None  # Envases por Camada
+    
+    # 👈 NUEVO: Camadas por Paleta
+    camadas_por_paleta: Optional[int] = None
+    
     bot_por_paleta: Optional[float] = None
     gruesas_por_paleta: Optional[float] = None
 

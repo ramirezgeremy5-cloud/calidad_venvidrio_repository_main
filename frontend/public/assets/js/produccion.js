@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v24 (Cálculo bidireccional Unidades ↔ Paletas)
+   produccion.js - v25 (Cálculo bidireccional + Feedback visual + Resumen + Spinner)
    ========================================== */
 
 (function () {
@@ -26,6 +26,7 @@
   let productosCache = {};
 
   let timeoutBusqueda = null;
+  let timeoutsHint = {};
 
   const MAQUINA_LINEA_MAP = {
     'A1': 'Línea A', 'A2': 'Línea A', 'A3': 'Línea A', 'A4': 'Línea A',
@@ -76,6 +77,52 @@
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 4000);
     }
+  }
+
+  // 👇 MEJORA 1: Mostrar hint temporal de cálculo
+  function mostrarHint(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (timeoutsHint[id]) clearTimeout(timeoutsHint[id]);
+    el.style.display = 'block';
+    timeoutsHint[id] = setTimeout(() => { el.style.display = 'none'; }, 3000);
+  }
+
+  function ocultarHint(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  }
+
+  // 👇 MEJORA 2: Actualizar resumen del lote
+  function actualizarResumen(bppCalculado = null) {
+    const resumenEl = document.getElementById('resumen-lote');
+    const resumenTexto = document.getElementById('resumen-texto');
+    if (!resumenEl || !resumenTexto) return;
+
+    const loteCode = document.getElementById('lote-id')?.value || '';
+    const cantidad = parseNumero(document.getElementById('cantidad')?.value);
+    const paletas = parseNumero(document.getElementById('paletas')?.value);
+    const bpc = parseNumero(document.getElementById('bpc')?.value);
+    const camadasPaleta = parseNumero(document.getElementById('camadas_paleta')?.value);
+
+    let bpp = bppCalculado;
+    if (!bpp && bpc && camadasPaleta && bpc > 0 && camadasPaleta > 0) {
+      bpp = bpc * camadasPaleta;
+    }
+
+    if (!loteCode && !cantidad && !paletas) {
+      resumenEl.style.display = 'none';
+      return;
+    }
+
+    const partes = [];
+    if (loteCode) partes.push(`Lote: <strong>${loteCode}</strong>`);
+    if (cantidad) partes.push(`<strong>${cantidad.toLocaleString()}</strong> unidades`);
+    if (paletas) partes.push(`<strong>${paletas}</strong> paletas`);
+    if (bpp) partes.push(`BPP: <strong>${bpp}</strong>`);
+
+    resumenTexto.innerHTML = partes.join(' | ');
+    resumenEl.style.display = 'flex';
   }
 
   // ==========================================
@@ -376,6 +423,7 @@
     }
     
     loteInput.value = `${fechaVal.replace(/-/g, '')}${maquina.replace(/\s+/g, '').toUpperCase()}`;
+    actualizarResumen();
   }
 
   function configurarGeneracionCodigo() {
@@ -391,7 +439,7 @@
   }
 
   // ==========================================
-  // CÁLCULO BIDIRECCIONAL (Unidades ↔ Paletas)
+  // CÁLCULO BIDIRECCIONAL (Unidades ↔ Paletas) con Feedback
   // ==========================================
   function recalcularTodo(origen = 'cantidad') {
     const cantidadEl = document.getElementById('cantidad');
@@ -402,19 +450,35 @@
     const cajasEl = document.getElementById('cajas_producidas');
     const gruesasEl = document.getElementById('gruesas');
     const gruesasPaletaEl = document.getElementById('gruesas_paleta');
+    const hintBpp = document.getElementById('calc-hint-bpp');
 
     const cantidad = parseNumero(cantidadEl?.value);
     const paletasInput = parseNumero(paletasEl?.value);
     const bpc = parseNumero(bpcEl?.value);
     const camadasPaleta = parseNumero(camadasEl?.value);
 
-    // 1. Calcular BPP automáticamente
+    // 1. Calcular BPP
     let bppCalculado = null;
     if (bpc && camadasPaleta && bpc > 0 && camadasPaleta > 0) {
       bppCalculado = bpc * camadasPaleta;
-      if (bppEl) bppEl.value = formatearNumero(bppCalculado, 0);
+      if (bppEl) {
+        bppEl.value = formatearNumero(bppCalculado, 0);
+        bppEl.style.color = '';
+      }
+      if (hintBpp) hintBpp.style.display = 'none';
     } else {
-      if (bppEl) bppEl.value = '';
+      if (bppEl) {
+        bppEl.value = '';
+      }
+      if (hintBpp) {
+        if ((bpc !== null || camadasPaleta !== null) && (bpc === 0 || camadasPaleta === 0)) {
+          hintBpp.innerHTML = '<i class="ti ti-alert-triangle"></i> Escribe valores mayores a 0';
+          hintBpp.style.color = 'var(--danger)';
+          hintBpp.style.display = 'block';
+        } else {
+          hintBpp.style.display = 'none';
+        }
+      }
     }
 
     // 2. Lógica bidireccional
@@ -422,13 +486,13 @@
     let paletasFinal = paletasInput;
 
     if (origen === 'paletas' && paletasInput && bppCalculado) {
-      // El operador escribió las paletas -> calcular unidades
       cantidadFinal = paletasInput * bppCalculado;
       if (cantidadEl) cantidadEl.value = formatearNumero(cantidadFinal, 0);
+      mostrarHint('calc-hint-cantidad');
     } else if (origen === 'cantidad' && cantidad && bppCalculado) {
-      // El operador escribió las unidades -> calcular paletas
       paletasFinal = cantidad / bppCalculado;
       if (paletasEl) paletasEl.value = formatearNumero(paletasFinal, 2);
+      mostrarHint('calc-hint-paletas');
     }
 
     // 3. Cajas / Canastas
@@ -451,16 +515,14 @@
     } else if (gruesasPaletaEl) {
       gruesasPaletaEl.value = '';
     }
+
+    // 👇 MEJORA: Actualizar resumen
+    actualizarResumen(bppCalculado);
   }
 
   function configurarAutoCalculos() {
-    // Cantidad: recalcula paletas
     document.getElementById('cantidad')?.addEventListener('input', () => recalcularTodo('cantidad'));
-    
-    // Paletas: recalcula unidades
     document.getElementById('paletas')?.addEventListener('input', () => recalcularTodo('paletas'));
-    
-    // BPC y Camadas: al cambiarlas recalculamos en base a la cantidad
     document.getElementById('bpc')?.addEventListener('input', () => recalcularTodo('cantidad'));
     document.getElementById('camadas_paleta')?.addEventListener('input', () => recalcularTodo('cantidad'));
   }
@@ -558,7 +620,6 @@
     try { const d = new Date(fechaStr + 'T00:00:00'); return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (e) { return fechaStr; }
   }
 
-  // --- FUNCIONES PARA DESCARGAR IMAGEN Y PDF ---
   function descargarEtiquetaJPG() {
     const elementoCaptura = document.getElementById("ticket-para-captura");
     if (!elementoCaptura) return;
@@ -670,7 +731,6 @@
     setTexto('detail-estado-auditoria', estadoAuditoria);
     setTexto('detail-observaciones', lote.observaciones);
 
-    // QR
     const qrContainer = document.getElementById('modal-qr-container');
     if (qrContainer) {
       qrContainer.innerHTML = ''; 
@@ -687,7 +747,6 @@
       }
     }
 
-    // Ticket oculto
     const setInText = (id, valor, defecto) => {
       const el = document.getElementById(id);
       if (el) el.innerText = valor || defecto;
@@ -843,7 +902,6 @@
           document.getElementById('maquina').dispatchEvent(new Event('change'));
           document.getElementById('fecha-prod').dispatchEvent(new Event('change'));
           
-          // Prioridad: si tiene cantidad, recalcular desde cantidad; si no, desde paletas
           if (lote.cantidad) recalcularTodo('cantidad');
           else if (lote.paletas) recalcularTodo('paletas');
 
@@ -895,151 +953,162 @@
   }
 
   // ==========================================
-  // REGISTRAR
+  // REGISTRAR (con spinner y deshabilitado)
   // ==========================================
   function initFormularioRegistro() {
     const btnRegistrar = document.getElementById('btn-registrar');
-    if (btnRegistrar) {
-      btnRegistrar.addEventListener('click', async (e) => {
-        e.preventDefault();
+    if (!btnRegistrar) return;
 
-        const ticket_carga = document.getElementById('ticket_carga').value.trim();
-        const planta = document.getElementById('planta').value;
-        const maquina = document.getElementById('maquina').value;
-        const turno = document.getElementById('turno').value; 
-        const grupo = document.getElementById('grupo').value.trim();
-        const linea = document.getElementById('linea').value.trim();
-        const operador = document.getElementById('operador').value.trim();
-        const acabado = document.getElementById('acabado').value.trim();
-        const item = document.getElementById('item').value.trim();
-        const material = document.getElementById('material')?.value?.trim() || '';
-        const tipo_boca = document.getElementById('tipo_boca')?.value?.trim() || '';
-        const molde = document.getElementById('molde').value.trim();
-        const bpp = document.getElementById('bpp').value;
-        const bpc = document.getElementById('bpc')?.value;
-        const camadas_paleta = document.getElementById('camadas_paleta')?.value;
-        const capacidadValor = parseNumero(document.getElementById('capacidad')?.value);
-        const capacidadUnidad = unidadActual();
-        const capacidadMl = capacidadMlActual();
-        const cant = document.getElementById('cantidad').value;
-        const paletas = document.getElementById('paletas').value;
-        const cajas_producidas = document.getElementById('cajas_producidas').value;
-        const gruesas = document.getElementById('gruesas').value;
-        const gruesas_paleta = document.getElementById('gruesas_paleta').value;
-        const fecha = document.getElementById('fecha-prod').value;
-        const estatus = document.getElementById('estatus').value;
-        const observaciones = document.getElementById('obs-prod').value.trim();
+    btnRegistrar.addEventListener('click', async (e) => {
+      e.preventDefault();
 
-        const prod = obtenerProducto();
-        const cliente = obtenerCliente();
-        const juego_envases = document.getElementById('juego_envases')?.value?.trim() || null;
-        const dimensiones = obtenerDimensiones();
-        const guardarEnCatalogo = document.getElementById('guardar-en-catalogo')?.checked || false;
+      const btn = e.currentTarget;
+      const originalHtml = btn.innerHTML;
 
-        if (!planta) { mostrarToast('Selecciona una planta.', true); return; }
-        if (!maquina) { mostrarToast('Selecciona una máquina.', true); return; }
-        if (!turno) { mostrarToast('Selecciona un turno.', true); return; }
-        if (!operador) { mostrarToast('Ingresa el operador.', true); return; }
-        if (!molde) { mostrarToast('Ingresa el molde.', true); return; }
-        if (!prod) { mostrarToast('Selecciona o crea un producto.', true); return; }
-        if (!cliente) { mostrarToast('Selecciona o crea un cliente.', true); return; }
-        if (!cant || parseInt(cant) <= 0) { mostrarToast('La cantidad debe ser mayor a 0.', true); return; }
-        if (capacidadValor !== null && capacidadValor <= 0) { mostrarToast('El volumen debe ser mayor a 0.', true); return; }
+      const ticket_carga = document.getElementById('ticket_carga').value.trim();
+      const planta = document.getElementById('planta').value;
+      const maquina = document.getElementById('maquina').value;
+      const turno = document.getElementById('turno').value; 
+      const grupo = document.getElementById('grupo').value.trim();
+      const linea = document.getElementById('linea').value.trim();
+      const operador = document.getElementById('operador').value.trim();
+      const acabado = document.getElementById('acabado').value.trim();
+      const item = document.getElementById('item').value.trim();
+      const material = document.getElementById('material')?.value?.trim() || '';
+      const tipo_boca = document.getElementById('tipo_boca')?.value?.trim() || '';
+      const molde = document.getElementById('molde').value.trim();
+      const bpp = document.getElementById('bpp').value;
+      const bpc = document.getElementById('bpc')?.value;
+      const camadas_paleta = document.getElementById('camadas_paleta')?.value;
+      const capacidadValor = parseNumero(document.getElementById('capacidad')?.value);
+      const capacidadUnidad = unidadActual();
+      const capacidadMl = capacidadMlActual();
+      const cant = document.getElementById('cantidad').value;
+      const paletas = document.getElementById('paletas').value;
+      const cajas_producidas = document.getElementById('cajas_producidas').value;
+      const gruesas = document.getElementById('gruesas').value;
+      const gruesas_paleta = document.getElementById('gruesas_paleta').value;
+      const fecha = document.getElementById('fecha-prod').value;
+      const estatus = document.getElementById('estatus').value;
+      const observaciones = document.getElementById('obs-prod').value.trim();
 
-        const body = {
-          ticket_carga: ticket_carga || null,
-          planta: planta,
-          maquina: maquina || null,
-          turno: turno,
-          grupo: grupo || null,
-          linea_produccion: linea || null,
-          operador: operador,
-          tipo_producto: prod,
-          acabado: acabado || null,
-          material: material || null,
-          tipo_boca: tipo_boca || null,
-          item: item || null,
-          molde: molde || null,
-          bpp: bpp ? parseFloat(bpp) : null,
-          bpc: bpc ? parseInt(bpc) : null,
-          camadas_por_paleta: camadas_paleta ? parseInt(camadas_paleta) : null,
-          capacidad: capacidadMl,
-          capacidad_ml: capacidadMl,
-          unidad_capacidad: capacidadUnidad,
-          cantidad: parseInt(cant) || 0,
-          paletas: paletas ? parseFloat(paletas) : null,
-          cajas_producidas: cajas_producidas ? parseFloat(cajas_producidas) : null,
-          gruesas: gruesas ? parseFloat(gruesas) : null,
-          juego_envases: juego_envases,
-          tamano_muestra: dimensiones,
-          bot_por_canada: bpc ? parseInt(bpc) : null,
-          bot_por_paleta: bpp ? parseFloat(bpp) : null,
-          gruesas_por_paleta: gruesas_paleta ? parseFloat(gruesas_paleta) : null,
-          cliente: cliente,
-          estatus: estatus,
-          observaciones: observaciones || null
-        };
+      const prod = obtenerProducto();
+      const cliente = obtenerCliente();
+      const juego_envases = document.getElementById('juego_envases')?.value?.trim() || null;
+      const dimensiones = obtenerDimensiones();
+      const guardarEnCatalogo = document.getElementById('guardar-en-catalogo')?.checked || false;
 
-        if (fecha) body.fecha_produccion = fecha;
+      // Validaciones
+      if (!planta) { mostrarToast('Selecciona una planta.', true); return; }
+      if (!maquina) { mostrarToast('Selecciona una máquina.', true); return; }
+      if (!turno) { mostrarToast('Selecciona un turno.', true); return; }
+      if (!operador) { mostrarToast('Ingresa el operador.', true); return; }
+      if (!molde) { mostrarToast('Ingresa el molde.', true); return; }
+      if (!prod) { mostrarToast('Selecciona o crea un producto.', true); return; }
+      if (!cliente) { mostrarToast('Selecciona o crea un cliente.', true); return; }
+      if (!cant || parseInt(cant) <= 0) { mostrarToast('La cantidad debe ser mayor a 0.', true); return; }
+      if (capacidadValor !== null && capacidadValor <= 0) { mostrarToast('El volumen debe ser mayor a 0.', true); return; }
 
-        try {
-          if (modoNuevoProducto && prod && guardarEnCatalogo) {
-            const productBody = { 
-              nombre: prod, item: item || null, acabado: acabado || null, 
-              capacidad_ml: capacidadMl !== null ? Math.round(capacidadMl) : null, 
-              bpp: bpp ? parseFloat(bpp) : null, bpc: bpc ? parseInt(bpc) : null,
-              camadas_por_paleta: camadas_paleta ? parseInt(camadas_paleta) : null,
-              juego_envases: juego_envases || null, material: material || null, 
-              tipo_boca: tipo_boca || null, dimensiones: dimensiones || null 
-            };
-            const resProd = await fetch(`${API_URL}/productos`, { method: 'POST', headers: jsonHeader(), body: JSON.stringify(productBody) });
-            if (!resProd.ok) {
-              const err = await resProd.json().catch(() => ({}));
-              if (resProd.status === 400 || resProd.status === 409) mostrarToast(`El producto "${prod}" ya existe. Se guardará el lote igual.`, true);
-              else throw new Error(err.detail || `Error ${resProd.status} guardando producto`);
-            }
+      // 👇 MEJORA: Spinner y deshabilitar botón
+      btn.innerHTML = '<i class="ti ti-loader"></i> Guardando...';
+      btn.disabled = true;
+
+      const body = {
+        ticket_carga: ticket_carga || null,
+        planta: planta,
+        maquina: maquina || null,
+        turno: turno,
+        grupo: grupo || null,
+        linea_produccion: linea || null,
+        operador: operador,
+        tipo_producto: prod,
+        acabado: acabado || null,
+        material: material || null,
+        tipo_boca: tipo_boca || null,
+        item: item || null,
+        molde: molde || null,
+        bpp: bpp ? parseFloat(bpp) : null,
+        bpc: bpc ? parseInt(bpc) : null,
+        camadas_por_paleta: camadas_paleta ? parseInt(camadas_paleta) : null,
+        capacidad: capacidadMl,
+        capacidad_ml: capacidadMl,
+        unidad_capacidad: capacidadUnidad,
+        cantidad: parseInt(cant) || 0,
+        paletas: paletas ? parseFloat(paletas) : null,
+        cajas_producidas: cajas_producidas ? parseFloat(cajas_producidas) : null,
+        gruesas: gruesas ? parseFloat(gruesas) : null,
+        juego_envases: juego_envases,
+        tamano_muestra: dimensiones,
+        bot_por_canada: bpc ? parseInt(bpc) : null,
+        bot_por_paleta: bpp ? parseFloat(bpp) : null,
+        gruesas_por_paleta: gruesas_paleta ? parseFloat(gruesas_paleta) : null,
+        cliente: cliente,
+        estatus: estatus,
+        observaciones: observaciones || null
+      };
+
+      if (fecha) body.fecha_produccion = fecha;
+
+      try {
+        if (modoNuevoProducto && prod && guardarEnCatalogo) {
+          const productBody = { 
+            nombre: prod, item: item || null, acabado: acabado || null, 
+            capacidad_ml: capacidadMl !== null ? Math.round(capacidadMl) : null, 
+            bpp: bpp ? parseFloat(bpp) : null, bpc: bpc ? parseInt(bpc) : null,
+            camadas_por_paleta: camadas_paleta ? parseInt(camadas_paleta) : null,
+            juego_envases: juego_envases || null, material: material || null, 
+            tipo_boca: tipo_boca || null, dimensiones: dimensiones || null 
+          };
+          const resProd = await fetch(`${API_URL}/productos`, { method: 'POST', headers: jsonHeader(), body: JSON.stringify(productBody) });
+          if (!resProd.ok) {
+            const err = await resProd.json().catch(() => ({}));
+            if (resProd.status === 400 || resProd.status === 409) mostrarToast(`El producto "${prod}" ya existe. Se guardará el lote igual.`, true);
+            else throw new Error(err.detail || `Error ${resProd.status} guardando producto`);
           }
-
-          if (modoNuevoCliente && cliente) {
-            const resCli = await fetch(`${API_URL}/clientes`, { method: 'POST', headers: jsonHeader(), body: JSON.stringify({ nombre: cliente }) });
-            if (!resCli.ok) {
-              const err = await resCli.json().catch(() => ({}));
-              if (resCli.status === 400 || resCli.status === 409) mostrarToast(`El cliente "${cliente}" ya existe. Se guardará el lote igual.`, true);
-              else throw new Error(err.detail || `Error ${resCli.status} guardando cliente`);
-            }
-          }
-
-          const response = await fetch(`${API_URL}/produccion`, { method: 'POST', headers: jsonHeader(), body: JSON.stringify(body) });
-          if (!response.ok) {
-            if (response.status === 401) { window.location.href = '../public/login.html'; return; }
-            const errorData = await response.json().catch(() => ({}));
-            let errorMsg = errorData.detail || `Error ${response.status} guardando lote`;
-            if (Array.isArray(errorMsg)) errorMsg = errorMsg.map(err => `${err.loc.join('.')}: ${err.msg}`).join('\n');
-            throw new Error(errorMsg);
-          }
-
-          await cargarProductosYClientes();
-          await cargarOpcionesRegistradas();
-          await cargarProduccion(filtrosActivos);
-
-          if (modoNuevoProducto && prod) {
-            const sp = document.getElementById('producto-select');
-            if (sp) { const match = Array.from(sp.options).find(o => o.value.toUpperCase() === prod.toUpperCase()); if (match) sp.value = match.value; }
-          }
-          if (modoNuevoCliente && cliente) {
-            const sc = document.getElementById('cliente-select');
-            if (sc) { const match = Array.from(sc.options).find(o => o.value.toUpperCase() === cliente.toUpperCase()); if (match) sc.value = match.value; }
-          }
-
-          mostrarToast('✅ Lote registrado correctamente');
-          document.getElementById('btn-limpiar').click();
-
-        } catch (error) {
-          console.error('Error registrando producción:', error);
-          mostrarToast(error.message || 'No se pudo registrar la producción', true);
         }
-      });
-    }
+
+        if (modoNuevoCliente && cliente) {
+          const resCli = await fetch(`${API_URL}/clientes`, { method: 'POST', headers: jsonHeader(), body: JSON.stringify({ nombre: cliente }) });
+          if (!resCli.ok) {
+            const err = await resCli.json().catch(() => ({}));
+            if (resCli.status === 400 || resCli.status === 409) mostrarToast(`El cliente "${cliente}" ya existe. Se guardará el lote igual.`, true);
+            else throw new Error(err.detail || `Error ${resCli.status} guardando cliente`);
+          }
+        }
+
+        const response = await fetch(`${API_URL}/produccion`, { method: 'POST', headers: jsonHeader(), body: JSON.stringify(body) });
+        if (!response.ok) {
+          if (response.status === 401) { window.location.href = '../public/login.html'; return; }
+          const errorData = await response.json().catch(() => ({}));
+          let errorMsg = errorData.detail || `Error ${response.status} guardando lote`;
+          if (Array.isArray(errorMsg)) errorMsg = errorMsg.map(err => `${err.loc.join('.')}: ${err.msg}`).join('\n');
+          throw new Error(errorMsg);
+        }
+
+        await cargarProductosYClientes();
+        await cargarOpcionesRegistradas();
+        await cargarProduccion(filtrosActivos);
+
+        if (modoNuevoProducto && prod) {
+          const sp = document.getElementById('producto-select');
+          if (sp) { const match = Array.from(sp.options).find(o => o.value.toUpperCase() === prod.toUpperCase()); if (match) sp.value = match.value; }
+        }
+        if (modoNuevoCliente && cliente) {
+          const sc = document.getElementById('cliente-select');
+          if (sc) { const match = Array.from(sc.options).find(o => o.value.toUpperCase() === cliente.toUpperCase()); if (match) sc.value = match.value; }
+        }
+
+        mostrarToast('✅ Lote registrado correctamente');
+        document.getElementById('btn-limpiar').click();
+
+      } catch (error) {
+        console.error('Error registrando producción:', error);
+        mostrarToast(error.message || 'No se pudo registrar la producción', true);
+      } finally {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+      }
+    });
   }
 
   // ==========================================
@@ -1071,7 +1140,14 @@
       activarModoEdicionLibre(false);
       limpiarFichaTecnica();
       generarCodigoLoteLocal();
-      recalcularTodo('cantidad'); // Forzar recálculo desde cantidad al limpiar
+      recalcularTodo('cantidad');
+
+      // Ocultar hints y resumen
+      ocultarHint('calc-hint-cantidad');
+      ocultarHint('calc-hint-paletas');
+      ocultarHint('calc-hint-bpp');
+      const resumenEl = document.getElementById('resumen-lote');
+      if (resumenEl) resumenEl.style.display = 'none';
     });
   }
 

@@ -139,6 +139,15 @@ def obtener_opciones_filtros(db: Session = Depends(get_db)):
         rows = db.query(columna).distinct().all()
         return sorted([r[0] for r in rows if r[0]])
 
+    # 👈 NUEVO: valores únicos de camadas por paleta (para datalist)
+    try:
+        camadas_rows = db.query(Produccion.camadas_por_paleta).filter(
+            Produccion.camadas_por_paleta.isnot(None)
+        ).distinct().all()
+        camadas_unicas = sorted([r[0] for r in camadas_rows if r[0]])
+    except Exception:
+        camadas_unicas = []
+
     return {
         "productos": unicos(Produccion.tipo_producto),
         "lineas": unicos(Produccion.linea_produccion),
@@ -150,6 +159,7 @@ def obtener_opciones_filtros(db: Session = Depends(get_db)):
         "acabados": unicos(Produccion.acabado),
         "grupos": unicos(Produccion.grupo),
         "ordenes": unicos(Produccion.orden),
+        "camadas_paleta": camadas_unicas,  # 👈 NUEVO
         "turnos": [1, 2, 3, 4]
     }
 
@@ -203,6 +213,7 @@ def debug_schema(db: Session = Depends(get_db)):
             "juego_envases": ultimo.juego_envases,
             "tamano_muestra": ultimo.tamano_muestra,
             "bot_por_canada": ultimo.bot_por_canada,
+            "camadas_por_paleta": getattr(ultimo, 'camadas_por_paleta', None),  # 👈 NUEVO
             "bot_por_paleta": ultimo.bot_por_paleta,
             "gruesas_por_paleta": ultimo.gruesas_por_paleta,
             "turno": ultimo.turno
@@ -255,7 +266,20 @@ def listar_productos(db: Session = Depends(get_db)):
             .all()
         )
         return [
-            {"id": p.id, "nombre": p.nombre, "capacidad_ml": p.capacidad_ml, "bpp": p.bpp, "bpc": p.bpc}
+            {
+                "id": p.id, 
+                "nombre": p.nombre, 
+                "capacidad_ml": p.capacidad_ml, 
+                "bpp": p.bpp, 
+                "bpc": p.bpc,
+                "camadas_por_paleta": getattr(p, 'camadas_por_paleta', None),  # 👈 NUEVO
+                "item": getattr(p, 'item', None),
+                "acabado": getattr(p, 'acabado', None),
+                "material": getattr(p, 'material', None),
+                "tipo_boca": getattr(p, 'tipo_boca', None),
+                "juego_envases": getattr(p, 'juego_envases', None),
+                "dimensiones": getattr(p, 'dimensiones', None)
+            }
             for p in productos
         ]
     except ImportError:
@@ -275,6 +299,7 @@ def crear_producto(
     capacidad_ml: Optional[int] = Query(None),
     bpp: Optional[float] = Query(None),
     bpc: Optional[int] = Query(None),
+    camadas_por_paleta: Optional[int] = Query(None),  # 👈 NUEVO
     item: Optional[str] = Query(None),
     acabado: Optional[str] = Query(None),
     material: Optional[str] = Query(None),
@@ -290,12 +315,15 @@ def crear_producto(
         if existe:
             return {
                 "id": existe.id, "nombre": existe.nombre, "capacidad_ml": existe.capacidad_ml,
-                "bpp": existe.bpp, "bpc": existe.bpc, "nuevo": False
+                "bpp": existe.bpp, "bpc": existe.bpc, 
+                "camadas_por_paleta": getattr(existe, 'camadas_por_paleta', None),
+                "nuevo": False
             }
 
         nuevo = Producto(
-            nombre=nombre, capacidad_ml=capacidad_ml, bpp=bpp, bpc=bpc, item=item,
-            acabado=acabado, material=material, tipo_boca=tipo_boca,
+            nombre=nombre, capacidad_ml=capacidad_ml, bpp=bpp, bpc=bpc, 
+            camadas_por_paleta=camadas_por_paleta,  # 👈 NUEVO
+            item=item, acabado=acabado, material=material, tipo_boca=tipo_boca,
             juego_envases=juego_envases, dimensiones=dimensiones
         )
         db.add(nuevo)
@@ -303,10 +331,16 @@ def crear_producto(
         db.refresh(nuevo)
         return {
             "id": nuevo.id, "nombre": nuevo.nombre, "capacidad_ml": nuevo.capacidad_ml,
-            "bpp": nuevo.bpp, "bpc": nuevo.bpc, "nuevo": True
+            "bpp": nuevo.bpp, "bpc": nuevo.bpc,
+            "camadas_por_paleta": getattr(nuevo, 'camadas_por_paleta', None),
+            "nuevo": True
         }
     except ImportError:
-        return {"id": None, "nombre": nombre, "capacidad_ml": capacidad_ml, "bpp": bpp, "bpc": bpc, "nuevo": True}
+        return {
+            "id": None, "nombre": nombre, "capacidad_ml": capacidad_ml, 
+            "bpp": bpp, "bpc": bpc, "camadas_por_paleta": camadas_por_paleta, 
+            "nuevo": True
+        }
 
 
 # =========================
@@ -359,7 +393,9 @@ def crear_produccion(datos: ProduccionCreate, db: Session = Depends(get_db)):
         unidad_capacidad=getattr(datos, 'unidad_capacidad', 'ml'), cliente=datos.cliente,
         cantidad=datos.cantidad, paletas=datos.paletas, cajas_producidas=getattr(datos, 'cajas_producidas', None),
         gruesas=datos.gruesas, juego_envases=datos.juego_envases, tamano_muestra=datos.tamano_muestra,
-        bot_por_canada=datos.bot_por_canada, bot_por_paleta=datos.bot_por_paleta,
+        bot_por_canada=datos.bot_por_canada, 
+        camadas_por_paleta=getattr(datos, 'camadas_por_paleta', None),  # 👈 NUEVO
+        bot_por_paleta=datos.bot_por_paleta,
         gruesas_por_paleta=datos.gruesas_por_paleta, estatus="100",
         observaciones=datos.observaciones, fecha_produccion=datos.fecha_produccion
     )

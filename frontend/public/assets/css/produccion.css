@@ -1,6 +1,6 @@
 /* ==========================================================
    PRODUCCIÓN — VENVIDRIO
-   produccion.css — v13 (Alineado a HTML con Altura + Cálculo Bidireccional)
+   produccion.css — v14 (Resumen + Hints + Spinner centralizados)
    ========================================================== */
 
 /* ================= VARIABLES (idénticas a auditoría/defectos) ================= */
@@ -83,6 +83,12 @@ body {
 @keyframes slideUpMobile { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeTab { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 👇 NUEVO: Spinner para botón Guardar Lote */
+.ti-loader {
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
 
 /* ================= SKELETON ================= */
 .skeleton {
@@ -361,6 +367,36 @@ body {
   text-align: center;
 }
 
+/* 👇 NUEVO: Hints de cálculo automático */
+.calc-hint {
+  display: none;
+  font-size: 10.5px;
+  color: var(--success);
+  margin-top: 2px;
+  font-weight: 500;
+  animation: fadeIn 0.2s ease;
+}
+.calc-hint i { font-size: 11px; margin-right: 2px; vertical-align: middle; }
+
+/* 👇 NUEVO: Resumen del lote antes de guardar */
+.resumen-lote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--brand-soft);
+  border: 1px solid var(--brand-line);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--brand-1);
+  font-weight: 500;
+  margin: 1rem 0;
+  line-height: 1.5;
+  animation: fadeIn 0.2s ease;
+}
+.resumen-lote i { font-size: 16px; color: var(--brand-2); flex-shrink: 0; }
+.resumen-lote strong { font-weight: 700; color: var(--brand-1); }
+
 /* ================= INPUTS DOBLES ================= */
 .input-pair { display: flex; align-items: center; gap: 8px; }
 .input-pair input { flex: 1; min-width: 0; }
@@ -573,6 +609,7 @@ body {
 }
 .btn-primary:hover { background: var(--brand-2); }
 .btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
 
 .btn-outline {
   background: #fff;
@@ -792,6 +829,7 @@ body {
   background: var(--brand-soft);
   border-bottom: 1px solid var(--brand-line);
   color: var(--text-main);
+  flex-shrink: 0;
 }
 .modal-title {
   font-size: 15px;
@@ -860,6 +898,8 @@ body {
   color: var(--brand-1);
   font-weight: 600;
 }
+
+/* 👇 NUEVO: Footer sticky para que el botón Cerrar siempre esté visible */
 .modal-footer {
   display: flex;
   justify-content: flex-end;
@@ -867,6 +907,10 @@ body {
   border-top: 1px solid var(--border);
   background: var(--off-white);
   gap: 8px;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  flex-shrink: 0;
 }
 
 /* ================= FOOTER ================= */

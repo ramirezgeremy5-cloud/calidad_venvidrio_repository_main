@@ -41,9 +41,14 @@ class Produccion(Base):
     gruesas = Column(Float, nullable=True)
     juego_envases = Column(String, nullable=True)
 
+    # 👇 NUEVO: Envases por Camada (antes "bpc")
+    bot_por_canada = Column(Integer, nullable=True)  # Envases por Camada
+    
+    # 👇 NUEVO: Camadas por Paleta
+    camadas_por_paleta = Column(Integer, nullable=True)  # Camadas apiladas en una paleta
+
     # Datos para reporte de inspección
-    tamano_muestra = Column(String, nullable=True)
-    bot_por_canada = Column(Integer, nullable=True)
+    tamano_muestra = Column(String, nullable=True)  # Ahora solo guarda la Altura
     bot_por_paleta = Column(Float, nullable=True)
     gruesas_por_paleta = Column(Float, nullable=True)
 
