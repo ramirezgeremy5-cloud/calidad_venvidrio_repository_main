@@ -1,7 +1,6 @@
 /* ==========================================
    VENVIDRIO - DEFECTOS
-   JS v16 - Cálculo automático de muestra (10%) 
-            + Mensajes de sugerencia y error corregidos
+   JS v17 - Corrección de Error 422 (Validación de Payload)
    ========================================== */
 
 (function () {
@@ -273,10 +272,8 @@
         return;
       }
 
-      // Si es un fallo de conexión (Mixed Content, red, etc.), NO borramos el token para no bloquear Supabase.
       alert('No se pudo conectar con el servidor (Error de red o bloqueo del navegador). Revisa tu conexión. La aplicación intentará cargar de todos modos.');
       
-      // Forzamos la carga de la UI para no dejar la pantalla en blanco
       cargarUsuarioNav();
       initUserControls();
       init();
@@ -1600,10 +1597,17 @@
       const response = await fetch(`${API_URL}/defectos/lote/${lote.id}/apto`, {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ observaciones: obs || null, canastas_inspeccionadas: canastas, tamano_muestra: tamanoMuestra })
+        body: JSON.stringify({ 
+          observaciones: obs ? String(obs).trim() : null, 
+          canastas_inspeccionadas: parseInt(canastas, 10), 
+          tamano_muestra: parseInt(tamanoMuestra, 10) 
+        })
       });
 
-      if (!response.ok) throw new Error('Error al marcar APTO');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail ? JSON.stringify(errorData.detail) : 'Error al marcar APTO');
+      }
 
       mostrarToast(`Lote ${lote.codigo_lote} APTO`);
       await refrescar();
@@ -1620,34 +1624,38 @@
     if (!obs) return alert('Escriba las observaciones generales del lote.');
 
     const inspector = val('d-inspector');
+    if (!inspector) return alert('El campo inspector no puede estar vacío.');
+
     const tamanoPoblacion = parseFloat(document.getElementById('d-tam-poblacion')?.value) || 0;
     const botellasCaja = parseFloat(document.getElementById('d-botellas-caja')?.value) || 0;
     const botellasPaleta = parseFloat(document.getElementById('d-botellas-paleta')?.value) || 0;
     const gruesasPaleta = parseFloat(document.getElementById('d-gruesas-paleta')?.value) || 0;
 
+    // SANEAMIENTO ESTRICTO DEL PAYLOAD PARA EVITAR ERROR 422
     const payload = [];
     gruposAgregados.forEach((g, gIdx) => {
       const grupoId = `${lote.id}-${Date.now()}-${gIdx}`;
 
       g.defectos.forEach(d => {
         payload.push({
-          lote_id: lote.id,
-          codigo_lote: lote.codigo_lote,
+          lote_id: Number(lote.id),
+          codigo_lote: String(lote.codigo_lote || "").trim(),
           grupo_id: grupoId,
-          tipo_defecto: d.tipo,
+          tipo_defecto: String(d.tipo || "").trim(),
           clasificacion: d.clase,
-          cantidad_piezas: g.piezas,
-          zona_deteccion: d.zona || null,
-          descripcion: d.desc || null,
-          inspector: inspector,
-          observaciones: obs,
+          cantidad_piezas: Number(g.piezas) || 0,
+          zona_deteccion: d.zona ? String(d.zona).trim() : null,
+          descripcion: d.desc ? String(d.desc).trim() : null,
+          inspector: String(inspector).trim(),
+          observaciones: String(obs).trim(),
           resultado_lote: "RETENIDO",
-          canastas_inspeccionadas: canastas,
-          tamano_muestra: tamanoMuestra,
-          tamano_poblacion: tamanoPoblacion,
-          botellas_por_caja: botellasCaja,
-          botellas_por_paleta: botellasPaleta,
-          gruesas_por_paleta: gruesasPaleta
+          // Convertimos a entero o enviamos null si no es un número válido
+          canastas_inspeccionadas: isNaN(parseInt(canastas, 10)) ? null : parseInt(canastas, 10),
+          tamano_muestra: isNaN(parseInt(tamanoMuestra, 10)) ? null : parseInt(tamanoMuestra, 10),
+          tamano_poblacion: isNaN(parseInt(tamanoPoblacion, 10)) ? null : parseInt(tamanoPoblacion, 10),
+          botellas_por_caja: isNaN(parseInt(botellasCaja, 10)) ? null : parseInt(botellasCaja, 10),
+          botellas_por_paleta: isNaN(parseInt(botellasPaleta, 10)) ? null : parseInt(botellasPaleta, 10),
+          gruesas_por_paleta: isNaN(parseInt(gruesasPaleta, 10)) ? null : parseInt(gruesasPaleta, 10)
         });
       });
     });
@@ -1657,13 +1665,25 @@
         await fetch(`${API_URL}/defectos/lote/${lote.id}`, { method: 'DELETE', headers: authHeaders() });
       }
 
-      const response = await fetch(`${API_URL}/defectos/`, {
+      // Quitamos el slash final para evitar redirecciones
+      const response = await fetch(`${API_URL}/defectos`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error('Error al guardar los defectos');
+      if (!response.ok) {
+        // Extraemos el error real de Pydantic si da 422
+        const errorData = await response.json().catch(() => ({}));
+        console.error("🔴 ERROR DEL BACKEND:", errorData);
+        
+        let mensajeError = 'Error al guardar los defectos';
+        if (errorData.detail && Array.isArray(errorData.detail)) {
+           // Formatear los errores de validación de Pydantic para que sean legibles
+           mensajeError = errorData.detail.map(e => `${e.loc.join('.')}: ${e.msg}`).join(' | ');
+        }
+        throw new Error(mensajeError);
+      }
 
       mostrarToast(`Lote ${lote.codigo_lote} RETENIDO (${gruposAgregados.length} grupo(s), ${payload.length} defectos)`);
       loteEditando = null;
