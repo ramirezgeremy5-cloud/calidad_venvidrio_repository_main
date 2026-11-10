@@ -229,20 +229,25 @@
           <!-- PESTAÑA 2: PRODUCTO -->
           <div class="tab-panel" id="tab-producto">
             <div class="form-section">
-              <p class="form-section-desc">Seleccione un producto o cree uno nuevo. Los campos técnicos se autocompletan.</p>
+              <p class="form-section-desc">Seleccione un producto existente o cree uno nuevo. Los campos técnicos se autocompletan.</p>
               <div class="grid-2">
+                
+                <!-- BUG CORREGIDO: El botón de nuevo producto ahora está al lado del select, y los inputs extra están ocultos hasta hacer clic en "Nuevo" -->
                 <div class="field field-full-width">
                   <label for="producto-select">Producto / Ítem *</label>
-                  <div class="select-with-button">
+                  <div class="select-with-button" id="producto-select-container">
                     <select id="producto-select" style="flex:1;">
                       <option value="">-- Seleccione un producto --</option>
                     </select>
                     <button type="button" class="btn-new" id="btn-nuevo-producto" style="width:auto; flex-shrink:0;"><i class="ti ti-plus"></i> Nuevo</button>
                   </div>
+                  
+                  <!-- Input para NUEVO producto (oculto por defecto, solo se muestra al hacer clic en "+ Nuevo") -->
                   <div class="input-nuevo-wrapper" id="producto-nuevo-wrapper" style="display: none;">
-                    <input type="text" id="producto-nuevo" class="input-nuevo" placeholder="Escriba el nombre..." />
+                    <input type="text" id="producto-nuevo" class="input-nuevo" placeholder="Escriba el nombre del nuevo producto..." />
                     <button type="button" class="btn-clear-input" id="btn-cancelar-producto"><i class="ti ti-x"></i></button>
                   </div>
+                  
                   <small class="field-hint" id="producto-hint">Seleccione un producto o cree uno nuevo</small>
                   <div class="aviso-nuevo-producto" id="aviso-nuevo-producto" style="display: none;">
                     <i class="ti ti-info-circle"></i>
@@ -289,8 +294,8 @@
                   <input type="number" id="camadas_paleta" min="1" step="1" placeholder="Ej: 10" />
                 </div>
                 
-                <div class="field field-auto field-full-width"><label for="juego_envases">Juego de Envases</label><input type="text" id="juego_envases" readonly /></div>
-                
+                <!-- 👇 JUEGO DE ENVASES ELIMINADO DE AQUÍ -->
+
                 <div class="field field-full-width" id="field-dimensiones">
                   <label for="dim_altura_cil">Altura del Envase (pulgadas)</label>
                   <small class="field-hint" style="margin-bottom: 8px; display: block; color: var(--warning);">
@@ -316,10 +321,11 @@
 
                 <div class="field">
                   <label for="cliente-select">Cliente Destino *</label>
-                  <div class="select-with-button">
+                  <div class="select-with-button" id="cliente-select-container">
                     <select id="cliente-select" style="flex:1;"><option value="">-- Seleccione --</option></select>
                     <button type="button" class="btn-new" id="btn-nuevo-cliente" style="width:auto; flex-shrink:0;"><i class="ti ti-plus"></i> Nuevo</button>
                   </div>
+                  <!-- Input para NUEVO cliente (oculto por defecto) -->
                   <div class="input-nuevo-wrapper" id="cliente-nuevo-wrapper" style="display: none;">
                     <input type="text" id="cliente-nuevo" placeholder="Nombre del cliente..." />
                     <button type="button" class="btn-clear-input" id="btn-cancelar-cliente"><i class="ti ti-x"></i></button>
@@ -391,13 +397,11 @@
                 
                 <div class="field field-auto"><label for="cajas_producidas">Cajas / Canastas</label><input type="number" id="cajas_producidas" readonly /></div>
                 
-                <!-- 👇 NUEVO: Gruesas Totales con label aclaratorio -->
                 <div class="field field-auto">
                   <label for="gruesas">Gruesas Totales (144 uds)</label>
                   <input type="number" id="gruesas" readonly />
                 </div>
                 
-                <!-- 👇 NUEVO: Campo Docenas -->
                 <div class="field field-auto">
                   <label for="docenas">Docenas</label>
                   <input type="number" id="docenas" readonly />
@@ -571,10 +575,9 @@
             <span class="detail-label">Capacidad (CAP)</span>
             <span class="detail-value detail-value-highlight" id="detail-capacidad">—</span>
           </div>
-          <div class="detail-item">
-            <span class="detail-label">Juego de Envases</span>
-            <span class="detail-value" id="detail-juego-envases">—</span>
-          </div>
+          
+          <!-- 👇 JUEGO DE ENVASES ELIMINADO DEL MODAL TAMBIÉN -->
+          
           <div class="detail-item">
             <span class="detail-label">Envases por Camada</span>
             <span class="detail-value" id="detail-bpc">—</span>
@@ -640,13 +643,11 @@
             <span class="detail-value" id="detail-cajas">—</span>
           </div>
           
-          <!-- 👇 NUEVO: Gruesas Totales con label aclaratorio -->
           <div class="detail-item">
             <span class="detail-label">Gruesas Totales (144 uds)</span>
             <span class="detail-value" id="detail-gruesas">—</span>
           </div>
           
-          <!-- 👇 NUEVO: Docenas en el modal -->
           <div class="detail-item">
             <span class="detail-label">Docenas</span>
             <span class="detail-value" id="detail-docenas">—</span>

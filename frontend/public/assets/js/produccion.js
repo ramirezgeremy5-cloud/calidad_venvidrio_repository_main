@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - PRODUCCIÓN (MoonDRAGO)
-   produccion.js - v27 (Docenas + Estándar Industrial 144)
+   produccion.js - v28 (Fix Bug visual + Eliminado Juego de Envases)
    ========================================== */
 
 (function () {
@@ -278,7 +278,8 @@
   // PRODUCTOS Y CLIENTES
   // ==========================================
   function activarModoEdicionLibre(activo) {
-    const camposTecnicos = ['item', 'acabado', 'material', 'tipo_boca', 'juego_envases', 'capacidad'];
+    // Ya no incluimos juego_envases porque fue eliminado del HTML
+    const camposTecnicos = ['item', 'acabado', 'material', 'tipo_boca', 'capacidad'];
     camposTecnicos.forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
@@ -306,7 +307,7 @@
   }
 
   function limpiarFichaTecnica() {
-    ['item', 'acabado', 'material', 'tipo_boca', 'juego_envases', 'capacidad'].forEach(id => {
+    ['item', 'acabado', 'material', 'tipo_boca', 'capacidad'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
     const unidad = document.getElementById('capacidad_unidad'); if (unidad) unidad.value = 'ml';
@@ -320,7 +321,6 @@
     if (document.getElementById('acabado')) document.getElementById('acabado').value = producto.acabado || '';
     if (document.getElementById('material')) document.getElementById('material').value = producto.material || '';
     if (document.getElementById('tipo_boca')) document.getElementById('tipo_boca').value = producto.tipo_boca || '';
-    if (document.getElementById('juego_envases')) document.getElementById('juego_envases').value = producto.juego_envases || '';
     
     if (document.getElementById('bpc')) document.getElementById('bpc').value = (producto.bpc !== null && producto.bpc !== undefined) ? producto.bpc : '';
     if (document.getElementById('camadas_paleta')) document.getElementById('camadas_paleta').value = (producto.camadas_por_paleta !== null && producto.camadas_por_paleta !== undefined) ? producto.camadas_por_paleta : '';
@@ -342,7 +342,7 @@
     if (modoNuevoProducto) {
       if (wrapper) wrapper.style.display = 'flex';
       if (input) { input.value = ''; input.focus(); }
-      if (searchInput) searchInput.disabled = true;
+      if (searchInput) { searchInput.disabled = true; searchInput.value = ''; }
       if (btn) { btn.classList.add('active'); btn.innerHTML = '<i class="ti ti-x"></i> Cancelar'; }
       if (hint) hint.textContent = 'Escriba el nombre del nuevo producto.';
       activarModoEdicionLibre(true);
@@ -368,7 +368,7 @@
     if (modoNuevoCliente) {
       if (wrapper) wrapper.style.display = 'flex';
       if (input) { input.value = ''; input.focus(); }
-      if (searchInput) searchInput.disabled = true;
+      if (searchInput) { searchInput.disabled = true; searchInput.value = ''; }
       if (btn) { btn.classList.add('active'); btn.innerHTML = '<i class="ti ti-x"></i> Cancelar'; }
     } else {
       if (wrapper) wrapper.style.display = 'none';
@@ -577,8 +577,8 @@
         linea: p.linea_produccion, planta: p.planta || 'Valera', op: p.operador, uds: p.cantidad, turno: p.turno,
         paletas: p.paletas || 0, 
         gruesas: p.gruesas || 0, 
-        docenas: p.docenas || 0,  // 👈 NUEVO: mapear docenas
-        juego_envases: p.juego_envases || '', tamano_muestra: p.tamano_muestra || '',
+        docenas: p.docenas || 0,
+        tamano_muestra: p.tamano_muestra || '',
         bot_por_canada: p.bot_por_canada || 0, bot_por_paleta: p.bot_por_paleta || 0, gruesas_por_paleta: p.gruesas_por_paleta || 0,
         cliente: p.cliente || 'Sin asignar', estatus: p.estatus || '100', estado_auditoria: p.estado_auditoria || 'Pendiente',
         observaciones: p.observaciones || '', fecha_prod: p.fecha_produccion || '',
@@ -717,7 +717,6 @@
     setTexto('detail-capacidad', etiquetaCapacidad(lote.capacidad_ml, lote.unidad_capacidad));
     setTexto('detail-bpp', lote.bpp);
     setTexto('detail-acabado', lote.acabado);
-    setTexto('detail-juego-envases', lote.juego_envases);
     setTexto('detail-dimensiones', lote.tamano_muestra || '—');
 
     let bpcMostrar = lote.bpc || lote.bot_por_canada || 0;
@@ -739,7 +738,6 @@
     else if (lote.uds > 0 && bpcMostrar > 0) cajasMostrar = formatearNumero(lote.uds / bpcMostrar, 2);
     setTexto('detail-cajas', cajasMostrar);
 
-    // 👇 NUEVO: Docenas (del backend, o calculadas si no vienen)
     let docenasMostrar = '—';
     if (lote.docenas && Number(lote.docenas) > 0) {
       docenasMostrar = formatearNumero(lote.docenas, 0);
@@ -980,7 +978,7 @@
   }
 
   // ==========================================
-  // REGISTRAR (ahora incluye docenas)
+  // REGISTRAR
   // ==========================================
   function initFormularioRegistro() {
     const btnRegistrar = document.getElementById('btn-registrar');
@@ -1015,14 +1013,13 @@
       const cajas_producidas = document.getElementById('cajas_producidas').value;
       const gruesas = document.getElementById('gruesas').value;
       const gruesas_paleta = document.getElementById('gruesas_paleta').value;
-      const docenas = document.getElementById('docenas')?.value;  // 👈 NUEVO
+      const docenas = document.getElementById('docenas')?.value;
       const fecha = document.getElementById('fecha-prod').value;
       const estatus = document.getElementById('estatus').value;
       const observaciones = document.getElementById('obs-prod').value.trim();
 
       const prod = obtenerProducto();
       const cliente = obtenerCliente();
-      const juego_envases = document.getElementById('juego_envases')?.value?.trim() || null;
       const dimensiones = obtenerDimensiones();
       const guardarEnCatalogo = document.getElementById('guardar-en-catalogo')?.checked || false;
 
@@ -1063,8 +1060,7 @@
         paletas: paletas ? parseFloat(paletas) : null,
         cajas_producidas: cajas_producidas ? parseFloat(cajas_producidas) : null,
         gruesas: gruesas ? parseFloat(gruesas) : null,
-        docenas: docenas ? parseFloat(docenas) : null,  // 👈 NUEVO
-        juego_envases: juego_envases,
+        docenas: docenas ? parseFloat(docenas) : null,
         tamano_muestra: dimensiones,
         bot_por_canada: bpc ? parseInt(bpc) : null,
         bot_por_paleta: bpp ? parseFloat(bpp) : null,
@@ -1083,7 +1079,7 @@
             capacidad_ml: capacidadMl !== null ? Math.round(capacidadMl) : null, 
             bpp: bpp ? parseFloat(bpp) : null, bpc: bpc ? parseInt(bpc) : null,
             camadas_por_paleta: camadas_paleta ? parseInt(camadas_paleta) : null,
-            juego_envases: juego_envases || null, material: material || null, 
+            material: material || null, 
             tipo_boca: tipo_boca || null, dimensiones: dimensiones || null 
           };
           const resProd = await fetch(`${API_URL}/productos`, { method: 'POST', headers: jsonHeader(), body: JSON.stringify(productBody) });
@@ -1147,7 +1143,7 @@
     btnLimpiar.addEventListener('click', async (e) => {
       e.preventDefault();
 
-      const campos = ['ticket_carga', 'grupo', 'linea', 'acabado', 'item', 'material', 'tipo_boca', 'molde', 'bpp', 'bpc', 'camadas_paleta', 'cantidad', 'paletas', 'cajas_producidas', 'gruesas', 'juego_envases', 'capacidad', 'dim_altura_cil', 'gruesas_paleta', 'docenas', 'obs-prod'];
+      const campos = ['ticket_carga', 'grupo', 'linea', 'acabado', 'item', 'material', 'tipo_boca', 'molde', 'bpp', 'bpc', 'camadas_paleta', 'cantidad', 'paletas', 'cajas_producidas', 'gruesas', 'capacidad', 'dim_altura_cil', 'gruesas_paleta', 'docenas', 'obs-prod'];
 
       campos.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       ['planta', 'maquina', 'turno'].forEach(id => { const el = document.getElementById(id); if (el) el.selectedIndex = 0; });
@@ -1341,6 +1337,7 @@
     initFormularioRegistro();
     initLimpiar();
 
+    // 👇 FIX DEL BUG: Forzamos a que el formulario inicie limpio y cerrado
     toggleNuevoProducto(false);
     toggleNuevoCliente(false);
     activarModoEdicionLibre(false);
