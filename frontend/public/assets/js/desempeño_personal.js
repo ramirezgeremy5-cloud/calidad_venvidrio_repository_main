@@ -1,28 +1,33 @@
-Aquí tienes el archivo auditoria.js completo y corregido. El código que me pasaste estaba cortado a la mitad (justo en la función renderHistorialEvaluado()), por lo que el archivo no era válido y el navegador no podía ejecutarlo (por eso "no cargaba").
+Aquí tienes el archivo auditoria.js completo.
 
-He completado toda la lógica faltante (renderizado del historial, carga de evaluaciones, guardado, eliminación, exportaciones y arranque de la app), manteniendo todas las correcciones que ya tenías (timeout, retry, foto robusta, roles, etc.).
+El problema anterior era que el código que me pasaste estaba cortado a la mitad (la función renderHistorialEvaluado() estaba incompleta), lo cual rompía todo el archivo y el navegador no lo ejecutaba.
+
+He reconstruido el archivo entero, he cerrado todas las funciones correctamente, y he añadido la lógica faltante (carga de evaluaciones, guardado, eliminación, generación automática de planes de mejora y exportación a CSV).
 
 ```javascript
 /* ==========================================
    VENVIDRIO - AUDITORÍA INTERNA DE CALIDAD
-   auditoria.js - v3 (Completo y Funcional)
+   auditoria.js - v4 (Completo y Corregido)
    ========================================== */
 
 (function () {
   'use strict';
 
   // =========================
-  // CONFIGURACIÓN
+  // CONFIGURACIÓN DINÁMICA DE API
   // =========================
   const hostname = window.location.hostname;
   const API_URL = (hostname === 'localhost' || hostname === '127.0.0.1')
     ? 'http://127.0.0.1:8000'
     : 'https://calidad-venvidrio-repository-main.onrender.com';
 
-  const ROLES_PERMITIDOS = [2, 3];
+  const ROLES_PERMITIDOS = [2, 3]; // 2 = supervisor, 3 = admin
   const TIMEOUT_MS = 15000;
   const TIMEOUT_WAKE_MS = 30000;
 
+  // =========================
+  // CATÁLOGO DE CRITERIOS
+  // =========================
   const CRITERIOS = [
     { id: "c1",  texto: "Cumple sus funciones y responsabilidades asignadas", funcion: "Cumplimiento de funciones" },
     { id: "c2",  texto: "Asiste puntualmente a las reuniones del departamento de calidad", funcion: "Puntualidad en reuniones" },
@@ -156,23 +161,29 @@ He completado toda la lógica faltante (renderizado del historial, carga de eval
   }
 
   // =========================
-  // ROLES / SESIÓN
+  // CONTROL DE ROLES / ACCESO
   // =========================
   function verificarAcceso() {
     const token = localStorage.getItem('token');
-    if (!token) { window.location.href = '../public/login.html'; return false; }
+    if (!token) {
+      window.location.href = '../public/login.html';
+      return false;
+    }
 
     const rol = parseInt(localStorage.getItem('role'), 10);
     rolActual = isNaN(rol) ? 0 : rol;
 
     if (!ROLES_PERMITIDOS.includes(rolActual)) {
-      alert('⛔ Acceso restringido.\n\nEsta sección es exclusiva para Supervisores y Administradores.');
+      alert('⛔ Acceso restringido.\n\nEsta sección de Auditoría Interna es exclusiva para Supervisores y Administradores.');
       window.location.href = '../public/dashboard.html';
       return false;
     }
     return true;
   }
 
+  // =========================
+  // SESIÓN / NAVBAR
+  // =========================
   function cargarUsuarioNav() {
     const userData = localStorage.getItem('user');
     if (!userData) return;
@@ -188,8 +199,12 @@ He completado toda la lógica faltante (renderizado del historial, carga de eval
         avatarHtml = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
       }
 
-      if ($('navAvatar')) $('navAvatar').innerHTML = avatarHtml;
-      if ($('dropdownAvatar')) $('dropdownAvatar').innerHTML = avatarHtml;
+      const navAvatar = $('navAvatar');
+      if (navAvatar) navAvatar.innerHTML = avatarHtml;
+
+      const dropdownAvatar = $('dropdownAvatar');
+      if (dropdownAvatar) dropdownAvatar.innerHTML = avatarHtml;
+
       setText('navUsername', user.nombre || 'Usuario');
       setText('dropdownName', user.nombre || 'Usuario');
       setText('dropdownEmail', user.correo || 'usuario@email.com');
@@ -207,15 +222,16 @@ He completado toda la lógica faltante (renderizado del historial, carga de eval
 
   function initUserControls() {
     const container = $('navUserContainer');
-    const dropdown = $('userDropdown');
+    const dropdown  = $('userDropdown');
     const logoutBtn = $('dropdownLogout');
 
-    if (container) {
+    if (container && dropdown) {
       container.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (dropdown) dropdown.classList.toggle('show');
+        dropdown.classList.toggle('show');
       });
     }
+
     document.addEventListener('click', () => { if (dropdown) dropdown.classList.remove('show'); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && dropdown) dropdown.classList.remove('show'); });
 
@@ -239,13 +255,14 @@ He completado toda la lógica faltante (renderizado del historial, carga de eval
         { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } },
         2
       );
+
       if (response.status === 401 || response.status === 403) {
         localStorage.clear();
         window.location.href = '../public/login.html';
         return;
       }
-    } catch (e) {
-      console.warn('No se pudo verificar sesión, se continúa offline:', e);
+    } catch (error) {
+      console.warn('No se pudo verificar sesión, se continúa offline:', error);
     }
 
     cargarUsuarioNav();
@@ -255,7 +272,7 @@ He completado toda la lógica faltante (renderizado del historial, carga de eval
   }
 
   // =========================
-  // CARGA DE PERSONAL
+  // CARGA DEL PERSONAL
   // =========================
   async function cargarPersonal() {
     try {
@@ -267,6 +284,7 @@ He completado toda la lógica faltante (renderizado del historial, carga de eval
       if (response.ok) {
         const data = await response.json();
         const lista = Array.isArray(data) ? data : (data.items || data.usuarios || []);
+
         personal = lista.map(u => ({
           id: u.id,
           nombre: u.nombre || 'Sin nombre',
@@ -325,7 +343,7 @@ He completado toda la lógica faltante (renderizado del historial, carga de eval
   }
 
   // =========================
-  // EVALUACIÓN
+  // CHECKLIST / EVALUACIÓN
   // =========================
   function resetEvaluacion() {
     evaluacionState = {};
@@ -341,7 +359,9 @@ He completado toda la lógica faltante (renderizado del historial, carga de eval
 
     cont.innerHTML = CRITERIOS.map((c, i) => {
       const estado = evaluacionState[c.id];
-      const cls = estado ? `evaluado ${estado === 'ok' ? 'cumple' : estado === 'parcial' ? 'parcial' : 'no-cumple'}` : '';
+      const cls = estado
+        ? `evaluado ${estado === 'ok' ? 'cumple' : estado === 'parcial' ? 'parcial' : 'no-cumple'}`
+        : '';
       const n = String(i + 1).padStart(2, '0');
 
       return `
@@ -402,14 +422,14 @@ He completado toda la lógica faltante (renderizado del historial, carga de eval
   // GUARDAR EVALUACIÓN
   // =========================
   async function guardarEvaluacion() {
-    if (!evaluadoActual) { alert('Selecciona un miembro del personal.'); return; }
+    if (!evaluadoActual) { alert('Selecciona un miembro del personal primero.'); return; }
 
     const { evaluados, total, pct } = calcularProgreso();
     if (evaluados < total) {
-      if (!confirm(`Solo has evaluado ${evaluados} de ${total} criterios. ¿Deseas guardar igualmente?`)) return;
+      if (!confirm(`Solo has evaluado ${evaluados} de ${total} criterios. ¿Deseas guardar de todas formas?`)) return;
     }
 
-    const { categoria, clase } = clasificar(pct);
+    const { categoria } = clasificar(pct);
     const obs = val('obs-eval');
 
     const body = {
@@ -445,6 +465,12 @@ He completado toda la lógica faltante (renderizado del historial, carga de eval
         throw new Error(err.detail || `HTTP ${response.status}`);
       }
 
+      // Generar planes de mejora si la evaluación fue baja
+      const nuevosPlanes = generarPlanesDesdeEvaluacion(evaluadoActual, body, pct, categoria);
+      if (nuevosPlanes.length > 0) {
+        planes = [...planes, ...nuevosPlanes];
+      }
+
       alert('✅ Evaluación guardada correctamente.');
       resetEvaluacion();
       await cargarEvaluaciones();
@@ -461,6 +487,72 @@ He completado toda la lógica faltante (renderizado del historial, carga de eval
   }
 
   // =========================
+  // PLANES DE MEJORA
+  // =========================
+  function generarPlanesDesdeEvaluacion(p, evaluacion, pct, categoria) {
+    const nuevos = [];
+    if (categoria === 'Regular' || categoria === 'Deficiente') {
+      CRITERIOS.forEach(c => {
+        const v = evaluacionState[c.id];
+        if (v === 'fail' || v === 'parcial') {
+          nuevos.push({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            evaluado_id: p.id,
+            evaluado: p.nombre,
+            cargo: p.cargo,
+            criterio: c.texto,
+            funcion: c.funcion,
+            prioridad: v === 'fail' ? 'alta' : 'media',
+            estado: 'abierto',
+            fecha: new Date().toISOString(),
+            origen: `Evaluación ${categoria} (${pct}%)`
+          });
+        }
+      });
+    }
+    return nuevos;
+  }
+
+  function renderPlanes() {
+    const cont = $('lista-planes');
+    if (!cont) return;
+
+    setText('badge-planes', planes.length);
+    setText('kpi-planes', planes.length);
+    setText('kpi-planes-sub', planes.length
+      ? `${planes.filter(p => p.prioridad === 'alta').length} de prioridad alta`
+      : 'Sin planes pendientes');
+
+    if (planes.length === 0) {
+      cont.innerHTML = `
+        <div class="empty-panel">
+          <i class="ti ti-target-arrow"></i>
+          <span>Sin planes de mejora activos</span>
+        </div>`;
+      return;
+    }
+
+    cont.innerHTML = planes.slice(0, 8).map(p => `
+      <div class="plan-item ${p.prioridad === 'alta' ? 'prioridad-alta' : ''}">
+        <div class="plan-icon">
+          <i class="ti ${p.prioridad === 'alta' ? 'ti-alert-triangle' : 'ti-flag'}"></i>
+        </div>
+        <div class="plan-body">
+          <div class="plan-titulo">${esc(p.criterio)}</div>
+          <div class="plan-desc">${esc(p.evaluado)} · ${esc(p.cargo)}</div>
+          <div class="plan-meta">
+            <span><strong>Función:</strong> ${esc(p.funcion)}</span>
+            <span><strong>Prioridad:</strong> ${esc(p.prioridad)}</span>
+            <span>${fmtFecha(p.fecha)}</span>
+          </div>
+        </div>
+        <span class="plan-estado ${p.estado === 'cerrado' ? 'cerrado' : ''}">
+          ${p.estado === 'cerrado' ? 'Cerrado' : 'Abierto'}
+        </span>
+      </div>`).join('');
+  }
+
+  // =========================
   // HISTORIAL DEL EVALUADO
   // =========================
   function renderHistorialEvaluado() {
@@ -468,7 +560,7 @@ He completado toda la lógica faltante (renderizado del historial, carga de eval
     if (!cont) return;
 
     if (!evaluadoActual) {
-      cont.innerHTML = `<div class="empty-panel"><i class="ti ti-history"></i><span>Selecciona un miembro del personal</span></div>`;
+      cont.innerHTML = `<div class="empty-panel"><i class="ti ti-history"></i><span>Selecciona un miembro del personal para ver su historial</span></div>`;
       return;
     }
 
@@ -523,68 +615,6 @@ He completado toda la lógica faltante (renderizado del historial, carga de eval
   };
 
   // =========================
-  // PLANES DE MEJORA
-  // =========================
-  function generarPlanesDesdeEvaluacion(p, evaluacion, pct, categoria) {
-    const nuevos = [];
-    if (categoria === 'Regular' || categoria === 'Deficiente') {
-      CRITERIOS.forEach(c => {
-        const v = evaluacionState[c.id];
-        if (v === 'fail' || v === 'parcial') {
-          nuevos.push({
-            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            evaluado_id: p.id,
-            evaluado: p.nombre,
-            cargo: p.cargo,
-            criterio: c.texto,
-            funcion: c.funcion,
-            prioridad: v === 'fail' ? 'alta' : 'media',
-            estado: 'abierto',
-            fecha: new Date().toISOString(),
-            origen: `Evaluación ${categoria} (${pct}%)`
-          });
-        }
-      });
-    }
-    return nuevos;
-  }
-
-  function renderPlanes() {
-    const cont = $('lista-planes');
-    if (!cont) return;
-
-    setText('badge-planes', planes.length);
-    setText('kpi-planes', planes.length);
-    setText('kpi-planes-sub', planes.length
-      ? `${planes.filter(p => p.prioridad === 'alta').length} de prioridad alta`
-      : 'Sin planes pendientes');
-
-    if (planes.length === 0) {
-      cont.innerHTML = `<div class="empty-panel"><i class="ti ti-target-arrow"></i><span>Sin planes de mejora activos</span></div>`;
-      return;
-    }
-
-    cont.innerHTML = planes.slice(0, 8).map(p => `
-      <div class="plan-item ${p.prioridad === 'alta' ? 'prioridad-alta' : ''}">
-        <div class="plan-icon">
-          <i class="ti ${p.prioridad === 'alta' ? 'ti-alert-triangle' : 'ti-flag'}"></i>
-        </div>
-        <div class="plan-body">
-          <div class="plan-titulo">${esc(p.criterio)}</div>
-          <div class="plan-desc">${esc(p.evaluado)} · ${esc(p.cargo)}</div>
-          <div class="plan-meta">
-            <span><strong>Función:</strong> ${esc(p.funcion)}</span>
-            <span><strong>Prioridad:</strong> ${esc(p.prioridad)}</span>
-            <span>${fmtFecha(p.fecha)}</span>
-          </div>
-        </div>
-        <span class="plan-estado ${p.estado === 'cerrado' ? 'cerrado' : ''}">
-          ${p.estado === 'cerrado' ? 'Cerrado' : 'Abierto'}
-        </span>
-      </div>`).join('');
-  }
-
-  // =========================
   // CARGAR EVALUACIONES (API)
   // =========================
   async function cargarEvaluaciones() {
@@ -607,7 +637,6 @@ He completado toda la lógica faltante (renderizado del historial, carga de eval
       evaluaciones = [];
     }
 
-    // KPIs globales
     actualizarKPIsGlobales();
   }
 
@@ -646,7 +675,7 @@ He completado toda la lógica faltante (renderizado del historial, carga de eval
   };
 
   // =========================
-  // INICIALIZACIÓN
+  // INICIALIZACIÓN GENERAL
   // =========================
   function init() {
     initSelectorEvaluado();
@@ -669,37 +698,3 @@ He completado toda la lógica faltante (renderizado del historial, carga de eval
 
 })();
 ```
-
-¿Qué estaba mal y qué se corrigió?
-
-1. Archivo cortado: El código original terminaba en function renderHistorialEvaluado() { sin cerrar la función ni el })(); del IIFE. Eso hacía que el archivo fuera inválido y el navegador lo ignorara por completo.
-2. Faltaban funciones clave: No existían cargarEvaluaciones, guardarEvaluacion, actualizarKPIsGlobales, exportarCSV, init, ni el verificarSesion() correcto.
-3. Faltaban referencias al DOM: El HTML (que no me pasaste, pero que se deduce del código) espera IDs como btn-guardar-eval, btn-reset-eval, checklist-body, pct-label, badge-progreso, kpi-total, etc. Ahora se usan todos de forma segura (con ?. o comprobando existencia).
-4. Lógica de planes sin usar: La función generarPlanesDesdeEvaluacion existía pero nunca se llamaba. Ahora al guardar una evaluación con categoría Regular o Deficiente, puedes generar planes (puedes añadirlo al guardarEvaluacion si quieres que se guarden automáticamente; por ahora solo se muestra la lista si los tienes precargados).
-
-Cómo añadir la generación automática de planes al guardar
-
-Si quieres que los planes se generen solos al guardar una evaluación deficiente, sustituye esta parte de guardarEvaluacion:
-
-```javascript
-alert('✅ Evaluación guardada correctamente.');
-resetEvaluacion();
-await cargarEvaluaciones();
-renderHistorialEvaluado();
-renderPlanes();
-```
-
-por esto:
-
-```javascript
-const nuevosPlanes = generarPlanesDesdeEvaluacion(evaluadoActual, body, pct, categoria);
-planes = [...planes, ...nuevosPlanes];
-
-alert('✅ Evaluación guardada correctamente.');
-resetEvaluacion();
-await cargarEvaluaciones();
-renderHistorialEvaluado();
-renderPlanes();
-```
-
-Con eso, cada vez que guardes una evaluación baja, aparecerán automáticamente los planes de mejora en la lista de la derecha. Recuerda guardar el archivo y recargar con Ctrl + F5.
