@@ -1,23 +1,30 @@
 /* ==========================================
    VENVIDRIO - AUDITORÍA INTERNA DE CALIDAD
-   auditoria_interna.js - v1 (Adaptado al HTML)
+   auditoria.js - v3 (alineado con backend FastAPI)
+   Endpoints correctos: /auditorias/interna/*
    ========================================== */
 
 (function () {
   'use strict';
 
   // =========================
-  // CONFIGURACIÓN
+  // CONFIGURACIÓN DINÁMICA DE API
   // =========================
   const hostname = window.location.hostname;
   const API_URL = (hostname === 'localhost' || hostname === '127.0.0.1')
     ? 'http://127.0.0.1:8000'
     : 'https://calidad-venvidrio-repository-main.onrender.com';
 
+  // 👇 PREFIJO CORRECTO DEL BACKEND
+  const BASE = `${API_URL}/auditorias/interna`;
+
   const ROLES_PERMITIDOS = [2, 3];
   const TIMEOUT_MS = 15000;
   const TIMEOUT_WAKE_MS = 30000;
 
+  // =========================
+  // CATÁLOGO DE CRITERIOS
+  // =========================
   const CRITERIOS = [
     { id: "c1",  texto: "Cumple sus funciones y responsabilidades asignadas", funcion: "Cumplimiento de funciones" },
     { id: "c2",  texto: "Asiste puntualmente a las reuniones del departamento de calidad", funcion: "Puntualidad en reuniones" },
@@ -43,7 +50,7 @@
   ];
 
   // =========================
-  // ESTADO GLOBAL
+  // ESTADO
   // =========================
   let personal = [...PERSONAL_FALLBACK];
   let evaluaciones = [];
@@ -52,16 +59,19 @@
   let evaluacionState = {};
   let usuarioActual = null;
   let rolActual = 0;
-  let idAEliminar = null;
-  let filtrosActuales = {};
+  let evaluacionEliminando = null;
+  let personalCargado = false;
 
   // =========================
   // UTILIDADES
   // =========================
-  const $ = (id) => document.getElementById(id);
-  const val = (id) => { const el = $(id); return el ? String(el.value).trim() : ''; };
-  const setText = (id, t) => { const el = $(id); if (el) el.textContent = t; };
-  const setHTML = (id, h) => { const el = $(id); if (el) el.innerHTML = h; };
+  function log(msg, d)     { console.log(`[${new Date().toLocaleTimeString()}] 🔍 ${msg}`, d || ''); }
+  function logError(m, e)  { console.error(`[${new Date().toLocaleTimeString()}] ❌ ${m}`, e || ''); }
+  function logSuccess(m,d) { console.log(`[${new Date().toLocaleTimeString()}] ✅ ${m}`, d || ''); }
+
+  function $(id) { return document.getElementById(id); }
+  function val(id) { const el = $(id); return el ? String(el.value).trim() : ''; }
+  function setText(id, t) { const el = $(id); if (el) el.textContent = t; }
 
   function esc(v) {
     if (v === null || v === undefined) return '';
@@ -80,8 +90,8 @@
     if (!nombre) return '??';
     const partes = String(nombre).trim().split(/\s+/);
     const a = partes[0] ? partes[0][0] : '';
-    const b = partes[1] ? partes[1][0] : '';
-    return (a + b).toUpperCase() || '??';
+    const b = partes[1] ? partes[1][0] : (partes[0] && partes[0][1] || '');
+    return (a + b).toUpperCase();
   }
 
   function obtenerUrlFoto(fotoUrl) {
@@ -99,22 +109,6 @@
     };
   }
 
-  function mostrarToast(mensaje, esError = false) {
-    const toast = $('toast-auditoria');
-    if (toast) {
-      const icono = esError ? 'ti-alert-circle' : 'ti-circle-check';
-      toast.innerHTML = `<i class="ti ${icono}" aria-hidden="true"></i> <span>${esc(mensaje)}</span>`;
-      toast.style.background = esError ? '#fee2e2' : '#d1fae5';
-      toast.style.color = esError ? '#b91c1c' : '#065f46';
-      toast.style.borderLeftColor = esError ? '#ef4444' : '#10b981';
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 4000);
-    }
-  }
-
-  // =========================
-  // FETCH CON TIMEOUT Y RETRY
-  // =========================
   async function fetchConTimeout(url, options = {}, timeout = TIMEOUT_MS) {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
@@ -167,8 +161,14 @@
     return { categoria: 'Deficiente', clase: 'cat-deficiente' };
   }
 
+  // 👇 helper: el backend devuelve "puntaje", no "porcentaje"
+  function getPuntaje(e) {
+    if (!e) return 0;
+    return Number(e.puntaje ?? e.porcentaje ?? 0);
+  }
+
   // =========================
-  // CONTROL DE ACCESO
+  // CONTROL DE ROLES / ACCESO
   // =========================
   function verificarAcceso() {
     const token = localStorage.getItem('token');
@@ -176,19 +176,20 @@
       window.location.href = '../public/login.html';
       return false;
     }
+
     const rol = parseInt(localStorage.getItem('role'), 10);
     rolActual = isNaN(rol) ? 0 : rol;
 
     if (!ROLES_PERMITIDOS.includes(rolActual)) {
-      alert('⛔ Acceso restringido a Supervisores y Administradores.');
-      window.location.href = '../dashboard.html';
+      alert('⛔ Acceso restringido.\n\nEsta sección de Auditoría Interna de Calidad es exclusiva para Supervisores y Administradores.');
+      window.location.href = '../public/dashboard.html';
       return false;
     }
     return true;
   }
 
   // =========================
-  // NAVBAR Y SESIÓN
+  // SESIÓN / NAVBAR
   // =========================
   function cargarUsuarioNav() {
     const userData = localStorage.getItem('user');
@@ -205,66 +206,167 @@
         avatarHtml = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
       }
 
-      if ($('navAvatar')) $('navAvatar').innerHTML = avatarHtml;
-      if ($('dropdownAvatar')) $('dropdownAvatar').innerHTML = avatarHtml;
+      const navAvatar = $('navAvatar');
+      if (navAvatar) navAvatar.innerHTML = avatarHtml;
+
+      const dropdownAvatar = $('dropdownAvatar');
+      if (dropdownAvatar) dropdownAvatar.innerHTML = avatarHtml;
+
       setText('navUsername', user.nombre || 'Usuario');
       setText('dropdownName', user.nombre || 'Usuario');
       setText('dropdownEmail', user.correo || 'usuario@email.com');
     } catch (e) {
-      console.error('Error cargando usuario:', e);
+      logError('Error cargando usuario:', e);
+    }
+  }
+
+  function mostrarEnlaceUsuarios() {
+    if (rolActual === 3) {
+      const link = $('navUsuariosLink');
+      if (link) link.style.display = 'flex';
+    }
+  }
+
+  async function cerrarSesion(mensaje) {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await fetchConTimeout(`${API_URL}/auth/logout`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        }, 5000).catch(() => {});
+      }
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('role');
+      if (mensaje) alert(mensaje);
+      window.location.href = '../public/login.html';
     }
   }
 
   function initUserControls() {
     const container = $('navUserContainer');
-    const dropdown = $('userDropdown');
+    const dropdown  = $('userDropdown');
     const logoutBtn = $('dropdownLogout');
 
+    let lastToggle = 0;
+    const toggleDropdown = (e) => {
+      e.stopPropagation();
+      const now = Date.now();
+      if (now - lastToggle < 300) return;
+      lastToggle = now;
+      if (dropdown) dropdown.classList.toggle('show');
+    };
+
     if (container) {
-      container.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (dropdown) dropdown.classList.toggle('show');
-      });
+      container.addEventListener('click', toggleDropdown);
+      container.addEventListener('touchstart', toggleDropdown, { passive: false });
     }
-    document.addEventListener('click', () => { if (dropdown) dropdown.classList.remove('show'); });
-    
+
+    const cerrarDropdown = () => { if (dropdown) dropdown.classList.remove('show'); };
+    document.addEventListener('click', cerrarDropdown);
+    document.addEventListener('touchstart', (e) => {
+      if (container && !container.contains(e.target)) cerrarDropdown();
+    }, { passive: true });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarDropdown(); });
+
     if (logoutBtn) {
-      logoutBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (confirm('¿Cerrar sesión?')) {
-          localStorage.clear();
-          window.location.href = '../public/login.html';
+      logoutBtn.addEventListener('click', e => {
+        e.preventDefault(); e.stopPropagation();
+        if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+          cerrarSesion('👋 Sesión cerrada exitosamente.');
         }
       });
     }
   }
 
+  async function verificarSesion() {
+    if (!verificarAcceso()) return;
+
+    try {
+      const response = await fetchConRetry(
+        `${API_URL}/auth/verify`,
+        { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } },
+        2
+      );
+
+      if (response.status === 401 || response.status === 403) {
+        await cerrarSesion('Sesión expirada. Vuelve a iniciar sesión.');
+        return;
+      }
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      cargarUsuarioNav();
+      mostrarEnlaceUsuarios();
+      initUserControls();
+      init();
+
+    } catch (error) {
+      logError('Error en verificación de sesión:', error);
+      if (error.name === 'AbortError') {
+        alert('El servidor tardó demasiado en responder. Revisa tu conexión.');
+      }
+      cargarUsuarioNav();
+      mostrarEnlaceUsuarios();
+      initUserControls();
+      init();
+    }
+  }
+
   // =========================
-  // CARGA DE PERSONAL
+  // CARGA DEL PERSONAL
   // =========================
   async function cargarPersonal() {
     try {
-      const response = await fetchConTimeout(`${API_URL}/usuarios?t=${Date.now()}`, { headers: authHeaders() });
-      if (response.ok) {
-        const data = await response.json();
-        const lista = Array.isArray(data) ? data : (data.items || data.usuarios || []);
+      // 👇 Probar varias rutas posibles de usuarios
+      const rutas = [
+        `${API_URL}/usuarios`,
+        `${API_URL}/users`,
+        `${API_URL}/auth/usuarios`
+      ];
+
+      let lista = null;
+      for (const url of rutas) {
+        try {
+          const response = await fetchConTimeout(
+            `${url}?t=${Date.now()}`,
+            { headers: authHeaders() },
+            8000
+          );
+          if (response.ok) {
+            const data = await response.json();
+            lista = Array.isArray(data) ? data : (data.items || data.usuarios || data.users || []);
+            if (lista.length) { logSuccess(`Personal cargado desde ${url}`); break; }
+          }
+        } catch (_) { /* siguiente ruta */ }
+      }
+
+      if (lista && lista.length) {
         personal = lista.map(u => ({
           id: u.id,
-          nombre: u.nombre || 'Sin nombre',
-          cargo: u.cargo || 'Sin cargo',
+          nombre: u.nombre || u.name || 'Sin nombre',
+          cargo: u.cargo || u.rol_nombre || u.role || 'Sin cargo',
           turno: u.turno || '—',
           ingreso: u.created_at || u.fecha_ingreso || null
         }));
+        logSuccess(`${personal.length} personas cargadas desde backend`);
+      } else {
+        log('Usando personal de fallback (backend sin /usuarios accesible)');
       }
     } catch (e) {
-      console.warn('Usando personal de fallback:', e);
+      logError('No se pudo cargar personal del backend, usando fallback:', e);
     }
+
+    personalCargado = true;
     poblarSelectorPersonal();
   }
 
   function poblarSelectorPersonal() {
     const sel = $('evaluado');
     if (!sel) return;
+    const prev = sel.value;
     sel.innerHTML = '<option value="">-- Seleccione un miembro del personal --</option>';
     personal.forEach(p => {
       const opt = document.createElement('option');
@@ -272,6 +374,7 @@
       opt.textContent = `${p.nombre} · ${p.cargo}`;
       sel.appendChild(opt);
     });
+    if (prev && personal.some(p => String(p.id) === prev)) sel.value = prev;
   }
 
   // =========================
@@ -291,8 +394,19 @@
     ficha.style.display = 'block';
   }
 
+  function initSelectorEvaluado() {
+    const sel = $('evaluado');
+    if (!sel) return;
+    sel.addEventListener('change', () => {
+      evaluadoActual = personal.find(p => String(p.id) === sel.value) || null;
+      mostrarFicha(evaluadoActual);
+      renderHistorialEvaluado();
+      resetEvaluacion();
+    });
+  }
+
   // =========================
-  // CHECKLIST DE EVALUACIÓN
+  // CHECKLIST / EVALUACIÓN
   // =========================
   function resetEvaluacion() {
     evaluacionState = {};
@@ -300,7 +414,6 @@
     renderChecklist();
     const obs = $('obs-eval');
     if (obs) obs.value = '';
-    actualizarContadorObs();
   }
 
   function renderChecklist() {
@@ -309,7 +422,9 @@
 
     cont.innerHTML = CRITERIOS.map((c, i) => {
       const estado = evaluacionState[c.id];
-      const cls = estado ? `evaluado ${estado === 'ok' ? 'cumple' : estado === 'parcial' ? 'parcial' : 'no-cumple'}` : '';
+      const cls = estado
+        ? `evaluado ${estado === 'ok' ? 'cumple' : estado === 'parcial' ? 'parcial' : 'no-cumple'}`
+        : '';
       const n = String(i + 1).padStart(2, '0');
 
       return `
@@ -317,9 +432,15 @@
           <div class="check-num">${n}</div>
           <div class="check-text">${esc(c.texto)}</div>
           <div class="check-estados">
-            <button type="button" class="check-estado estado-ok ${estado === 'ok' ? 'active' : ''}" data-id="${esc(c.id)}" data-val="ok"><i class="ti ti-check"></i></button>
-            <button type="button" class="check-estado estado-parcial ${estado === 'parcial' ? 'active' : ''}" data-id="${esc(c.id)}" data-val="parcial"><i class="ti ti-minus"></i></button>
-            <button type="button" class="check-estado estado-fail ${estado === 'fail' ? 'active' : ''}" data-id="${esc(c.id)}" data-val="fail"><i class="ti ti-x"></i></button>
+            <button type="button" class="check-estado estado-ok ${estado === 'ok' ? 'active' : ''}" data-id="${esc(c.id)}" data-val="ok" title="Cumple (1.0)">
+              <i class="ti ti-check"></i>
+            </button>
+            <button type="button" class="check-estado estado-parcial ${estado === 'parcial' ? 'active' : ''}" data-id="${esc(c.id)}" data-val="parcial" title="Parcial (0.5)">
+              <i class="ti ti-minus"></i>
+            </button>
+            <button type="button" class="check-estado estado-fail ${estado === 'fail' ? 'active' : ''}" data-id="${esc(c.id)}" data-val="fail" title="No cumple (0.0)">
+              <i class="ti ti-x"></i>
+            </button>
           </div>
         </div>`;
     }).join('');
@@ -347,9 +468,9 @@
     });
     const evaluados = ok + parcial + fail;
     const total = CRITERIOS.length;
-    const puntaje = ok * 1.0 + parcial * 0.5;
+    const puntaje = ok * 1.0 + parcial * 0.5 + fail * 0.0;
     const pct = total ? Math.round((puntaje / total) * 100) : 0;
-    return { evaluados, total, pct };
+    return { ok, parcial, fail, evaluados, total, puntaje, pct };
   }
 
   function actualizarProgreso() {
@@ -358,92 +479,12 @@
     if (fill) fill.style.width = `${pct}%`;
     setText('pct-label', `${pct}%`);
     setText('badge-progreso', `${evaluados} / ${total}`);
-    
-    const track = $('aud-progress-track');
-    if (track) track.setAttribute('aria-valuenow', pct);
-  }
-
-  function actualizarContadorObs() {
-    const obs = $('obs-eval');
-    const count = $('obs-eval-count');
-    if (obs && count) {
-      count.textContent = obs.value.length;
-    }
   }
 
   // =========================
-  // GUARDAR EVALUACIÓN
+  // PLANES DE MEJORA (derivados de evaluaciones, en memoria)
   // =========================
-  async function guardarEvaluacion() {
-    if (!evaluadoActual) { mostrarToast('Selecciona un miembro del personal primero.', true); return; }
-
-    const { evaluados, total, pct } = calcularProgreso();
-    if (evaluados < total) {
-      if (!confirm(`Solo has evaluado ${evaluados} de ${total} criterios. ¿Deseas guardar de todas formas?`)) return;
-    }
-
-    const { categoria } = clasificar(pct);
-    const obs = val('obs-eval');
-    const periodo = val('periodo');
-
-    const body = {
-      evaluado_id: evaluadoActual.id,
-      evaluado_nombre: evaluadoActual.nombre,
-      evaluado_cargo: evaluadoActual.cargo,
-      evaluado_turno: evaluadoActual.turno || '—',
-      periodo: periodo,
-      puntaje_total: pct,
-      categoria: categoria,
-      observaciones: obs || null,
-      detalles: CRITERIOS.map(c => ({
-        criterio_id: c.id,
-        criterio: c.texto,
-        funcion: c.funcion,
-        valor: evaluacionState[c.id] || null
-      })),
-      evaluador: usuarioActual?.nombre || 'Desconocido',
-      fecha: new Date().toISOString()
-    };
-
-    try {
-      const btn = $('btn-guardar-eval');
-      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader"></i> Guardando...'; }
-
-      const response = await fetchConRetry(
-        `${API_URL}/auditoria-interna`,
-        { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) },
-        2
-      );
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.detail || `HTTP ${response.status}`);
-      }
-
-      // Generar planes de mejora si aplica
-      const nuevos = generarPlanesDesdeEvaluacion(evaluadoActual, body, pct, categoria);
-      if (nuevos.length) planes = [...planes, ...nuevos];
-
-      mostrarToast('Evaluación guardada correctamente.');
-      resetEvaluacion();
-      await cargarEvaluaciones();
-      renderHistorialEvaluado();
-      renderPlanes();
-      renderTablaHistorial();
-
-    } catch (e) {
-      console.error(e);
-      mostrarToast('No se pudo guardar la evaluación.', true);
-    } finally {
-      const btn = $('btn-guardar-eval');
-      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-device-floppy"></i> Guardar Evaluación'; }
-    }
-  }
-
-  // =========================
-  // PLANES DE MEJORA
-  // =========================
-  function generarPlanesDesdeEvaluacion(p, evaluacion, pct, categoria) {
+  function generarPlanesDesdeEvaluacion(p, pct, categoria) {
     const nuevos = [];
     if (categoria === 'Regular' || categoria === 'Deficiente') {
       CRITERIOS.forEach(c => {
@@ -478,13 +519,19 @@
       : 'Sin planes pendientes');
 
     if (planes.length === 0) {
-      cont.innerHTML = `<div class="empty-panel"><i class="ti ti-target-arrow"></i><span>Sin planes de mejora activos</span></div>`;
+      cont.innerHTML = `
+        <div class="empty-panel">
+          <i class="ti ti-target-arrow"></i>
+          <span>Sin planes de mejora activos</span>
+        </div>`;
       return;
     }
 
     cont.innerHTML = planes.slice(0, 8).map(p => `
       <div class="plan-item ${p.prioridad === 'alta' ? 'prioridad-alta' : ''}">
-        <div class="plan-icon"><i class="ti ${p.prioridad === 'alta' ? 'ti-alert-triangle' : 'ti-flag'}"></i></div>
+        <div class="plan-icon">
+          <i class="ti ${p.prioridad === 'alta' ? 'ti-alert-triangle' : 'ti-flag'}"></i>
+        </div>
         <div class="plan-body">
           <div class="plan-titulo">${esc(p.criterio)}</div>
           <div class="plan-desc">${esc(p.evaluado)} · ${esc(p.cargo)}</div>
@@ -494,329 +541,268 @@
             <span>${fmtFecha(p.fecha)}</span>
           </div>
         </div>
-        <span class="plan-estado ${p.estado === 'cerrado' ? 'cerrado' : ''}">${p.estado === 'cerrado' ? 'Cerrado' : 'Abierto'}</span>
+        <span class="plan-estado ${p.estado === 'cerrado' ? 'cerrado' : ''}">
+          ${p.estado === 'cerrado' ? 'Cerrado' : 'Abierto'}
+        </span>
       </div>`).join('');
   }
 
   // =========================
-  // HISTORIAL DEL EVALUADO
+  // HISTORIAL DEL EVALUADO (✅ ahora bien cerrado)
   // =========================
   function renderHistorialEvaluado() {
-    const cont = $('historial-evaluado');
+    const cont = $('historial-evaluado') || $('historial-evaluaciones');
     if (!cont) return;
 
     if (!evaluadoActual) {
-      cont.innerHTML = `<div class="empty-panel"><i class="ti ti-history"></i><span>Selecciona un miembro del personal</span></div>`;
+      cont.innerHTML = '<div class="empty-panel"><i class="ti ti-history"></i><span>Selecciona una persona</span></div>';
       return;
     }
 
-    const propias = evaluaciones.filter(e => String(e.evaluado_id) === String(evaluadoActual.id));
+    const hist = evaluaciones
+      .filter(e => String(e.evaluado_id) === String(evaluadoActual.id))
+      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
-    if (propias.length === 0) {
-      cont.innerHTML = `<div class="empty-panel"><i class="ti ti-history"></i><span>Sin evaluaciones previas</span></div>`;
+    if (!hist.length) {
+      cont.innerHTML = '<div class="empty-panel"><i class="ti ti-history"></i><span>Sin evaluaciones registradas</span></div>';
       return;
     }
 
-    cont.innerHTML = propias.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).map(e => {
-      const cls = clasificar(Number(e.puntaje_total) || 0);
+    cont.innerHTML = hist.map(e => {
+      const pts = getPuntaje(e);
+      const cls = clasificar(pts);
       return `
         <div class="hist-item">
-          <div class="hist-fecha">${fmtFecha(e.fecha)}</div>
-          <div class="hist-puntaje">
-            <strong>${esc(e.puntaje_total ?? '—')}%</strong>
-            <span class="cat-badge ${cls.clase}">${esc(cls.categoria)}</span>
+          <div class="hist-info">
+            <div class="hist-fecha">${fmtFecha(e.fecha)}</div>
+            <div class="hist-meta">${esc(e.categoria || cls.categoria)} · ${pts}% · ${esc(e.periodo || '—')}</div>
           </div>
-          <div class="hist-obs">${esc(e.observaciones || 'Sin observaciones')}</div>
+          <div class="hist-acciones">
+            <span class="cat-badge ${cls.clase}">${esc(e.categoria || cls.categoria)}</span>
+            ${rolActual === 3 ? `
+              <button type="button" class="btn-icon btn-danger" data-del="${esc(e.id)}" title="Eliminar">
+                <i class="ti ti-trash"></i>
+              </button>` : ''}
+          </div>
         </div>`;
     }).join('');
+
+    cont.querySelectorAll('[data-del]').forEach(btn => {
+      btn.addEventListener('click', () => eliminarEvaluacion(btn.dataset.del));
+    });
   }
 
   // =========================
-  // TABLA HISTORIAL GENERAL
-  // =========================
-  function renderTablaHistorial() {
-    const tbody = $('tabla-eval');
-    if (!tbody) return;
-
-    let data = [...evaluaciones];
-    const { cargo, evaluador, periodo, categoria, desde, hasta } = filtrosActuales;
-
-    if (cargo) data = data.filter(e => (e.evaluado_cargo || '').toLowerCase().includes(cargo.toLowerCase()));
-    if (evaluador) data = data.filter(e => (e.evaluador || '').toLowerCase().includes(evaluador.toLowerCase()));
-    if (periodo) data = data.filter(e => e.periodo === periodo);
-    if (categoria) data = data.filter(e => e.categoria === categoria);
-    
-    if (desde) {
-      const dDesde = new Date(desde);
-      data = data.filter(e => new Date(e.fecha) >= dDesde);
-    }
-    if (hasta) {
-      const dHasta = new Date(hasta);
-      dHasta.setHours(23, 59, 59);
-      data = data.filter(e => new Date(e.fecha) <= dHasta);
-    }
-
-    const resultadoEl = $('filtro-resultados');
-    if (resultadoEl) {
-      const totalActivos = Object.values(filtrosActuales).filter(Boolean).length;
-      resultadoEl.textContent = totalActivos > 0 
-        ? `🔍 Filtros aplicados: ${totalActivos} | ${data.length} resultados`
-        : `📋 Mostrando todas las evaluaciones (${data.length})`;
-    }
-
-    // KPIs Globales
-    setText('kpi-evaluaciones', data.length);
-    setText('kpi-evaluaciones-sub', 'Registros totales');
-    const pctPromedio = data.length ? Math.round(data.reduce((s, e) => s + (Number(e.puntaje_total) || 0), 0) / data.length) : 0;
-    setText('kpi-promedio', `${pctPromedio}%`);
-    const personasUnicas = new Set(data.map(e => e.evaluado_id)).size;
-    setText('kpi-personas', personasUnicas);
-    setText('kpi-personas-sub', 'Personal evaluado');
-
-    if (data.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted)"><i class="ti ti-inbox" style="font-size:1.5rem;margin-bottom:0.5rem;display:block;"></i> No hay evaluaciones registradas</td></tr>`;
-      return;
-    }
-
-    tbody.innerHTML = data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).map(e => {
-      const cls = clasificar(Number(e.puntaje_total) || 0);
-      const planesCount = (e.planes_generados || []).length;
-      return `
-        <tr>
-          <td><span style="font-weight:600;color:var(--navy);">${esc(e.evaluado_nombre)}</span></td>
-          <td>${esc(e.evaluado_cargo)}</td>
-          <td>${esc(e.evaluador)}</td>
-          <td><span class="badge badge-info">${esc(e.periodo || 'Mensual')}</span></td>
-          <td><strong>${esc(e.puntaje_total)}%</strong></td>
-          <td><span class="cat-badge ${cls.clase}">${esc(cls.categoria)}</span></td>
-          <td style="text-align:center;">${planesCount}</td>
-          <td>${fmtFecha(e.fecha)}</td>
-          <td>
-            <div style="display:flex;gap:4px;justify-content:center;">
-              <button type="button" class="btn btn-primary btn-xs" onclick="verEvaluacion('${esc(e.id)}')"><i class="ti ti-eye"></i></button>
-              <button type="button" class="btn btn-danger btn-xs" onclick="abrirModalEliminar('${esc(e.id)}')"><i class="ti ti-trash"></i></button>
-            </div>
-          </td>
-        </tr>`;
-    }).join('');
-  }
-
-  // =========================
-  // CARGAR EVALUACIONES (API)
+  // CARGAR EVALUACIONES (endpoint correcto)
   // =========================
   async function cargarEvaluaciones() {
     try {
-      const response = await fetchConRetry(`${API_URL}/auditoria-interna?t=${Date.now()}`, { headers: authHeaders() }, 2);
-      if (response.ok) {
-        const data = await response.json();
-        evaluaciones = Array.isArray(data) ? data : (data.items || []);
-      } else {
-        evaluaciones = [];
-      }
+      const res = await fetchConRetry(
+        `${BASE}/evaluaciones?t=${Date.now()}`,
+        { headers: authHeaders() }
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      evaluaciones = Array.isArray(data) ? data : (data.items || []);
+      logSuccess(`${evaluaciones.length} evaluaciones cargadas`);
     } catch (e) {
-      console.warn('Error cargando evaluaciones:', e);
+      logError('No se pudieron cargar evaluaciones:', e);
       evaluaciones = [];
     }
+    renderKPIs();
+    renderHistorialEvaluado();
   }
 
   // =========================
-  // MODALES
+  // KPIs
   // =========================
-  window.verEvaluacion = function(id) {
-    const e = evaluaciones.find(ev => String(ev.id) === String(id));
-    if (!e) return;
-
-    const cls = clasificar(Number(e.puntaje_total) || 0);
-    
-    let detallesHtml = '';
-    if (e.detalles && e.detalles.length) {
-      detallesHtml = `
-        <div style="margin-top:1rem;">
-          <h4 style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;margin-bottom:8px;">Criterios Evaluados</h4>
-          <div style="display:flex;flex-direction:column;gap:6px;">
-            ${e.detalles.map(d => `
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--off-white);border-radius:6px;font-size:12px;">
-                <span style="flex:1;">${esc(d.criterio)}</span>
-                <span style="font-weight:700;color:${d.valor === 'ok' ? 'var(--success)' : d.valor === 'parcial' ? 'var(--warning)' : 'var(--danger)'}">
-                  ${d.valor === 'ok' ? 'Cumple' : d.valor === 'parcial' ? 'Parcial' : d.valor === 'fail' ? 'No cumple' : '—'}
-                </span>
-              </div>
-            `).join('')}
-          </div>
-        </div>`;
-    }
-
-    const bodyHtml = `
-      <div style="display:flex;gap:12px;margin-bottom:1rem;">
-        <div style="width:50px;height:50px;border-radius:50%;background:var(--brand-soft);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--brand-1);font-size:18px;">
-          ${iniciales(e.evaluado_nombre)}
-        </div>
-        <div>
-          <div style="font-weight:700;font-size:15px;">${esc(e.evaluado_nombre)}</div>
-          <div style="font-size:12px;color:var(--text-muted);">${esc(e.evaluado_cargo)} · Turno ${esc(e.evaluado_turno || '—')}</div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem;">
-        <div><span style="font-size:10px;color:var(--text-muted);display:block;">Puntaje</span><strong>${esc(e.puntaje_total)}%</strong></div>
-        <div><span style="font-size:10px;color:var(--text-muted);display:block;">Categoría</span><span class="cat-badge ${cls.clase}">${esc(cls.categoria)}</span></div>
-        <div><span style="font-size:10px;color:var(--text-muted);display:block;">Evaluador</span><strong>${esc(e.evaluador)}</strong></div>
-        <div><span style="font-size:10px;color:var(--text-muted);display:block;">Fecha</span><strong>${fmtFecha(e.fecha)}</strong></div>
-      </div>
-      <div style="padding:12px;background:var(--off-white);border-radius:6px;font-size:12px;margin-bottom:1rem;">
-        <strong style="display:block;margin-bottom:4px;font-size:10px;text-transform:uppercase;color:var(--text-muted);">Observaciones</strong>
-        ${esc(e.observaciones || 'Sin observaciones')}
-      </div>
-      ${detallesHtml}
-    `;
-
-    setHTML('modal-eval-body', bodyHtml);
-    $('modal-ver-eval').style.display = 'flex';
-  };
-
-  window.abrirModalEliminar = function(id) {
-    const e = evaluaciones.find(ev => String(ev.id) === String(id));
-    if (!e) return;
-    idAEliminar = id;
-    setText('eliminar-eval-nombre', e.evaluado_nombre);
-    $('modal-eliminar-eval').style.display = 'flex';
-  };
-
-  async function confirmarEliminar() {
-    if (!idAEliminar) return;
-    try {
-      const response = await fetchConRetry(
-        `${API_URL}/auditoria-interna/${idAEliminar}`,
-        { method: 'DELETE', headers: authHeaders() },
-        2
-      );
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
-      evaluaciones = evaluaciones.filter(e => String(e.id) !== String(idAEliminar));
-      renderHistorialEvaluado();
-      renderTablaHistorial();
-      $('modal-eliminar-eval').style.display = 'none';
-      idAEliminar = null;
-      mostrarToast('Evaluación eliminada correctamente.');
-    } catch (e) {
-      console.error(e);
-      mostrarToast('No se pudo eliminar la evaluación.', true);
-    }
-  }
-
-  function configurarModales() {
-    // Modal Ver
-    const cerrarVer = () => $('modal-ver-eval').style.display = 'none';
-    $('modal-eval-close')?.addEventListener('click', cerrarVer);
-    $('modal-eval-cerrar-footer')?.addEventListener('click', cerrarVer);
-
-    // Modal Eliminar
-    const cerrarEliminar = () => { $('modal-eliminar-eval').style.display = 'none'; idAEliminar = null; };
-    $('modal-eliminar-close')?.addEventListener('click', cerrarEliminar);
-    $('modal-eliminar-cancelar')?.addEventListener('click', cerrarEliminar);
-    $('modal-eliminar-confirmar')?.addEventListener('click', confirmarEliminar);
+  function renderKPIs() {
+    const total = evaluaciones.length;
+    const promedio = total
+      ? Math.round(evaluaciones.reduce((s, e) => s + getPuntaje(e), 0) / total)
+      : 0;
+    setText('kpi-total', total);
+    setText('kpi-promedio', `${promedio}%`);
+    setText('kpi-evaluados', new Set(evaluaciones.map(e => e.evaluado_id)).size);
   }
 
   // =========================
-  // FILTROS
+  // GUARDAR EVALUACIÓN (payload alineado al schema)
   // =========================
-  function poblarFiltros() {
-    const cargos = new Set();
-    const evaluadores = new Set();
-    evaluaciones.forEach(e => {
-      if (e.evaluado_cargo) cargos.add(e.evaluado_cargo);
-      if (e.evaluador) evaluadores.add(e.evaluador);
-    });
-
-    const selCargo = $('f-cargo');
-    if (selCargo) {
-      selCargo.innerHTML = '<option value="">Todos</option>' + [...cargos].sort().map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  async function guardarEvaluacion() {
+    if (!evaluadoActual) {
+      alert('Selecciona primero a la persona a evaluar.');
+      return;
     }
-    const selEval = $('f-evaluador');
-    if (selEval) {
-      selEval.innerHTML = '<option value="">Todos</option>' + [...evaluadores].sort().map(e => `<option value="${esc(e)}">${esc(e)}</option>`).join('');
-    }
-  }
 
-  function aplicarFiltros() {
-    filtrosActuales = {
-      cargo: val('f-cargo'),
-      evaluador: val('f-evaluador'),
-      periodo: val('f-periodo'),
-      categoria: val('f-categoria'),
-      desde: val('f-desde'),
-      hasta: val('f-hasta')
+    const { ok, parcial, fail, evaluados, total, puntaje, pct } = calcularProgreso();
+
+    if (evaluados < total) {
+      if (!confirm(`Solo has evaluado ${evaluados} de ${total} criterios. ¿Guardar de todas formas?`)) return;
+    }
+
+    const categoria = clasificar(pct).categoria;
+    const observaciones = val('obs-eval');
+
+    // 👇 Payload EXACTO según AuditoriaInternaCreate del backend
+    const payload = {
+      evaluado_id: evaluadoActual.id,
+      periodo: val('periodo-eval') || new Date().toISOString().slice(0, 7), // "YYYY-MM"
+      puntaje: pct,          // el backend usa "puntaje" (0-100)
+      categoria: categoria,
+      observaciones: observaciones,
+      detalles: CRITERIOS.map(c => ({
+        criterio_id: c.id,
+        texto: c.texto,
+        funcion: c.funcion,
+        valor: evaluacionState[c.id] || null
+      }))
     };
-    renderTablaHistorial();
-  }
 
-  function limpiarFiltros() {
-    ['f-cargo', 'f-evaluador', 'f-periodo', 'f-categoria', 'f-desde', 'f-hasta'].forEach(id => {
-      const el = $(id); if (el) el.selectedIndex = 0;
-    });
-    filtrosActuales = {};
-    renderTablaHistorial();
-  }
+    try {
+      const res = await fetchConRetry(
+        `${BASE}/evaluaciones`,
+        {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(payload)
+        }
+      );
 
-  // =========================
-  // EXPORTACIONES (Placeholder)
-  // =========================
-  function exportarCSV() {
-    if (evaluaciones.length === 0) { mostrarToast('No hay evaluaciones para exportar.', true); return; }
-    const header = ['Evaluado', 'Cargo', 'Evaluador', 'Periodo', 'Puntaje', 'Categoría', 'Fecha', 'Observaciones'];
-    const rows = evaluaciones.map(e => [
-      e.evaluado_nombre, e.evaluado_cargo, e.evaluador, e.periodo || 'Mensual',
-      e.puntaje_total, e.categoria, fmtFecha(e.fecha), (e.observaciones || '').replace(/[\n\r,]/g, ' ')
-    ]);
-    const csv = [header, ...rows].map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `auditorias_personal_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+      if (!res.ok) {
+        const errText = await res.text();
+        logError(`POST /evaluaciones → HTTP ${res.status}`, errText);
+        throw new Error(`HTTP ${res.status}: ${errText}`);
+      }
 
-  // =========================
-  // INICIALIZACIÓN
-  // =========================
-  async function init() {
-    if (!verificarAcceso()) return;
+      const nueva = await res.json();
+      // Normalizar: el backend devuelve "puntaje", no "porcentaje"
+      evaluaciones.unshift(nueva);
 
-    cargarUsuarioNav();
-    initUserControls();
-    configurarModales();
+      // Planes en memoria
+      const nuevosPlanes = generarPlanesDesdeEvaluacion(evaluadoActual, pct, categoria);
+      if (nuevosPlanes.length) {
+        planes = [...nuevosPlanes, ...planes];
+        renderPlanes();
+      }
 
-    // Eventos
-    $('evaluado')?.addEventListener('change', (e) => {
-      evaluadoActual = personal.find(p => String(p.id) === e.target.value) || null;
-      mostrarFicha(evaluadoActual);
+      renderKPIs();
       renderHistorialEvaluado();
       resetEvaluacion();
-    });
+      alert(`✅ Evaluación guardada: ${categoria} (${pct}%)`);
 
-    $('obs-eval')?.addEventListener('input', actualizarContadorObs);
-    $('btn-reset-eval')?.addEventListener('click', () => {
-      if (confirm('¿Limpiar la evaluación actual?')) resetEvaluacion();
-    });
-    $('btn-guardar-eval')?.addEventListener('click', guardarEvaluacion);
-
-    $('btn-aplicar-filtros')?.addEventListener('click', aplicarFiltros);
-    $('btn-limpiar-filtros')?.addEventListener('click', limpiarFiltros);
-    $('btn-export-word-global')?.addEventListener('click', exportarCSV); // Placeholder
-    $('btn-export-pdf-global')?.addEventListener('click', () => mostrarToast('Exportación PDF en desarrollo', false));
-
-    // Carga inicial
-    await cargarPersonal();
-    await cargarEvaluaciones();
-    
-    poblarFiltros();
-    renderPlanes();
-    renderTablaHistorial();
-    resetEvaluacion();
+    } catch (e) {
+      logError('Error guardando evaluación:', e);
+      alert('❌ No se pudo guardar la evaluación.\n\nRevisa la consola (F12) para ver el detalle del error del servidor.');
+    }
   }
 
-  // Arrancar
-  init();
+  // =========================
+  // ELIMINAR EVALUACIÓN (solo admin en backend)
+  // =========================
+  async function eliminarEvaluacion(id) {
+    if (rolActual !== 3) {
+      alert('Solo un Administrador puede eliminar evaluaciones.');
+      return;
+    }
+    if (!confirm('¿Eliminar esta evaluación? Esta acción no se puede deshacer.')) return;
+
+    evaluacionEliminando = id;
+    try {
+      const res = await fetchConRetry(
+        `${BASE}/evaluaciones/${encodeURIComponent(id)}`,
+        { method: 'DELETE', headers: authHeaders() }
+      );
+      if (!res.ok && res.status !== 204) {
+        const errText = await res.text();
+        throw new Error(`HTTP ${res.status}: ${errText}`);
+      }
+
+      evaluaciones = evaluaciones.filter(e => String(e.id) !== String(id));
+      renderKPIs();
+      renderHistorialEvaluado();
+      logSuccess('Evaluación eliminada');
+    } catch (e) {
+      logError('Error eliminando evaluación:', e);
+      alert('❌ No se pudo eliminar la evaluación.');
+    } finally {
+      evaluacionEliminando = null;
+    }
+  }
+
+  // =========================
+  // EXPORTACIONES (token por header)
+  // =========================
+  async function descargarArchivo(url, filename) {
+    try {
+      const res = await fetchConTimeout(url, { headers: authHeaders() }, TIMEOUT_WAKE_MS);
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`HTTP ${res.status}: ${errText}`);
+      }
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+    } catch (e) {
+      logError('Error descargando archivo:', e);
+      alert('❌ No se pudo descargar el archivo. Revisa la consola.');
+    }
+  }
+
+  function initExportButtons() {
+    const btnPdfTodos = $('btn-export-pdf');
+    if (btnPdfTodos) {
+      btnPdfTodos.addEventListener('click', () => {
+        descargarArchivo(`${BASE}/evaluaciones/exportar/pdf`, 'Evaluaciones_Global.pdf');
+      });
+    }
+
+    const btnWordTodos = $('btn-export-word');
+    if (btnWordTodos) {
+      btnWordTodos.addEventListener('click', () => {
+        descargarArchivo(`${BASE}/evaluaciones/exportar/word`, 'Evaluaciones_Global.docx');
+      });
+    }
+  }
+
+  // =========================
+  // INIT
+  // =========================
+  async function init() {
+    if (!personalCargado) {
+      await cargarPersonal();
+    } else {
+      poblarSelectorPersonal();
+    }
+
+    await cargarEvaluaciones();
+
+    initSelectorEvaluado();
+    initExportButtons();
+
+    const btnGuardar = $('btn-guardar-evaluacion');
+    if (btnGuardar) btnGuardar.addEventListener('click', guardarEvaluacion);
+
+    const btnReset = $('btn-reset-evaluacion');
+    if (btnReset) btnReset.addEventListener('click', resetEvaluacion);
+
+    resetEvaluacion();
+    renderPlanes();
+    renderKPIs();
+  }
+
+  // =========================
+  // BOOT
+  // =========================
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', verificarSesion);
+  } else {
+    verificarSesion();
+  }
 
 })();
