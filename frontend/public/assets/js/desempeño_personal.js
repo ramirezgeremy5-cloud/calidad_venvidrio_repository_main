@@ -1,33 +1,23 @@
-Aquí tienes el archivo auditoria.js completo.
-
-El problema anterior era que el código que me pasaste estaba cortado a la mitad (la función renderHistorialEvaluado() estaba incompleta), lo cual rompía todo el archivo y el navegador no lo ejecutaba.
-
-He reconstruido el archivo entero, he cerrado todas las funciones correctamente, y he añadido la lógica faltante (carga de evaluaciones, guardado, eliminación, generación automática de planes de mejora y exportación a CSV).
-
-```javascript
 /* ==========================================
    VENVIDRIO - AUDITORÍA INTERNA DE CALIDAD
-   auditoria.js - v4 (Completo y Corregido)
+   auditoria_interna.js - v1 (Adaptado al HTML)
    ========================================== */
 
 (function () {
   'use strict';
 
   // =========================
-  // CONFIGURACIÓN DINÁMICA DE API
+  // CONFIGURACIÓN
   // =========================
   const hostname = window.location.hostname;
   const API_URL = (hostname === 'localhost' || hostname === '127.0.0.1')
     ? 'http://127.0.0.1:8000'
     : 'https://calidad-venvidrio-repository-main.onrender.com';
 
-  const ROLES_PERMITIDOS = [2, 3]; // 2 = supervisor, 3 = admin
+  const ROLES_PERMITIDOS = [2, 3];
   const TIMEOUT_MS = 15000;
   const TIMEOUT_WAKE_MS = 30000;
 
-  // =========================
-  // CATÁLOGO DE CRITERIOS
-  // =========================
   const CRITERIOS = [
     { id: "c1",  texto: "Cumple sus funciones y responsabilidades asignadas", funcion: "Cumplimiento de funciones" },
     { id: "c2",  texto: "Asiste puntualmente a las reuniones del departamento de calidad", funcion: "Puntualidad en reuniones" },
@@ -53,7 +43,7 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
   ];
 
   // =========================
-  // ESTADO
+  // ESTADO GLOBAL
   // =========================
   let personal = [...PERSONAL_FALLBACK];
   let evaluaciones = [];
@@ -62,8 +52,8 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
   let evaluacionState = {};
   let usuarioActual = null;
   let rolActual = 0;
-  let evaluacionEliminando = null;
-  let personalCargado = false;
+  let idAEliminar = null;
+  let filtrosActuales = {};
 
   // =========================
   // UTILIDADES
@@ -71,6 +61,7 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
   const $ = (id) => document.getElementById(id);
   const val = (id) => { const el = $(id); return el ? String(el.value).trim() : ''; };
   const setText = (id, t) => { const el = $(id); if (el) el.textContent = t; };
+  const setHTML = (id, h) => { const el = $(id); if (el) el.innerHTML = h; };
 
   function esc(v) {
     if (v === null || v === undefined) return '';
@@ -108,6 +99,22 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
     };
   }
 
+  function mostrarToast(mensaje, esError = false) {
+    const toast = $('toast-auditoria');
+    if (toast) {
+      const icono = esError ? 'ti-alert-circle' : 'ti-circle-check';
+      toast.innerHTML = `<i class="ti ${icono}" aria-hidden="true"></i> <span>${esc(mensaje)}</span>`;
+      toast.style.background = esError ? '#fee2e2' : '#d1fae5';
+      toast.style.color = esError ? '#b91c1c' : '#065f46';
+      toast.style.borderLeftColor = esError ? '#ef4444' : '#10b981';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 4000);
+    }
+  }
+
+  // =========================
+  // FETCH CON TIMEOUT Y RETRY
+  // =========================
   async function fetchConTimeout(url, options = {}, timeout = TIMEOUT_MS) {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
@@ -161,7 +168,7 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
   }
 
   // =========================
-  // CONTROL DE ROLES / ACCESO
+  // CONTROL DE ACCESO
   // =========================
   function verificarAcceso() {
     const token = localStorage.getItem('token');
@@ -169,20 +176,19 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
       window.location.href = '../public/login.html';
       return false;
     }
-
     const rol = parseInt(localStorage.getItem('role'), 10);
     rolActual = isNaN(rol) ? 0 : rol;
 
     if (!ROLES_PERMITIDOS.includes(rolActual)) {
-      alert('⛔ Acceso restringido.\n\nEsta sección de Auditoría Interna es exclusiva para Supervisores y Administradores.');
-      window.location.href = '../public/dashboard.html';
+      alert('⛔ Acceso restringido a Supervisores y Administradores.');
+      window.location.href = '../dashboard.html';
       return false;
     }
     return true;
   }
 
   // =========================
-  // SESIÓN / NAVBAR
+  // NAVBAR Y SESIÓN
   // =========================
   function cargarUsuarioNav() {
     const userData = localStorage.getItem('user');
@@ -199,12 +205,8 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
         avatarHtml = user.nombre ? user.nombre.substring(0, 2).toUpperCase() : 'US';
       }
 
-      const navAvatar = $('navAvatar');
-      if (navAvatar) navAvatar.innerHTML = avatarHtml;
-
-      const dropdownAvatar = $('dropdownAvatar');
-      if (dropdownAvatar) dropdownAvatar.innerHTML = avatarHtml;
-
+      if ($('navAvatar')) $('navAvatar').innerHTML = avatarHtml;
+      if ($('dropdownAvatar')) $('dropdownAvatar').innerHTML = avatarHtml;
       setText('navUsername', user.nombre || 'Usuario');
       setText('dropdownName', user.nombre || 'Usuario');
       setText('dropdownEmail', user.correo || 'usuario@email.com');
@@ -213,28 +215,19 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
     }
   }
 
-  function mostrarEnlaceUsuarios() {
-    if (rolActual === 3) {
-      const link = $('navUsuariosLink');
-      if (link) link.style.display = 'flex';
-    }
-  }
-
   function initUserControls() {
     const container = $('navUserContainer');
-    const dropdown  = $('userDropdown');
+    const dropdown = $('userDropdown');
     const logoutBtn = $('dropdownLogout');
 
-    if (container && dropdown) {
+    if (container) {
       container.addEventListener('click', (e) => {
         e.stopPropagation();
-        dropdown.classList.toggle('show');
+        if (dropdown) dropdown.classList.toggle('show');
       });
     }
-
     document.addEventListener('click', () => { if (dropdown) dropdown.classList.remove('show'); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && dropdown) dropdown.classList.remove('show'); });
-
+    
     if (logoutBtn) {
       logoutBtn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -246,45 +239,15 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
     }
   }
 
-  async function verificarSesion() {
-    if (!verificarAcceso()) return;
-
-    try {
-      const response = await fetchConRetry(
-        `${API_URL}/auth/verify`,
-        { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } },
-        2
-      );
-
-      if (response.status === 401 || response.status === 403) {
-        localStorage.clear();
-        window.location.href = '../public/login.html';
-        return;
-      }
-    } catch (error) {
-      console.warn('No se pudo verificar sesión, se continúa offline:', error);
-    }
-
-    cargarUsuarioNav();
-    mostrarEnlaceUsuarios();
-    initUserControls();
-    init();
-  }
-
   // =========================
-  // CARGA DEL PERSONAL
+  // CARGA DE PERSONAL
   // =========================
   async function cargarPersonal() {
     try {
-      const response = await fetchConTimeout(
-        `${API_URL}/usuarios?t=${Date.now()}`,
-        { headers: authHeaders() }
-      );
-
+      const response = await fetchConTimeout(`${API_URL}/usuarios?t=${Date.now()}`, { headers: authHeaders() });
       if (response.ok) {
         const data = await response.json();
         const lista = Array.isArray(data) ? data : (data.items || data.usuarios || []);
-
         personal = lista.map(u => ({
           id: u.id,
           nombre: u.nombre || 'Sin nombre',
@@ -296,14 +259,12 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
     } catch (e) {
       console.warn('Usando personal de fallback:', e);
     }
-    personalCargado = true;
     poblarSelectorPersonal();
   }
 
   function poblarSelectorPersonal() {
     const sel = $('evaluado');
     if (!sel) return;
-    const prev = sel.value;
     sel.innerHTML = '<option value="">-- Seleccione un miembro del personal --</option>';
     personal.forEach(p => {
       const opt = document.createElement('option');
@@ -311,7 +272,6 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
       opt.textContent = `${p.nombre} · ${p.cargo}`;
       sel.appendChild(opt);
     });
-    if (prev && personal.some(p => String(p.id) === prev)) sel.value = prev;
   }
 
   // =========================
@@ -331,19 +291,8 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
     ficha.style.display = 'block';
   }
 
-  function initSelectorEvaluado() {
-    const sel = $('evaluado');
-    if (!sel) return;
-    sel.addEventListener('change', () => {
-      evaluadoActual = personal.find(p => String(p.id) === sel.value) || null;
-      mostrarFicha(evaluadoActual);
-      renderHistorialEvaluado();
-      resetEvaluacion();
-    });
-  }
-
   // =========================
-  // CHECKLIST / EVALUACIÓN
+  // CHECKLIST DE EVALUACIÓN
   // =========================
   function resetEvaluacion() {
     evaluacionState = {};
@@ -351,6 +300,7 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
     renderChecklist();
     const obs = $('obs-eval');
     if (obs) obs.value = '';
+    actualizarContadorObs();
   }
 
   function renderChecklist() {
@@ -359,9 +309,7 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
 
     cont.innerHTML = CRITERIOS.map((c, i) => {
       const estado = evaluacionState[c.id];
-      const cls = estado
-        ? `evaluado ${estado === 'ok' ? 'cumple' : estado === 'parcial' ? 'parcial' : 'no-cumple'}`
-        : '';
+      const cls = estado ? `evaluado ${estado === 'ok' ? 'cumple' : estado === 'parcial' ? 'parcial' : 'no-cumple'}` : '';
       const n = String(i + 1).padStart(2, '0');
 
       return `
@@ -369,15 +317,9 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
           <div class="check-num">${n}</div>
           <div class="check-text">${esc(c.texto)}</div>
           <div class="check-estados">
-            <button type="button" class="check-estado estado-ok ${estado === 'ok' ? 'active' : ''}" data-id="${esc(c.id)}" data-val="ok">
-              <i class="ti ti-check"></i>
-            </button>
-            <button type="button" class="check-estado estado-parcial ${estado === 'parcial' ? 'active' : ''}" data-id="${esc(c.id)}" data-val="parcial">
-              <i class="ti ti-minus"></i>
-            </button>
-            <button type="button" class="check-estado estado-fail ${estado === 'fail' ? 'active' : ''}" data-id="${esc(c.id)}" data-val="fail">
-              <i class="ti ti-x"></i>
-            </button>
+            <button type="button" class="check-estado estado-ok ${estado === 'ok' ? 'active' : ''}" data-id="${esc(c.id)}" data-val="ok"><i class="ti ti-check"></i></button>
+            <button type="button" class="check-estado estado-parcial ${estado === 'parcial' ? 'active' : ''}" data-id="${esc(c.id)}" data-val="parcial"><i class="ti ti-minus"></i></button>
+            <button type="button" class="check-estado estado-fail ${estado === 'fail' ? 'active' : ''}" data-id="${esc(c.id)}" data-val="fail"><i class="ti ti-x"></i></button>
           </div>
         </div>`;
     }).join('');
@@ -405,9 +347,9 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
     });
     const evaluados = ok + parcial + fail;
     const total = CRITERIOS.length;
-    const puntaje = ok * 1.0 + parcial * 0.5 + fail * 0.0;
+    const puntaje = ok * 1.0 + parcial * 0.5;
     const pct = total ? Math.round((puntaje / total) * 100) : 0;
-    return { ok, parcial, fail, evaluados, total, puntaje, pct };
+    return { evaluados, total, pct };
   }
 
   function actualizarProgreso() {
@@ -416,13 +358,24 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
     if (fill) fill.style.width = `${pct}%`;
     setText('pct-label', `${pct}%`);
     setText('badge-progreso', `${evaluados} / ${total}`);
+    
+    const track = $('aud-progress-track');
+    if (track) track.setAttribute('aria-valuenow', pct);
+  }
+
+  function actualizarContadorObs() {
+    const obs = $('obs-eval');
+    const count = $('obs-eval-count');
+    if (obs && count) {
+      count.textContent = obs.value.length;
+    }
   }
 
   // =========================
   // GUARDAR EVALUACIÓN
   // =========================
   async function guardarEvaluacion() {
-    if (!evaluadoActual) { alert('Selecciona un miembro del personal primero.'); return; }
+    if (!evaluadoActual) { mostrarToast('Selecciona un miembro del personal primero.', true); return; }
 
     const { evaluados, total, pct } = calcularProgreso();
     if (evaluados < total) {
@@ -431,12 +384,14 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
 
     const { categoria } = clasificar(pct);
     const obs = val('obs-eval');
+    const periodo = val('periodo');
 
     const body = {
       evaluado_id: evaluadoActual.id,
       evaluado_nombre: evaluadoActual.nombre,
       evaluado_cargo: evaluadoActual.cargo,
       evaluado_turno: evaluadoActual.turno || '—',
+      periodo: periodo,
       puntaje_total: pct,
       categoria: categoria,
       observaciones: obs || null,
@@ -465,21 +420,20 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
         throw new Error(err.detail || `HTTP ${response.status}`);
       }
 
-      // Generar planes de mejora si la evaluación fue baja
-      const nuevosPlanes = generarPlanesDesdeEvaluacion(evaluadoActual, body, pct, categoria);
-      if (nuevosPlanes.length > 0) {
-        planes = [...planes, ...nuevosPlanes];
-      }
+      // Generar planes de mejora si aplica
+      const nuevos = generarPlanesDesdeEvaluacion(evaluadoActual, body, pct, categoria);
+      if (nuevos.length) planes = [...planes, ...nuevos];
 
-      alert('✅ Evaluación guardada correctamente.');
+      mostrarToast('Evaluación guardada correctamente.');
       resetEvaluacion();
       await cargarEvaluaciones();
       renderHistorialEvaluado();
       renderPlanes();
+      renderTablaHistorial();
 
     } catch (e) {
-      console.error('Error guardando evaluación:', e);
-      alert('⚠️ No se pudo guardar la evaluación. Intenta de nuevo.');
+      console.error(e);
+      mostrarToast('No se pudo guardar la evaluación.', true);
     } finally {
       const btn = $('btn-guardar-eval');
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-device-floppy"></i> Guardar Evaluación'; }
@@ -524,19 +478,13 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
       : 'Sin planes pendientes');
 
     if (planes.length === 0) {
-      cont.innerHTML = `
-        <div class="empty-panel">
-          <i class="ti ti-target-arrow"></i>
-          <span>Sin planes de mejora activos</span>
-        </div>`;
+      cont.innerHTML = `<div class="empty-panel"><i class="ti ti-target-arrow"></i><span>Sin planes de mejora activos</span></div>`;
       return;
     }
 
     cont.innerHTML = planes.slice(0, 8).map(p => `
       <div class="plan-item ${p.prioridad === 'alta' ? 'prioridad-alta' : ''}">
-        <div class="plan-icon">
-          <i class="ti ${p.prioridad === 'alta' ? 'ti-alert-triangle' : 'ti-flag'}"></i>
-        </div>
+        <div class="plan-icon"><i class="ti ${p.prioridad === 'alta' ? 'ti-alert-triangle' : 'ti-flag'}"></i></div>
         <div class="plan-body">
           <div class="plan-titulo">${esc(p.criterio)}</div>
           <div class="plan-desc">${esc(p.evaluado)} · ${esc(p.cargo)}</div>
@@ -546,9 +494,7 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
             <span>${fmtFecha(p.fecha)}</span>
           </div>
         </div>
-        <span class="plan-estado ${p.estado === 'cerrado' ? 'cerrado' : ''}">
-          ${p.estado === 'cerrado' ? 'Cerrado' : 'Abierto'}
-        </span>
+        <span class="plan-estado ${p.estado === 'cerrado' ? 'cerrado' : ''}">${p.estado === 'cerrado' ? 'Cerrado' : 'Abierto'}</span>
       </div>`).join('');
   }
 
@@ -556,11 +502,11 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
   // HISTORIAL DEL EVALUADO
   // =========================
   function renderHistorialEvaluado() {
-    const cont = $('historial-evaluaciones');
+    const cont = $('historial-evaluado');
     if (!cont) return;
 
     if (!evaluadoActual) {
-      cont.innerHTML = `<div class="empty-panel"><i class="ti ti-history"></i><span>Selecciona un miembro del personal para ver su historial</span></div>`;
+      cont.innerHTML = `<div class="empty-panel"><i class="ti ti-history"></i><span>Selecciona un miembro del personal</span></div>`;
       return;
     }
 
@@ -581,120 +527,296 @@ He reconstruido el archivo entero, he cerrado todas las funciones correctamente,
             <span class="cat-badge ${cls.clase}">${esc(cls.categoria)}</span>
           </div>
           <div class="hist-obs">${esc(e.observaciones || 'Sin observaciones')}</div>
-          <div class="hist-acciones">
-            <button type="button" class="btn btn-danger btn-xs" onclick="eliminarEvaluacion('${esc(e.id)}')">
-              <i class="ti ti-trash"></i>
-            </button>
-          </div>
         </div>`;
     }).join('');
   }
 
   // =========================
-  // ELIMINAR EVALUACIÓN
+  // TABLA HISTORIAL GENERAL
   // =========================
-  window.eliminarEvaluacion = async function (id) {
-    if (!confirm('¿Eliminar esta evaluación? Esta acción no se puede deshacer.')) return;
+  function renderTablaHistorial() {
+    const tbody = $('tabla-eval');
+    if (!tbody) return;
 
-    try {
-      const response = await fetchConRetry(
-        `${API_URL}/auditoria-interna/${id}`,
-        { method: 'DELETE', headers: authHeaders() },
-        2
-      );
+    let data = [...evaluaciones];
+    const { cargo, evaluador, periodo, categoria, desde, hasta } = filtrosActuales;
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      evaluaciones = evaluaciones.filter(e => String(e.id) !== String(id));
-      renderHistorialEvaluado();
-      alert('✅ Evaluación eliminada.');
-    } catch (e) {
-      console.error('Error eliminando:', e);
-      alert('⚠️ No se pudo eliminar la evaluación.');
+    if (cargo) data = data.filter(e => (e.evaluado_cargo || '').toLowerCase().includes(cargo.toLowerCase()));
+    if (evaluador) data = data.filter(e => (e.evaluador || '').toLowerCase().includes(evaluador.toLowerCase()));
+    if (periodo) data = data.filter(e => e.periodo === periodo);
+    if (categoria) data = data.filter(e => e.categoria === categoria);
+    
+    if (desde) {
+      const dDesde = new Date(desde);
+      data = data.filter(e => new Date(e.fecha) >= dDesde);
     }
-  };
+    if (hasta) {
+      const dHasta = new Date(hasta);
+      dHasta.setHours(23, 59, 59);
+      data = data.filter(e => new Date(e.fecha) <= dHasta);
+    }
+
+    const resultadoEl = $('filtro-resultados');
+    if (resultadoEl) {
+      const totalActivos = Object.values(filtrosActuales).filter(Boolean).length;
+      resultadoEl.textContent = totalActivos > 0 
+        ? `🔍 Filtros aplicados: ${totalActivos} | ${data.length} resultados`
+        : `📋 Mostrando todas las evaluaciones (${data.length})`;
+    }
+
+    // KPIs Globales
+    setText('kpi-evaluaciones', data.length);
+    setText('kpi-evaluaciones-sub', 'Registros totales');
+    const pctPromedio = data.length ? Math.round(data.reduce((s, e) => s + (Number(e.puntaje_total) || 0), 0) / data.length) : 0;
+    setText('kpi-promedio', `${pctPromedio}%`);
+    const personasUnicas = new Set(data.map(e => e.evaluado_id)).size;
+    setText('kpi-personas', personasUnicas);
+    setText('kpi-personas-sub', 'Personal evaluado');
+
+    if (data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted)"><i class="ti ti-inbox" style="font-size:1.5rem;margin-bottom:0.5rem;display:block;"></i> No hay evaluaciones registradas</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).map(e => {
+      const cls = clasificar(Number(e.puntaje_total) || 0);
+      const planesCount = (e.planes_generados || []).length;
+      return `
+        <tr>
+          <td><span style="font-weight:600;color:var(--navy);">${esc(e.evaluado_nombre)}</span></td>
+          <td>${esc(e.evaluado_cargo)}</td>
+          <td>${esc(e.evaluador)}</td>
+          <td><span class="badge badge-info">${esc(e.periodo || 'Mensual')}</span></td>
+          <td><strong>${esc(e.puntaje_total)}%</strong></td>
+          <td><span class="cat-badge ${cls.clase}">${esc(cls.categoria)}</span></td>
+          <td style="text-align:center;">${planesCount}</td>
+          <td>${fmtFecha(e.fecha)}</td>
+          <td>
+            <div style="display:flex;gap:4px;justify-content:center;">
+              <button type="button" class="btn btn-primary btn-xs" onclick="verEvaluacion('${esc(e.id)}')"><i class="ti ti-eye"></i></button>
+              <button type="button" class="btn btn-danger btn-xs" onclick="abrirModalEliminar('${esc(e.id)}')"><i class="ti ti-trash"></i></button>
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+  }
 
   // =========================
   // CARGAR EVALUACIONES (API)
   // =========================
   async function cargarEvaluaciones() {
     try {
-      const response = await fetchConRetry(
-        `${API_URL}/auditoria-interna?t=${Date.now()}`,
-        { headers: authHeaders() },
-        2
-      );
-
+      const response = await fetchConRetry(`${API_URL}/auditoria-interna?t=${Date.now()}`, { headers: authHeaders() }, 2);
       if (response.ok) {
         const data = await response.json();
         evaluaciones = Array.isArray(data) ? data : (data.items || []);
       } else {
-        console.warn('No se pudieron cargar evaluaciones, usando vacío.');
         evaluaciones = [];
       }
     } catch (e) {
       console.warn('Error cargando evaluaciones:', e);
       evaluaciones = [];
     }
-
-    actualizarKPIsGlobales();
-  }
-
-  function actualizarKPIsGlobales() {
-    const total = evaluaciones.length;
-    const pctPromedio = total
-      ? Math.round(evaluaciones.reduce((s, e) => s + (Number(e.puntaje_total) || 0), 0) / total)
-      : 0;
-
-    setText('kpi-total', total);
-    setText('kpi-promedio', `${pctPromedio}%`);
-    setText('kpi-evaluaciones-sub', total ? `${total} registros` : 'Sin registros');
   }
 
   // =========================
-  // EXPORTACIONES
+  // MODALES
   // =========================
-  window.exportarCSV = function () {
-    if (evaluaciones.length === 0) { alert('No hay evaluaciones para exportar.'); return; }
+  window.verEvaluacion = function(id) {
+    const e = evaluaciones.find(ev => String(ev.id) === String(id));
+    if (!e) return;
 
-    const header = ['ID', 'Evaluado', 'Cargo', 'Puntaje', 'Categoría', 'Evaluador', 'Fecha', 'Observaciones'];
+    const cls = clasificar(Number(e.puntaje_total) || 0);
+    
+    let detallesHtml = '';
+    if (e.detalles && e.detalles.length) {
+      detallesHtml = `
+        <div style="margin-top:1rem;">
+          <h4 style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;margin-bottom:8px;">Criterios Evaluados</h4>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            ${e.detalles.map(d => `
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--off-white);border-radius:6px;font-size:12px;">
+                <span style="flex:1;">${esc(d.criterio)}</span>
+                <span style="font-weight:700;color:${d.valor === 'ok' ? 'var(--success)' : d.valor === 'parcial' ? 'var(--warning)' : 'var(--danger)'}">
+                  ${d.valor === 'ok' ? 'Cumple' : d.valor === 'parcial' ? 'Parcial' : d.valor === 'fail' ? 'No cumple' : '—'}
+                </span>
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
+    }
+
+    const bodyHtml = `
+      <div style="display:flex;gap:12px;margin-bottom:1rem;">
+        <div style="width:50px;height:50px;border-radius:50%;background:var(--brand-soft);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--brand-1);font-size:18px;">
+          ${iniciales(e.evaluado_nombre)}
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:15px;">${esc(e.evaluado_nombre)}</div>
+          <div style="font-size:12px;color:var(--text-muted);">${esc(e.evaluado_cargo)} · Turno ${esc(e.evaluado_turno || '—')}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem;">
+        <div><span style="font-size:10px;color:var(--text-muted);display:block;">Puntaje</span><strong>${esc(e.puntaje_total)}%</strong></div>
+        <div><span style="font-size:10px;color:var(--text-muted);display:block;">Categoría</span><span class="cat-badge ${cls.clase}">${esc(cls.categoria)}</span></div>
+        <div><span style="font-size:10px;color:var(--text-muted);display:block;">Evaluador</span><strong>${esc(e.evaluador)}</strong></div>
+        <div><span style="font-size:10px;color:var(--text-muted);display:block;">Fecha</span><strong>${fmtFecha(e.fecha)}</strong></div>
+      </div>
+      <div style="padding:12px;background:var(--off-white);border-radius:6px;font-size:12px;margin-bottom:1rem;">
+        <strong style="display:block;margin-bottom:4px;font-size:10px;text-transform:uppercase;color:var(--text-muted);">Observaciones</strong>
+        ${esc(e.observaciones || 'Sin observaciones')}
+      </div>
+      ${detallesHtml}
+    `;
+
+    setHTML('modal-eval-body', bodyHtml);
+    $('modal-ver-eval').style.display = 'flex';
+  };
+
+  window.abrirModalEliminar = function(id) {
+    const e = evaluaciones.find(ev => String(ev.id) === String(id));
+    if (!e) return;
+    idAEliminar = id;
+    setText('eliminar-eval-nombre', e.evaluado_nombre);
+    $('modal-eliminar-eval').style.display = 'flex';
+  };
+
+  async function confirmarEliminar() {
+    if (!idAEliminar) return;
+    try {
+      const response = await fetchConRetry(
+        `${API_URL}/auditoria-interna/${idAEliminar}`,
+        { method: 'DELETE', headers: authHeaders() },
+        2
+      );
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      evaluaciones = evaluaciones.filter(e => String(e.id) !== String(idAEliminar));
+      renderHistorialEvaluado();
+      renderTablaHistorial();
+      $('modal-eliminar-eval').style.display = 'none';
+      idAEliminar = null;
+      mostrarToast('Evaluación eliminada correctamente.');
+    } catch (e) {
+      console.error(e);
+      mostrarToast('No se pudo eliminar la evaluación.', true);
+    }
+  }
+
+  function configurarModales() {
+    // Modal Ver
+    const cerrarVer = () => $('modal-ver-eval').style.display = 'none';
+    $('modal-eval-close')?.addEventListener('click', cerrarVer);
+    $('modal-eval-cerrar-footer')?.addEventListener('click', cerrarVer);
+
+    // Modal Eliminar
+    const cerrarEliminar = () => { $('modal-eliminar-eval').style.display = 'none'; idAEliminar = null; };
+    $('modal-eliminar-close')?.addEventListener('click', cerrarEliminar);
+    $('modal-eliminar-cancelar')?.addEventListener('click', cerrarEliminar);
+    $('modal-eliminar-confirmar')?.addEventListener('click', confirmarEliminar);
+  }
+
+  // =========================
+  // FILTROS
+  // =========================
+  function poblarFiltros() {
+    const cargos = new Set();
+    const evaluadores = new Set();
+    evaluaciones.forEach(e => {
+      if (e.evaluado_cargo) cargos.add(e.evaluado_cargo);
+      if (e.evaluador) evaluadores.add(e.evaluador);
+    });
+
+    const selCargo = $('f-cargo');
+    if (selCargo) {
+      selCargo.innerHTML = '<option value="">Todos</option>' + [...cargos].sort().map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    }
+    const selEval = $('f-evaluador');
+    if (selEval) {
+      selEval.innerHTML = '<option value="">Todos</option>' + [...evaluadores].sort().map(e => `<option value="${esc(e)}">${esc(e)}</option>`).join('');
+    }
+  }
+
+  function aplicarFiltros() {
+    filtrosActuales = {
+      cargo: val('f-cargo'),
+      evaluador: val('f-evaluador'),
+      periodo: val('f-periodo'),
+      categoria: val('f-categoria'),
+      desde: val('f-desde'),
+      hasta: val('f-hasta')
+    };
+    renderTablaHistorial();
+  }
+
+  function limpiarFiltros() {
+    ['f-cargo', 'f-evaluador', 'f-periodo', 'f-categoria', 'f-desde', 'f-hasta'].forEach(id => {
+      const el = $(id); if (el) el.selectedIndex = 0;
+    });
+    filtrosActuales = {};
+    renderTablaHistorial();
+  }
+
+  // =========================
+  // EXPORTACIONES (Placeholder)
+  // =========================
+  function exportarCSV() {
+    if (evaluaciones.length === 0) { mostrarToast('No hay evaluaciones para exportar.', true); return; }
+    const header = ['Evaluado', 'Cargo', 'Evaluador', 'Periodo', 'Puntaje', 'Categoría', 'Fecha', 'Observaciones'];
     const rows = evaluaciones.map(e => [
-      e.id, e.evaluado_nombre, e.evaluado_cargo,
-      e.puntaje_total, e.categoria, e.evaluador,
-      fmtFecha(e.fecha), (e.observaciones || '').replace(/[\n\r,]/g, ' ')
+      e.evaluado_nombre, e.evaluado_cargo, e.evaluador, e.periodo || 'Mensual',
+      e.puntaje_total, e.categoria, fmtFecha(e.fecha), (e.observaciones || '').replace(/[\n\r,]/g, ' ')
     ]);
-
     const csv = [header, ...rows].map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `auditorias_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `auditorias_personal_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  };
-
-  // =========================
-  // INICIALIZACIÓN GENERAL
-  // =========================
-  function init() {
-    initSelectorEvaluado();
-    resetEvaluacion();
-
-    const btnGuardar = $('btn-guardar-eval');
-    if (btnGuardar) btnGuardar.addEventListener('click', guardarEvaluacion);
-
-    const btnReset = $('btn-reset-eval');
-    if (btnReset) btnReset.addEventListener('click', () => {
-      if (confirm('¿Limpiar la evaluación actual?')) resetEvaluacion();
-    });
-
-    cargarPersonal();
-    cargarEvaluaciones();
-    renderPlanes();
   }
 
-  verificarSesion();
+  // =========================
+  // INICIALIZACIÓN
+  // =========================
+  async function init() {
+    if (!verificarAcceso()) return;
+
+    cargarUsuarioNav();
+    initUserControls();
+    configurarModales();
+
+    // Eventos
+    $('evaluado')?.addEventListener('change', (e) => {
+      evaluadoActual = personal.find(p => String(p.id) === e.target.value) || null;
+      mostrarFicha(evaluadoActual);
+      renderHistorialEvaluado();
+      resetEvaluacion();
+    });
+
+    $('obs-eval')?.addEventListener('input', actualizarContadorObs);
+    $('btn-reset-eval')?.addEventListener('click', () => {
+      if (confirm('¿Limpiar la evaluación actual?')) resetEvaluacion();
+    });
+    $('btn-guardar-eval')?.addEventListener('click', guardarEvaluacion);
+
+    $('btn-aplicar-filtros')?.addEventListener('click', aplicarFiltros);
+    $('btn-limpiar-filtros')?.addEventListener('click', limpiarFiltros);
+    $('btn-export-word-global')?.addEventListener('click', exportarCSV); // Placeholder
+    $('btn-export-pdf-global')?.addEventListener('click', () => mostrarToast('Exportación PDF en desarrollo', false));
+
+    // Carga inicial
+    await cargarPersonal();
+    await cargarEvaluaciones();
+    
+    poblarFiltros();
+    renderPlanes();
+    renderTablaHistorial();
+    resetEvaluacion();
+  }
+
+  // Arrancar
+  init();
 
 })();
-```
