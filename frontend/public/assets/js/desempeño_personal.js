@@ -1,6 +1,6 @@
 /* ==========================================
-   VENVIDRIO - AUDITORÍA INTERNA DE CALIDAD
-   auditoria_interna.js - v5 (Completo y Adaptado)
+   VENVIDRIO - EVALUACIÓN DE DESEMPEÑO
+   desempeño_personal.js - v5 (Completo)
    ========================================== */
 
 (function () {
@@ -191,7 +191,7 @@
     const total = evaluaciones.length;
     const promedio = total ? Math.round(evaluaciones.reduce((s, e) => s + (e.puntaje || 0), 0) / total) : 0;
     const personasUnicas = new Set(evaluaciones.map(e => e.evaluado_id)).size;
-    const planesActivos = evaluaciones.filter(e => e.categoria === 'Deficiente' || e.categoria === 'Regular').length; // Simulación de planes
+    const planesActivos = evaluaciones.filter(e => e.categoria === 'Deficiente' || e.categoria === 'Regular').length;
 
     setText('kpi-evaluaciones', total);
     setText('kpi-evaluaciones-sub', 'Registradas en el sistema');
@@ -218,8 +218,6 @@
     tbody.innerHTML = evaluaciones.map(e => {
       const pts = e.puntaje || 0;
       const cls = clasificar(pts).clase;
-      
-      // Buscar el cargo en el personal (por si el backend no lo envía)
       const persona = personal.find(p => p.id === e.evaluado_id);
       const cargo = e.cargo || (persona ? persona.cargo : '—');
 
@@ -450,8 +448,6 @@
   }
 
   function aplicarFiltros() {
-    // NOTA: En una app real aquí harías un fetch con query params.
-    // Para este ejemplo, filtraremos en el cliente sobre la tabla actual.
     const cargo = val('f-cargo').toLowerCase();
     const evaluador = val('f-evaluador').toLowerCase();
     const periodo = val('f-periodo').toLowerCase();
@@ -556,7 +552,6 @@
   // EVENT LISTENERS
   // =========================
   function initListeners() {
-    // Evaluado Change
     if ($('evaluado')) {
       $('evaluado').addEventListener('change', (e) => {
         evaluadoActual = personal.find(p => String(p.id) === e.target.value) || null;
@@ -566,27 +561,22 @@
       });
     }
 
-    // Guardar y Reiniciar
     if ($('btn-guardar-eval')) $('btn-guardar-eval').addEventListener('click', guardarEvaluacion);
     if ($('btn-reset-eval')) $('btn-reset-eval').addEventListener('click', resetEvaluacion);
 
-    // Contador de caracteres
     if ($('obs-eval')) {
       $('obs-eval').addEventListener('input', (e) => {
         if ($('obs-eval-count')) $('obs-eval-count').textContent = e.target.value.length;
       });
     }
 
-    // Filtros
     if ($('btn-aplicar-filtros')) $('btn-aplicar-filtros').addEventListener('click', aplicarFiltros);
     if ($('btn-limpiar-filtros')) $('btn-limpiar-filtros').addEventListener('click', limpiarFiltros);
 
-    // Modales
     if ($('modal-eliminar-close')) $('modal-eliminar-close').addEventListener('click', cerrarModalEliminar);
     if ($('modal-eliminar-cancelar')) $('modal-eliminar-cancelar').addEventListener('click', cerrarModalEliminar);
     if ($('modal-eliminar-confirmar')) $('modal-eliminar-confirmar').addEventListener('click', confirmarEliminar);
 
-    // Exportaciones
     if ($('btn-export-pdf-global')) $('btn-export-pdf-global').addEventListener('click', () => descargarReporte('pdf'));
     if ($('btn-export-word-global')) $('btn-export-word-global').addEventListener('click', () => descargarReporte('word'));
   }
@@ -600,14 +590,12 @@
 
     initListeners();
 
-    // Cargar datos en orden
     await cargarPersonal();
     await cargarEvaluaciones();
     
     resetEvaluacion();
   }
 
-  // Arrancar
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
