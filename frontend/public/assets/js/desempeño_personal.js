@@ -1,6 +1,6 @@
 /* ==========================================
    VENVIDRIO - EVALUACIÓN DE DESEMPEÑO
-   desempeño_personal.js - v5 (Completo)
+   desempeño_personal.js - v6 (Corregido 422)
    ========================================== */
 
 (function () {
@@ -349,17 +349,21 @@
     }
 
     const categoria = clasificar(pct).categoria;
+    
+    // 🔥 SOLUCIÓN AL ERROR 422: Convertimos el arreglo de detalles a String JSON
+    const detallesString = JSON.stringify(CRITERIOS.map(c => ({
+      criterio_id: c.id,
+      texto: c.texto,
+      valor: evaluacionState[c.id] || null
+    })));
+
     const payload = {
       evaluado_id: evaluadoActual.id,
       periodo: val('periodo') || 'mensual',
       puntaje: pct,
       categoria: categoria,
       observaciones: val('obs-eval'),
-      detalles: CRITERIOS.map(c => ({
-        criterio_id: c.id,
-        texto: c.texto,
-        valor: evaluacionState[c.id] || null
-      }))
+      detalles: detallesString // 👈 Se envía como string
     };
 
     const btn = $('btn-guardar-eval');
